@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  shellcheck:
+    name: ShellCheck
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run ShellCheck
+        uses: ludeeus/action-shellcheck@master
+        env:
+          # Allow sourcing files dynamically (modules are sourced from bootstrap.sh)
+          # SC1091: not following sourced files (acceptable — they're checked individually)
+          # SC1090: can't follow non-constant source (modules sourced dynamically by design)
+          # SC2034: appears unused (zsh-plugin-consumed vars in dotfiles/)
+          # SC2155: declare and assign separately (style preference, not a bug)
+          SHELLCHECK_OPTS: -e SC1090 -e SC1091 -e SC2034 -e SC2155 -x
+        with:
+          scandir: '.'
+          # Skip generated/external content
+          ignore_paths: >-
+            tests/bats
+            tests/bats-assert
+            tests/bats-support
+
+  bats:
+    name: Bats Tests
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install bats-core
+        run: brew install bats-core
+
+      - name: Run bats tests
+        run: bats tests/
+
+  shfmt:
+    name: shfmt (formatting check)
+    runs-on: ubuntu-latest
+    continue-on-error: true # advisory until repo is fully formatted
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install shfmt
+        run: |
+          curl -sL "https://github.com/mvdan/sh/releases/latest/download/shfmt_v3.8.0_linux_amd64" -o /tmp/shfmt
+          chmod +x /tmp/shfmt
+          sudo mv /tmp/shfmt /usr/local/bin/shfmt
+
+      - name: Check formatting
+        run: shfmt -d -i 2 -ci -bn bootstrap.sh lib/ modules/ config/ dotfiles/
