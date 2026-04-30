@@ -1,0 +1,35 @@
+# EditorConfig — https://editorconfig.org
+# Matches existing repo conventions (2-space indent for shell, LF, UTF-8).
+
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+insert_final_newline = true
+trim_trailing_whitespace = true
+indent_style = space
+indent_size = 2
+
+# Shell scripts (bash, zsh, bats)
+[*.{sh,bash,zsh,bats}]
+indent_style = space
+indent_size = 2
+
+# Markdown — preserve trailing whitespace (line breaks)
+[*.md]
+trim_trailing_whitespace = false
+
+# Makefiles require tabs
+[Makefile]
+indent_style = tab
+
+# YAML (GitHub Actions, etc.)
+[*.{yml,yaml}]
+indent_style = space
+indent_size = 2
+
+# JSON
+[*.json]
+indent_style = space
+indent_size = 2
