@@ -26,10 +26,10 @@ object.
    `mockCreativeAuditAsset`) returns complete objects with all fields populated.
    No test exercises the "API returns null for this field" path.
 
-3. **Mutation testing can't help:** Stryker mutates *existing* code. There's
-   no null guard to mutate — the bug is *missing* code. The component files
-   generated zero mutants because the crash-risk code is property access in
-   JSX that Stryker's mutators don't target.
+3. **Mutation testing can't help:** mutation testing tools mutate *existing*
+   code. There's no null guard to mutate — the bug is *missing* code. The
+   component files generated zero mutants because the crash-risk code is
+   property access in JSX that the mutators don't target.
 
 ---
 
