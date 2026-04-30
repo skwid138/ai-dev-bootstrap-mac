@@ -1,0 +1,28 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "model": "",
+  "instructions": [
+    "instruction/repo-context.md",
+    "instruction/orchestration-runtime.md"
+  ],
+  "plugin": [
+    "@tarquinen/opencode-dcp@3.1.9"
+  ],
+  "mcp": {
+    "chrome-devtools": {
+      "type": "local",
+      "command": ["npx", "-y", "chrome-devtools-mcp@0.23.0", "--browserUrl", "http://127.0.0.1:9222"],
+      "enabled": true
+    },
+    "context7": {
+      "type": "remote",
+      "url": "https://mcp.context7.com/mcp",
+      "enabled": true
+    },
+    "exa": {
+      "type": "remote",
+      "url": "https://mcp.exa.ai/mcp",
+      "enabled": true
+    }
+  }
+}
