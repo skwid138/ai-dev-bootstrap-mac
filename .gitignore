@@ -1,0 +1,29 @@
+# macOS noise
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+
+# Editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs & temp
+*.log
+*.tmp
+tmp/
+
+# Local working docs (not for shipping)
+ANALYSIS_AND_PLAN.md
+
+# Node (in case launcher/plugins land later)
+node_modules/
+
+# Build artifacts (in case launcher .app lands later)
+dist/
+build/
+*.app/
