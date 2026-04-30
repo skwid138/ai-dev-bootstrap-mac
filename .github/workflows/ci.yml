@@ -45,7 +45,6 @@ jobs:
   shfmt:
     name: shfmt (formatting check)
     runs-on: ubuntu-latest
-    continue-on-error: true # advisory until repo is fully formatted
     steps:
       - uses: actions/checkout@v4
 
