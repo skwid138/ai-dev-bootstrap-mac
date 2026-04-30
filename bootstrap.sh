@@ -105,12 +105,12 @@ if [ "$SELECTED_TIER" = "custom" ]; then
         break
       fi
     done
-  done <<< "$CHOSEN"
+  done <<<"$CHOSEN"
 else
   while IFS= read -r pkg; do
     [ -z "$pkg" ] && continue
     SELECTED_PACKAGES+=("$pkg")
-  done <<< "$(get_tier_packages "$SELECTED_TIER")"
+  done <<<"$(get_tier_packages "$SELECTED_TIER")"
 fi
 
 # ── Run modules for selected packages ────────────────────────────────

@@ -35,7 +35,7 @@ ui_choose_multi() {
     done
     read -r input
 
-    IFS=',' read -r -a picks <<< "$input"
+    IFS=',' read -r -a picks <<<"$input"
     for idx in "${picks[@]}"; do
       idx=$(echo "$idx" | tr -d ' ')
       if [[ "$idx" =~ ^[0-9]+$ ]] && [ "$idx" -ge 1 ] && [ "$idx" -le "${#options[@]}" ]; then

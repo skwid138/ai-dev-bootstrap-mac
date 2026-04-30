@@ -113,7 +113,7 @@ done
 
 # ── Write basic OpenCode config if none exists ────────────────────────
 if [ ! -f "$OPENCODE_CONFIG_DIR/opencode.json" ]; then
-  cat > "$OPENCODE_CONFIG_DIR/opencode.json" <<'OCEOF'
+  cat >"$OPENCODE_CONFIG_DIR/opencode.json" <<'OCEOF'
 {
   "$schema": "https://opencode.ai/config.json"
 }

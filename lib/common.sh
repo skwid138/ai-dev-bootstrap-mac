@@ -73,7 +73,7 @@ append_line_if_missing() {
   touch "$file"
 
   if ! grep -Fq "$line" "$file"; then
-    echo "$line" >> "$file"
+    echo "$line" >>"$file"
   fi
 }
 
