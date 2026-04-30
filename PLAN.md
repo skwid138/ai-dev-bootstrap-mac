@@ -4,6 +4,13 @@
 
 ---
 
+## Status
+
+- **v1 — Shipped.** All architecture, modules, and tests described in this document are implemented and passing (17/17 bats tests, shellcheck clean). See commit history.
+- **v2 — In progress.** Curated OpenCode config (agents/skills/commands/plugins/MCPs), git defaults, workspace-dir prompt, Ghostty config + one-click `.app` launcher, Brewfile output, polish flags. Tracked in the (gitignored) working doc `ANALYSIS_AND_PLAN.md`.
+
+---
+
 ## Design Principles
 
 1. **Shell-native** — Pure Bash/Zsh with [Gum](https://github.com/charmbracelet/gum) for interactive UI (plain fallback for pre-Homebrew stages)
