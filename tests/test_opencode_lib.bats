@@ -197,3 +197,88 @@ teardown() {
   run jq -r '.model' "$dest"
   [ "$output" = "x/y" ]
 }
+
+# ── opencode_decide_provider_path ────────────────────────────────────────────
+# 5 menu options × {gh authed, gh not authed} = 10 baseline cases, plus
+# 1 unknown-selection case = 11. The function is pure, so each case is a
+# clean assertion against stdout.
+
+# Helper: capture both lines of stdout into provider/model vars.
+_decide() {
+  local gh="$1" sel="$2"
+  local out
+  if ! out=$(opencode_decide_provider_path "$gh" "$sel" 2>/dev/null); then
+    return 1
+  fi
+  PROVIDER=$(echo "$out" | sed -n '1p')
+  MODEL=$(echo "$out" | sed -n '2p')
+  return 0
+}
+
+@test "decide: copilot with gh authed -> github-copilot/claude-sonnet-4.5" {
+  _decide yes copilot
+  [ "$PROVIDER" = "github-copilot" ]
+  [ "$MODEL" = "github-copilot/claude-sonnet-4.5" ]
+}
+
+@test "decide: copilot without gh authed -> error (contract violation)" {
+  # Orchestrator should never call us with this combination; verify the
+  # contract is enforced rather than silently falling through.
+  run opencode_decide_provider_path "no" "copilot"
+  [ "$status" -eq 2 ]
+}
+
+@test "decide: anthropic -> anthropic/claude-sonnet-4.5 regardless of gh state" {
+  _decide yes anthropic
+  [ "$PROVIDER" = "anthropic" ]
+  [ "$MODEL" = "anthropic/claude-sonnet-4.5" ]
+
+  _decide no anthropic
+  [ "$PROVIDER" = "anthropic" ]
+  [ "$MODEL" = "anthropic/claude-sonnet-4.5" ]
+}
+
+@test "decide: openai -> openai/gpt-5.2" {
+  _decide yes openai
+  [ "$PROVIDER" = "openai" ]
+  [ "$MODEL" = "openai/gpt-5.2" ]
+
+  _decide no openai
+  [ "$PROVIDER" = "openai" ]
+  [ "$MODEL" = "openai/gpt-5.2" ]
+}
+
+@test "decide: gemini -> google/gemini-2.5-flash" {
+  _decide yes gemini
+  [ "$PROVIDER" = "google" ]
+  [ "$MODEL" = "google/gemini-2.5-flash" ]
+
+  _decide no gemini
+  [ "$PROVIDER" = "google" ]
+  [ "$MODEL" = "google/gemini-2.5-flash" ]
+}
+
+@test "decide: zen -> opencode-zen / opencode/claude-sonnet-4.6" {
+  _decide yes zen
+  [ "$PROVIDER" = "opencode-zen" ]
+  [ "$MODEL" = "opencode/claude-sonnet-4.6" ]
+
+  _decide no zen
+  [ "$PROVIDER" = "opencode-zen" ]
+  [ "$MODEL" = "opencode/claude-sonnet-4.6" ]
+}
+
+@test "decide: skip -> none with empty model (so opencode falls back)" {
+  _decide yes skip
+  [ "$PROVIDER" = "none" ]
+  [ "$MODEL" = "" ]
+
+  _decide no skip
+  [ "$PROVIDER" = "none" ]
+  [ "$MODEL" = "" ]
+}
+
+@test "decide: unknown selection -> exit 2" {
+  run opencode_decide_provider_path "yes" "garbage-string"
+  [ "$status" -eq 2 ]
+}

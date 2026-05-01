@@ -161,3 +161,68 @@ opencode_login_copilot() {
 
   opencode auth login --provider github-copilot --method oauth
 }
+
+# ── opencode_decide_provider_path ────────────────────────────────────────────
+# Pure decision function: given the user's GitHub-auth state and their
+# menu choice, return (a) the opencode provider to log into and (b) the
+# model id to write into opencode.json.
+#
+# This is the single point of policy for the provider flow. Splitting it
+# out keeps modules/09-opencode.sh as a thin orchestrator and lets us
+# test every branch with bats — no CLI shell-outs, no $HOME side effects.
+#
+# Args:
+#   $1: gh_auth_state   — "yes" if `gh auth status` succeeded, else "no"
+#   $2: menu_selection  — one of:
+#                           "copilot"   (chosen because gh_auth=yes and user agreed)
+#                           "anthropic" "openai" "gemini" "zen" "skip"
+#                         These are stable IDs the orchestrator emits after
+#                         translating the human-readable ui_choose label.
+#
+# Stdout (two lines, in order):
+#   1. provider id   ("github-copilot", "anthropic", "openai", "google",
+#                     "opencode-zen", or "none" for skip)
+#   2. model id      e.g. "github-copilot/claude-sonnet-4.5", or empty
+#                    string for skip
+#
+# Returns: 0 always for valid input; 2 for unrecognized selection (so
+# the orchestrator can fall through cleanly rather than silently default).
+#
+# Note: the gh_auth_state arg is currently only consulted in test mode
+# to guard against the "menu picked copilot but gh isn't authed" edge
+# case. The orchestrator should not pass "copilot" if gh_auth_state is
+# "no" — that's a bug. We surface it as exit 2 to make the contract
+# explicit and the test easy to write.
+opencode_decide_provider_path() {
+  local gh_auth_state="$1"
+  local menu_selection="$2"
+
+  case "$menu_selection" in
+    copilot)
+      if [ "$gh_auth_state" != "yes" ]; then
+        echo "opencode_decide_provider_path: 'copilot' chosen but gh not authed" >&2
+        return 2
+      fi
+      printf '%s\n%s\n' "github-copilot" "github-copilot/claude-sonnet-4.5"
+      ;;
+    anthropic)
+      printf '%s\n%s\n' "anthropic" "anthropic/claude-sonnet-4.5"
+      ;;
+    openai)
+      printf '%s\n%s\n' "openai" "openai/gpt-5.2"
+      ;;
+    gemini)
+      printf '%s\n%s\n' "google" "google/gemini-2.5-flash"
+      ;;
+    zen)
+      printf '%s\n%s\n' "opencode-zen" "opencode/claude-sonnet-4.6"
+      ;;
+    skip)
+      printf '%s\n%s\n' "none" ""
+      ;;
+    *)
+      echo "opencode_decide_provider_path: unknown selection: $menu_selection" >&2
+      return 2
+      ;;
+  esac
+}
