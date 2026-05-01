@@ -27,6 +27,7 @@ source "${BOOTSTRAP_DIR}/config/packages.sh"
 source "${BOOTSTRAP_DIR}/config/tiers.sh"
 source "${BOOTSTRAP_DIR}/lib/common.sh"
 source "${BOOTSTRAP_DIR}/lib/workspace.sh"
+source "${BOOTSTRAP_DIR}/lib/brewfile.sh"
 
 # ── Pre-flight ────────────────────────────────────────────────────────
 run_preflight
@@ -216,6 +217,22 @@ fi
 
 if [ ${#RESULTS_FAILED[@]} -gt 0 ]; then
   log_error "Failed (${#RESULTS_FAILED[@]}): ${RESULTS_FAILED[*]}"
+fi
+
+# ── Brewfile snapshot ────────────────────────────────────────────────
+# Dump the user's full brew state to ~/.config/ai-bootstrap/Brewfile so
+# they can replay this setup on a new Mac with `brew bundle`. Includes
+# everything they have brewed, not just what bootstrap installed — the
+# point is reproducibility of the user's machine, not auditing what we
+# touched.
+brewfile_path="$HOME/.config/ai-bootstrap/Brewfile"
+if brewfile_dump "$brewfile_path" >/dev/null; then
+  log_installed "Brewfile saved to $brewfile_path"
+else
+  # Non-fatal — the bootstrap still succeeded; the user just doesn't get
+  # a portable record this run. Most likely cause: brew not on PATH, which
+  # only happens if the homebrew module was skipped/failed.
+  log_warn "Could not save Brewfile (brew not available?); skipping"
 fi
 
 echo ""
