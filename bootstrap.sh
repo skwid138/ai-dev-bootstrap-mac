@@ -27,6 +27,7 @@ source "${BOOTSTRAP_DIR}/config/packages.sh"
 source "${BOOTSTRAP_DIR}/config/tiers.sh"
 source "${BOOTSTRAP_DIR}/lib/common.sh"
 source "${BOOTSTRAP_DIR}/lib/workspace.sh"
+source "${BOOTSTRAP_DIR}/lib/state.sh"
 source "${BOOTSTRAP_DIR}/lib/brewfile.sh"
 
 # ── Pre-flight ────────────────────────────────────────────────────────
@@ -233,6 +234,19 @@ else
   # a portable record this run. Most likely cause: brew not on PATH, which
   # only happens if the homebrew module was skipped/failed.
   log_warn "Could not save Brewfile (brew not available?); skipping"
+fi
+
+# ── State snapshot ───────────────────────────────────────────────────
+# Re-write state.sh with the full set of run metadata (workspace, tier,
+# version, first/last-run timestamps). The early workspace_write_state
+# call earlier in this script already wrote the workspace anchor; this
+# call layers tier/version/timestamps on top and preserves first-run-at
+# across re-runs.
+state_path="$HOME/.config/ai-bootstrap/state.sh"
+if state_write "$state_path" "$WORKSPACE_PATH" "$SELECTED_TIER"; then
+  log_installed "State saved to $state_path"
+else
+  log_warn "Could not update state file at $state_path"
 fi
 
 echo ""
