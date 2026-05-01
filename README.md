@@ -92,6 +92,14 @@ Want more control? Choose **Custom** in the installer and pick exactly what you 
 5. **OpenCode provider setup** with guided API key prompts.
 6. **Summary** of what was installed, skipped, or failed.
 
+## 🐷 Vibe Code Launcher
+
+If you install the **Recommended** tier (or higher), the bootstrap drops a one‑click app called **Vibe Code** into your `~/Applications` folder.
+
+Open it from Spotlight, Launchpad, or Finder — drag it to your Dock for one‑click access. It opens Ghostty in your saved workspace folder and starts OpenCode automatically. No commands to remember.
+
+> Want a plain shell instead? Open **Terminal** or **Ghostty** directly. Vibe Code is purely a convenience launcher; it doesn't change anything else on your system.
+
 ## 🐚 Shell Configuration
 
 This project uses a modular dotfile setup stored in:
@@ -133,10 +141,17 @@ ai-dev-bootstrap-mac/
 ├── modules/
 ├── config/
 ├── dotfiles/
+├── ghostty/
+├── launcher/
+├── opencode/
 ├── tests/
 ├── PLAN.md
 └── README.md
 ```
+
+## 🎨 Credits
+
+- Vibe Code app icon: [Lucide](https://lucide.dev) `piggy-bank` (ISC License). See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
 
 ## 📄 License
 
