@@ -56,12 +56,27 @@ EOF
   chmod +x "$SANDBOX/osascript"
 }
 
+# Drop a fake opencode binary at $SANDBOX/opencode and set
+# VIBE_CODE_OPENCODE_PATHS to find it. Simulates a normal user setup
+# where opencode is installed on the brew prefix.
+_mock_opencode() {
+  cat >"$SANDBOX/opencode" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$SANDBOX/opencode"
+}
+
 # Run launch.sh with overrides pointed at the mocks. Any extra args are
 # treated as VAR=VALUE env-var overrides, layered on top of the defaults.
+# Always points VIBE_CODE_OPENCODE_PATHS at the mock so opencode resolves
+# without polluting $PATH; tests that want to test the not-found path can
+# override by passing VIBE_CODE_OPENCODE_PATHS=/nonexistent explicitly.
 _run_launch() {
   env \
     "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
     "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/opencode" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     "$@" \
     bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
@@ -148,31 +163,39 @@ _run_launch() {
 @test "launch.sh: defaults launch ghostty with --working-directory + opencode" {
   _mock_open
   _mock_osascript present
+  _mock_opencode
   mkdir -p "$SANDBOX/workspace"
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
   run _run_launch
   [ "$status" -eq 0 ]
-  grep -q "open -na Ghostty.app --args --working-directory=$SANDBOX/workspace -e opencode" "$MOCK_LOG"
+  # opencode is now resolved to its absolute path before being passed to
+  # ghostty (login shell PATH gotcha — see launch.sh comments). The mock
+  # lives at $SANDBOX/opencode, so that's what we expect in the argv.
+  grep -q "open -na Ghostty.app --args --working-directory=$SANDBOX/workspace -e $SANDBOX/opencode" "$MOCK_LOG"
 }
 
 @test "launch.sh: VIBE_CODE_LAUNCH_OPENCODE=0 omits the -e opencode arg" {
   _mock_open
   _mock_osascript present
+  _mock_opencode
   mkdir -p "$SANDBOX/workspace"
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
   run _run_launch VIBE_CODE_LAUNCH_OPENCODE=0
   [ "$status" -eq 0 ]
-  # opencode must not appear at all in the open invocation
+  # opencode binary path must not appear in the open invocation. Since
+  # `-e ` substring matches benign log content, narrow check: assert
+  # the mock opencode path is absent from open args.
   saved="$(cat "$MOCK_LOG")"
-  [[ "$saved" != *"-e opencode"* ]]
+  [[ "$saved" != *"$SANDBOX/opencode"* ]]
   grep -q "open -na Ghostty.app --args --working-directory=$SANDBOX/workspace" "$MOCK_LOG"
 }
 
 @test "launch.sh: missing state file falls back to \$HOME" {
   _mock_open
   _mock_osascript present
+  _mock_opencode
   # No state.sh written.
 
   run _run_launch
@@ -183,6 +206,7 @@ _run_launch() {
 @test "launch.sh: invalid workspace path in state falls back to \$HOME" {
   _mock_open
   _mock_osascript present
+  _mock_opencode
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/does-not-exist\"" >"$SANDBOX/state.sh"
 
   run _run_launch
@@ -193,6 +217,7 @@ _run_launch() {
 @test "launch.sh: missing ghostty shows alert and exits 1 without opening" {
   _mock_open
   _mock_osascript missing
+  _mock_opencode
 
   run _run_launch
   [ "$status" -eq 1 ]
@@ -206,6 +231,7 @@ _run_launch() {
 @test "launch.sh: respects VIBE_CODE_GHOSTTY_APP override (e.g. for forks)" {
   _mock_open
   _mock_osascript present
+  _mock_opencode
   mkdir -p "$SANDBOX/workspace"
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
@@ -213,3 +239,80 @@ _run_launch() {
   [ "$status" -eq 0 ]
   grep -q "open -na Wezterm.app --args" "$MOCK_LOG"
 }
+
+# ── opencode resolution ────────────────────────────────────────────────────
+
+@test "launch.sh: missing opencode shows alert and exits 1 without opening" {
+  # Regression: the very bug that made you file the issue. If opencode
+  # can't be found in any of the candidate paths, we must NOT pass the
+  # bare string `opencode` to Ghostty (which would then fail to find it
+  # via `/usr/bin/login -flp <user> opencode`). Instead, surface a
+  # friendly alert.
+  _mock_open
+  _mock_osascript present
+  # No _mock_opencode — opencode is genuinely absent.
+
+  run env \
+    "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
+    "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "VIBE_CODE_OPENCODE_PATHS=/nonexistent/opencode" \
+    "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
+    "PATH=/usr/bin:/bin" \
+    bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
+  [ "$status" -eq 1 ]
+  saved="$(cat "$MOCK_LOG")"
+  [[ "$saved" != *"open -na"* ]]
+  grep -q "display alert" "$MOCK_LOG"
+  grep -q "OpenCode is not installed" "$MOCK_LOG"
+}
+
+@test "launch.sh: resolves opencode from first candidate path that exists" {
+  # Multiple candidates; pick the first existing one. Simulates the
+  # priority-order in launch.sh: /opt/homebrew/bin first, then
+  # /usr/local/bin, then ~/.local/bin.
+  _mock_open
+  _mock_osascript present
+  mkdir -p "$SANDBOX/workspace" "$SANDBOX/a" "$SANDBOX/b"
+  # Make 'b' exist; 'a' does not. Order: a first, b second.
+  cat >"$SANDBOX/b/opencode" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$SANDBOX/b/opencode"
+  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+
+  run env \
+    "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
+    "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/a/opencode:$SANDBOX/b/opencode" \
+    "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
+    bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
+  [ "$status" -eq 0 ]
+  grep -q "\-e $SANDBOX/b/opencode" "$MOCK_LOG"
+}
+
+@test "launch.sh: falls back to PATH when no candidate path matches" {
+  # If a user installed opencode somewhere unusual (not /opt/homebrew,
+  # not /usr/local, not ~/.local), but it IS on their PATH, the launcher
+  # should still find it. Simulate by putting opencode on a custom PATH.
+  _mock_open
+  _mock_osascript present
+  mkdir -p "$SANDBOX/custom" "$SANDBOX/workspace"
+  cat >"$SANDBOX/custom/opencode" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$SANDBOX/custom/opencode"
+  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+
+  run env \
+    "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
+    "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "VIBE_CODE_OPENCODE_PATHS=/nonexistent" \
+    "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
+    "PATH=$SANDBOX/custom:/usr/bin:/bin" \
+    bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
+  [ "$status" -eq 0 ]
+  grep -q "\-e $SANDBOX/custom/opencode" "$MOCK_LOG"
+}
+
