@@ -5,21 +5,6 @@ set -euo pipefail
 BOOTSTRAP_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 export BOOTSTRAP_DIR
 
-# ── Help ──────────────────────────────────────────────────────────────
-if [[ "${1:-}" == "--help" || "${1:-}" == "-h" ]]; then
-  cat <<'EOF'
-AI Dev Bootstrap for Mac
-
-Usage:
-  ./bootstrap.sh          Run the interactive installer
-  ./bootstrap.sh --help   Show this help message
-
-Sets up a Mac for vibe-coding with OpenCode. Safe to run multiple times.
-https://github.com/skwid138/ai-dev-bootstrap-mac
-EOF
-  exit 0
-fi
-
 # ── Source libraries ──────────────────────────────────────────────────
 source "${BOOTSTRAP_DIR}/lib/ui.sh"
 source "${BOOTSTRAP_DIR}/lib/checks.sh"
@@ -29,36 +14,60 @@ source "${BOOTSTRAP_DIR}/lib/common.sh"
 source "${BOOTSTRAP_DIR}/lib/workspace.sh"
 source "${BOOTSTRAP_DIR}/lib/state.sh"
 source "${BOOTSTRAP_DIR}/lib/brewfile.sh"
+source "${BOOTSTRAP_DIR}/lib/args.sh"
+source "${BOOTSTRAP_DIR}/lib/plan.sh"
+
+# ── Parse flags ───────────────────────────────────────────────────────
+# args_parse exports BOOTSTRAP_DRY_RUN and BOOTSTRAP_NONINTERACTIVE.
+# Returns 1 for --help, 2 for unknown flag.
+if ! args_parse "$@"; then
+  rc=$?
+  args_print_help
+  if [ "$rc" = "1" ]; then
+    exit 0
+  fi
+  exit 2
+fi
 
 # ── Pre-flight ────────────────────────────────────────────────────────
-run_preflight
+# Skipped in dry-run: pre-flight does environment checks (macOS version,
+# disk space) that are fine to run, but it also writes nothing — keeping
+# everything before the plan-render side-effect-free is simpler than
+# auditing each pre-flight check.
+if [ -z "${BOOTSTRAP_DRY_RUN:-}" ]; then
+  run_preflight
+fi
 
 # ── Phase 0: Bootstrap prerequisites (plain UI — no Gum yet) ─────────
-echo ""
-echo "========================================"
-echo "  AI Dev Bootstrap for Mac"
-echo "  Setting up prerequisites..."
-echo "========================================"
-echo ""
+# Skipped in dry-run. These modules install xcode-clt, brew, and gum,
+# which are real side effects.
+if [ -z "${BOOTSTRAP_DRY_RUN:-}" ]; then
+  echo ""
+  echo "========================================"
+  echo "  AI Dev Bootstrap for Mac"
+  echo "  Setting up prerequisites..."
+  echo "========================================"
+  echo ""
 
-# Xcode CLT
-if [ -f "${BOOTSTRAP_DIR}/modules/00-xcode-clt.sh" ]; then
-  source "${BOOTSTRAP_DIR}/modules/00-xcode-clt.sh"
-fi
+  # Xcode CLT
+  if [ -f "${BOOTSTRAP_DIR}/modules/00-xcode-clt.sh" ]; then
+    source "${BOOTSTRAP_DIR}/modules/00-xcode-clt.sh"
+  fi
 
-# Homebrew
-if [ -f "${BOOTSTRAP_DIR}/modules/01-homebrew.sh" ]; then
-  source "${BOOTSTRAP_DIR}/modules/01-homebrew.sh"
-fi
+  # Homebrew
+  if [ -f "${BOOTSTRAP_DIR}/modules/01-homebrew.sh" ]; then
+    source "${BOOTSTRAP_DIR}/modules/01-homebrew.sh"
+  fi
 
-# Gum
-if [ -f "${BOOTSTRAP_DIR}/modules/02-gum.sh" ]; then
-  source "${BOOTSTRAP_DIR}/modules/02-gum.sh"
-fi
+  # Gum
+  if [ -f "${BOOTSTRAP_DIR}/modules/02-gum.sh" ]; then
+    source "${BOOTSTRAP_DIR}/modules/02-gum.sh"
+  fi
 
-# Re-detect Gum now that it should be installed.
-if command -v gum >/dev/null 2>&1; then
-  HAS_GUM=true
+  # Re-detect Gum now that it should be installed.
+  if command -v gum >/dev/null 2>&1; then
+    HAS_GUM=true
+  fi
 fi
 
 # ── Welcome ───────────────────────────────────────────────────────────
@@ -69,23 +78,30 @@ log_info "with AI-powered coding tools like OpenCode."
 echo ""
 
 # ── Tier selection ────────────────────────────────────────────────────
-log_info "Choose an install tier:"
-echo ""
+if [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+  # Non-interactive mode: default to recommended. Loud log so the user
+  # is never surprised about what got installed in CI / unattended runs.
+  SELECTED_TIER="recommended"
+  log_info "Non-interactive: using default tier '$SELECTED_TIER'"
+else
+  log_info "Choose an install tier:"
+  echo ""
 
-TIER=$(ui_choose \
-  "🟢 Essential — $(get_tier_description essential)" \
-  "🔵 Recommended — $(get_tier_description recommended)" \
-  "🟣 Complete — $(get_tier_description complete)" \
-  "🔧 Custom — Pick exactly what you want")
+  TIER=$(ui_choose \
+    "🟢 Essential — $(get_tier_description essential)" \
+    "🔵 Recommended — $(get_tier_description recommended)" \
+    "🟣 Complete — $(get_tier_description complete)" \
+    "🔧 Custom — Pick exactly what you want")
 
-# Extract tier key from selection.
-case "$TIER" in
-  *Essential*) SELECTED_TIER="essential" ;;
-  *Recommended*) SELECTED_TIER="recommended" ;;
-  *Complete*) SELECTED_TIER="complete" ;;
-  *Custom*) SELECTED_TIER="custom" ;;
-  *) SELECTED_TIER="essential" ;;
-esac
+  # Extract tier key from selection.
+  case "$TIER" in
+    *Essential*) SELECTED_TIER="essential" ;;
+    *Recommended*) SELECTED_TIER="recommended" ;;
+    *Complete*) SELECTED_TIER="complete" ;;
+    *Custom*) SELECTED_TIER="custom" ;;
+    *) SELECTED_TIER="essential" ;;
+  esac
+fi
 
 # ── Build selected package list ───────────────────────────────────────
 SELECTED_PACKAGES=()
@@ -120,39 +136,52 @@ fi
 # Where the user keeps their code projects. Asked once, persisted to
 # ~/.config/ai-bootstrap/state.sh, referenced by aliases (cdc), the
 # .app launcher (Phase E), and any future module that needs it.
-echo ""
-ui_header "📁 Workspace"
-echo ""
-log_info "Pick a directory to keep your code projects in. We'll create it"
-log_info "if it doesn't exist, and the 'cdc' shortcut will jump there."
-echo ""
-
 WORKSPACE_DEFAULT=$(workspace_default_path)
 WORKSPACE_PATH=""
 
-while [ -z "$WORKSPACE_PATH" ]; do
-  if [ -n "${AI_BOOTSTRAP_NONINTERACTIVE:-}" ]; then
-    user_input=""
-  else
+if [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+  # Non-interactive: skip the prompt entirely, default to ~/code with a
+  # loud log so the user knows what was assumed.
+  WORKSPACE_PATH="$WORKSPACE_DEFAULT"
+  log_info "Non-interactive: using default workspace '$WORKSPACE_PATH'"
+else
+  echo ""
+  ui_header "📁 Workspace"
+  echo ""
+  log_info "Pick a directory to keep your code projects in. We'll create it"
+  log_info "if it doesn't exist, and the 'cdc' shortcut will jump there."
+  echo ""
+
+  while [ -z "$WORKSPACE_PATH" ]; do
     user_input=$(ui_input "Workspace directory [$WORKSPACE_DEFAULT]:")
-  fi
 
-  if [ -z "$user_input" ]; then
-    candidate="$WORKSPACE_DEFAULT"
-  else
-    candidate=$(workspace_expand_path "$user_input")
-  fi
-
-  if workspace_validate_path "$candidate"; then
-    WORKSPACE_PATH="$candidate"
-  else
-    log_warn "Try again, or just press Enter to use $WORKSPACE_DEFAULT."
-    if [ -n "${AI_BOOTSTRAP_NONINTERACTIVE:-}" ]; then
-      # In non-interactive mode there's no "try again" — fall back to default.
-      WORKSPACE_PATH="$WORKSPACE_DEFAULT"
+    if [ -z "$user_input" ]; then
+      candidate="$WORKSPACE_DEFAULT"
+    else
+      candidate=$(workspace_expand_path "$user_input")
     fi
-  fi
-done
+
+    if workspace_validate_path "$candidate"; then
+      WORKSPACE_PATH="$candidate"
+    else
+      log_warn "Try again, or just press Enter to use $WORKSPACE_DEFAULT."
+    fi
+  done
+fi
+
+# ── Dry-run plan & exit ──────────────────────────────────────────────
+# In dry-run mode, we have everything we need to show the plan: tier,
+# workspace, and (for custom tier) the package list. Render and exit.
+# Nothing has been written to disk yet — the workspace dir hasn't been
+# created, state.sh hasn't been touched, no installs have run.
+if [ -n "${BOOTSTRAP_DRY_RUN:-}" ]; then
+  # For non-custom tiers, plan_render computes packages from tier.
+  # For custom tiers in non-interactive mode there's no way to specify
+  # packages on the command line yet, so the tier defaults to
+  # 'recommended' and custom isn't reachable. Pass empty CSV.
+  plan_render "$SELECTED_TIER" "$WORKSPACE_PATH" ""
+  exit 0
+fi
 
 if workspace_ensure_dir "$WORKSPACE_PATH"; then
   log_installed "Workspace: $WORKSPACE_PATH"
