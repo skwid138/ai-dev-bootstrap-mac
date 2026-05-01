@@ -1,0 +1,35 @@
+# Ghostty terminal config — installed by ai-dev-bootstrap-mac.
+# Edit freely; the bootstrap won't overwrite this once it exists.
+#
+# To explore options:
+#   ghostty +list-themes      # see available themes
+#   ghostty +list-keybinds    # see default keybinds
+#   ghostty +show-config      # see all current settings
+#
+# Reference: https://ghostty.org/docs/config
+
+# ─── Look & feel ────────────────────────────────────────────────────────────
+# GruvboxDark ships with ghostty. Run `ghostty +list-themes` to browse alternatives
+# (Catppuccin Mocha, Tokyo Night, Solarized Dark are popular).
+theme = GruvboxDark
+
+# JetBrainsMono Nerd Font is installed alongside ghostty by the bootstrap. The
+# Nerd Font variant has icons used by some TUIs (file trees, status bars). If
+# the font isn't installed, ghostty falls back to the system default.
+font-family = JetBrainsMono Nerd Font
+font-size = 14
+
+# ─── Window ─────────────────────────────────────────────────────────────────
+window-padding-x = 12
+window-padding-y = 12
+window-save-state = always
+
+# ─── Quality-of-life ────────────────────────────────────────────────────────
+copy-on-select = clipboard
+
+# ─── Quick reference (delete this block once you're settled in) ─────────────
+# Cmd+T       new tab
+# Cmd+W       close tab
+# Cmd+Enter   toggle fullscreen
+# Cmd+,       open this config in your editor
+# Cmd++ / -   font size up/down
