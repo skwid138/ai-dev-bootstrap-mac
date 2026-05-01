@@ -1,0 +1,26 @@
+#!/bin/bash
+# Mock `gh` for module tests.
+#
+# Behavior:
+#   gh auth status                   -> exit 0 if MOCK_GH_AUTHED=1 else 1
+#   gh auth login                    -> sets a flag in MOCK_LOG and
+#                                       behaves as if authed afterwards
+#                                       (we don't currently re-query within
+#                                       a single test, so just exit 0)
+#   anything else                    -> exit 0 (no test depends on it)
+#
+# Records all invocations to $MOCK_LOG.
+log_file="${MOCK_LOG:-/dev/null}"
+echo "gh $*" >>"$log_file"
+
+case "$1 $2" in
+  "auth status")
+    [ "${MOCK_GH_AUTHED:-0}" = "1" ] && exit 0
+    exit 1
+    ;;
+  "auth login")
+    exit 0
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,13 @@
+#!/bin/bash
+# Mock `opencode` CLI for module tests.
+#
+# Behavior:
+#   opencode auth login --provider X --method Y  -> records to MOCK_LOG, exits 0
+#   opencode auth list                           -> records, exits 0
+#   anything else                                -> records, exits 0
+#
+# All invocations are appended to $MOCK_LOG so integration tests can
+# assert on the exact command sequence.
+log_file="${MOCK_LOG:-/dev/null}"
+echo "opencode $*" >>"$log_file"
+exit 0

@@ -1,0 +1,47 @@
+#!/bin/bash
+# Mock `brew` for module tests.
+#
+# Records every invocation to $MOCK_LOG (line: "brew <args...>") and
+# exits 0. Special-cases:
+#   brew tap                         -> prints "anomalyco/tap" so the
+#                                       'already tapped' branch is taken
+#   brew list <pkg>                  -> exit 0 if MOCK_BREW_HAS_<pkg>=1,
+#                                       else exit 1 (so the install path
+#                                       runs by default)
+#   brew install <whatever>          -> always exit 0 (success)
+#   brew tap <whatever>              -> always exit 0
+#
+# This is enough for modules/09-opencode.sh, which uses
+# install_brew_formula (which calls 'brew list' then 'brew install').
+log_file="${MOCK_LOG:-/dev/null}"
+echo "brew $*" >>"$log_file"
+
+case "$1" in
+  tap)
+    if [ "$#" -eq 1 ]; then
+      # `brew tap` with no args: list tapped repos.
+      echo "anomalyco/tap"
+      exit 0
+    fi
+    # `brew tap <name>`: pretend we tapped it.
+    exit 0
+    ;;
+  list)
+    # 'brew list <pkg>' or 'brew list --cask <cask>'
+    # Grab the last positional arg without tripping SC2124.
+    pkg=""
+    for arg in "$@"; do pkg="$arg"; done
+    var="MOCK_BREW_HAS_$(echo "$pkg" | tr -c '[:alnum:]' '_')"
+    if [ "${!var:-0}" = "1" ]; then
+      exit 0
+    fi
+    exit 1
+    ;;
+  install)
+    # 'brew install [--cask] <pkg>'
+    exit 0
+    ;;
+esac
+
+# Unknown subcommand: still succeed (no test should depend on this).
+exit 0
