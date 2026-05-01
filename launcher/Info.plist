@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleName</key>
+  <string>Vibe Code</string>
+  <key>CFBundleDisplayName</key>
+  <string>Vibe Code</string>
+  <key>CFBundleIdentifier</key>
+  <string>dev.aibootstrap.vibecode</string>
+  <key>CFBundleVersion</key>
+  <string>1.0</string>
+  <key>CFBundleShortVersionString</key>
+  <string>1.0</string>
+  <key>CFBundleExecutable</key>
+  <string>launch</string>
+  <key>CFBundleIconFile</key>
+  <string>VibeCode</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleInfoDictionaryVersion</key>
+  <string>6.0</string>
+  <key>LSMinimumSystemVersion</key>
+  <string>11.0</string>
+  <key>NSHighResolutionCapable</key>
+  <true/>
+  <key>LSBackgroundOnly</key>
+  <false/>
+</dict>
+</plist>
