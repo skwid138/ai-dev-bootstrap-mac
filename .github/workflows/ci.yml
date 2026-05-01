@@ -50,9 +50,28 @@ jobs:
 
       - name: Install shfmt
         run: |
-          curl -sL "https://github.com/mvdan/sh/releases/latest/download/shfmt_v3.8.0_linux_amd64" -o /tmp/shfmt
+          # Pin a specific version + use the explicit /releases/download/v$VER
+          # path. Earlier this used `latest/download/...` which 302s to whatever
+          # the current release is — but the asset filename hardcoded
+          # `shfmt_v3.8.0_linux_amd64`, which 404s once that exact filename
+          # rotates out. The 404 HTML body was being saved as /tmp/shfmt and
+          # executed, producing the cryptic `Not: command not found` error
+          # (the first word of "Not Found" being run as a shell command).
+          #
+          # Two fixes combined:
+          #   1. Pin SHFMT_VERSION + use /releases/download/v$VER/<asset>
+          #      so URL and filename agree.
+          #   2. Use `curl -fsSL` (capital -f): fail on HTTP errors instead
+          #      of saving the error body. -s silences progress, -L follows
+          #      redirects.
+          #
+          # Pattern lifted from ~/code/scripts/.github/workflows/ci.yml.
+          SHFMT_VERSION="3.13.1"
+          curl -fsSL -o /tmp/shfmt \
+            "https://github.com/mvdan/sh/releases/download/v${SHFMT_VERSION}/shfmt_v${SHFMT_VERSION}_linux_amd64"
           chmod +x /tmp/shfmt
           sudo mv /tmp/shfmt /usr/local/bin/shfmt
+          shfmt --version
 
       - name: Check formatting
         run: shfmt -d -i 2 -ci -bn bootstrap.sh lib/ modules/ config/ dotfiles/
