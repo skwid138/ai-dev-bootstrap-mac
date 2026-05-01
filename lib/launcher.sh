@@ -1,11 +1,12 @@
 #!/bin/bash
 # Vibe Code launcher install helpers.
 #
-# Two responsibilities, factored out of modules/03-terminal.sh so each is
+# Three responsibilities, factored out of modules/03-terminal.sh so each is
 # independently testable with bats:
 #
-#   launcher_install   — build the .app and place it in ~/Applications/.
-#   launcher_uninstall — remove the .app from ~/Applications/.
+#   launcher_resolve_dest — pick install dir: /Applications or ~/Applications.
+#   launcher_install      — build the .app and place it in the dest dir.
+#   launcher_uninstall    — remove the .app from a given dir.
 #
 # Design choices (see ANALYSIS_AND_PLAN.md §E for full reasoning):
 #
@@ -14,21 +15,49 @@
 #     a stale launcher after we ship launch.sh changes — way worse than
 #     repeating 50 ms of work.
 #
-#   * Install to ~/Applications/, not /Applications/. Avoids needing sudo
-#     during bootstrap. Spotlight, LaunchPad, and Finder all index it the
-#     same way as the system Applications folder.
+#   * Prefer /Applications, fall back to ~/Applications. Most users *can*
+#     write to /Applications without sudo (it's group-writable for `admin`,
+#     and admin is the default for the Mac account that ran bootstrap).
+#     /Applications is what users actually expect: it shows up first in
+#     Spotlight, works for non-admin family members on shared machines,
+#     and matches every other Mac app's install location. We only fall
+#     back to ~/Applications on machines where /Applications is read-only
+#     (corp-managed Macs, non-admin user accounts).
 #
 #   * No "skipped" path. Unlike ghostty/AGENTS.md, the launcher bundle
-#     contains zero user-editable content (the `launch` binary is a copy
-#     of our launch.sh; users edit Terminal.app or System Settings if
-#     they want different behavior, not the .app contents). Rebuilding is
-#     always safe.
+#     contains zero user-editable content. Rebuilding is always safe.
+
+# ── launcher_resolve_dest ───────────────────────────────────────────────────
+# Pick the install directory for Vibe Code.app. Prefers /Applications if
+# writable (most users on standard Macs); falls back to ~/Applications
+# otherwise.
+#
+# Args: none.
+# Stdout: absolute path to install dir.
+# Returns: 0 always.
+#
+# Override via VIBE_CODE_DEST_DIR_OVERRIDE for tests (the resolution is
+# what we want to test, but real $HOME/Applications and /Applications
+# can't be safely written to from CI/test sandboxes).
+launcher_resolve_dest() {
+  if [ -n "${VIBE_CODE_DEST_DIR_OVERRIDE:-}" ]; then
+    echo "$VIBE_CODE_DEST_DIR_OVERRIDE"
+    return 0
+  fi
+
+  if [ -w "/Applications" ]; then
+    echo "/Applications"
+  else
+    echo "$HOME/Applications"
+  fi
+  return 0
+}
 
 # ── launcher_install ────────────────────────────────────────────────────────
 # Args:
 #   $1: build_script — absolute path to launcher/build.sh
-#   $2: dest_dir     — directory to install the .app into (typically
-#                      "$HOME/Applications")
+#   $2: dest_dir     — directory to install the .app into (use
+#                      launcher_resolve_dest to pick a sensible default)
 #
 # Stdout: "installed"
 # Returns:

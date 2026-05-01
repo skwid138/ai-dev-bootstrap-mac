@@ -32,16 +32,29 @@ case "$ghostty_result" in
   *) log_error "Ghostty config deployment returned unexpected: $ghostty_result" ;;
 esac
 
-# Build & install the one-click "Vibe Code" launcher into ~/Applications/.
+# Build & install the one-click "Vibe Code" launcher. Prefers /Applications
+# (where users actually look first) and falls back to ~/Applications on
+# corp-managed Macs / non-admin accounts where /Applications is read-only.
 # Always rebuilt on bootstrap re-run so users pick up any launch.sh fixes
 # we ship; the .app contains no user-editable content (toggles live in
 # env vars, not the script body).
-LAUNCHER_DEST="$HOME/Applications"
+LAUNCHER_DEST=$(launcher_resolve_dest)
 launcher_result=$(launcher_install \
   "${BOOTSTRAP_DIR}/launcher/build.sh" \
   "$LAUNCHER_DEST")
 
 case "$launcher_result" in
-  installed) log_installed "Vibe Code.app installed to $LAUNCHER_DEST" ;;
+  installed)
+    log_installed "Vibe Code.app installed to $LAUNCHER_DEST"
+    # Friendly heads-up if we landed in ~/Applications instead of the
+    # standard /Applications. This only happens on locked-down Macs;
+    # the message tells the user where to find it without requiring
+    # them to know about ~/Applications as a separate folder.
+    if [ "$LAUNCHER_DEST" = "$HOME/Applications" ]; then
+      log_info "Note: /Applications is read-only on this Mac, so we"
+      log_info "installed to ~/Applications instead. Spotlight, LaunchPad,"
+      log_info "and Finder will all find it there."
+    fi
+    ;;
   *) log_error "Vibe Code launcher install returned unexpected: $launcher_result" ;;
 esac

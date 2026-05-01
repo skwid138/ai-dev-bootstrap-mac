@@ -45,7 +45,7 @@ fi
 # re-reads state.sh at click-time, so this is mostly belt-and-suspenders.
 if [ -n "${BOOTSTRAP_LAUNCHER_ONLY:-}" ]; then
   build_script="${BOOTSTRAP_DIR}/launcher/build.sh"
-  dest_dir="$HOME/Applications"
+  dest_dir=$(launcher_resolve_dest)
   app_path="$dest_dir/Vibe Code.app"
 
   if [ -n "${BOOTSTRAP_DRY_RUN:-}" ]; then
@@ -65,6 +65,15 @@ if [ -n "${BOOTSTRAP_LAUNCHER_ONLY:-}" ]; then
   log_info "Launcher-only mode: rebuilding $app_path"
   if launcher_install "$build_script" "$dest_dir" >/dev/null; then
     log_installed "Vibe Code.app rebuilt at $app_path"
+    # Friendly heads-up if we landed in ~/Applications instead of the
+    # standard /Applications. This only happens on locked-down Macs;
+    # the message tells the user where to find it without requiring
+    # them to know about ~/Applications as a separate folder.
+    if [ "$dest_dir" = "$HOME/Applications" ]; then
+      log_info "Note: /Applications is read-only on this Mac, so we"
+      log_info "installed to ~/Applications instead. Spotlight, LaunchPad,"
+      log_info "and Finder will all find it there."
+    fi
     log_info "Open it from Spotlight, LaunchPad, or Finder."
     exit 0
   else
