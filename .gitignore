@@ -19,6 +19,7 @@ tmp/
 
 # Local working docs (not for shipping)
 ANALYSIS_AND_PLAN.md
+PLAN.md
 
 # Node (in case launcher/plugins land later)
 node_modules/
