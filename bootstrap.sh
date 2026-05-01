@@ -16,10 +16,11 @@ source "${BOOTSTRAP_DIR}/lib/state.sh"
 source "${BOOTSTRAP_DIR}/lib/brewfile.sh"
 source "${BOOTSTRAP_DIR}/lib/args.sh"
 source "${BOOTSTRAP_DIR}/lib/plan.sh"
+source "${BOOTSTRAP_DIR}/lib/launcher.sh"
 
 # ── Parse flags ───────────────────────────────────────────────────────
-# args_parse exports BOOTSTRAP_DRY_RUN and BOOTSTRAP_NONINTERACTIVE.
-# Returns 1 for --help, 2 for unknown flag.
+# args_parse exports BOOTSTRAP_DRY_RUN, BOOTSTRAP_NONINTERACTIVE, and
+# BOOTSTRAP_LAUNCHER_ONLY. Returns 1 for --help, 2 for unknown flag.
 if ! args_parse "$@"; then
   rc=$?
   args_print_help
@@ -27,6 +28,49 @@ if ! args_parse "$@"; then
     exit 0
   fi
   exit 2
+fi
+
+# ── Launcher-only fast path ───────────────────────────────────────────
+# Skip preflight, Phase 0, tier selection, workspace prompt, and all
+# modules. Just rebuild ~/Applications/Vibe Code.app and exit. Useful
+# when:
+#   * The user accidentally deleted their launcher and wants it back.
+#   * A dev is iterating on launcher/launch.sh and wants a fast rebuild
+#     without re-running everything.
+#   * Manually testing the .app bundle in isolation.
+#
+# Workspace resolution: read from existing state.sh if present (so the
+# rebuilt launcher points at the same workspace as the user's previous
+# bootstrap), else fall back to ~/code. The launcher script itself
+# re-reads state.sh at click-time, so this is mostly belt-and-suspenders.
+if [ -n "${BOOTSTRAP_LAUNCHER_ONLY:-}" ]; then
+  build_script="${BOOTSTRAP_DIR}/launcher/build.sh"
+  dest_dir="$HOME/Applications"
+  app_path="$dest_dir/Vibe Code.app"
+
+  if [ -n "${BOOTSTRAP_DRY_RUN:-}" ]; then
+    echo ""
+    echo "========================================"
+    echo "  📋 Dry-run plan (launcher only)"
+    echo "========================================"
+    echo ""
+    echo "  Would (re)build: $app_path"
+    echo "  From:            $build_script"
+    echo ""
+    echo "  Nothing has been changed yet. Run without --dry-run to rebuild."
+    echo ""
+    exit 0
+  fi
+
+  log_info "Launcher-only mode: rebuilding $app_path"
+  if launcher_install "$build_script" "$dest_dir" >/dev/null; then
+    log_installed "Vibe Code.app rebuilt at $app_path"
+    log_info "Open it from Spotlight, LaunchPad, or Finder."
+    exit 0
+  else
+    log_error "Launcher rebuild failed"
+    exit 1
+  fi
 fi
 
 # ── Pre-flight ────────────────────────────────────────────────────────

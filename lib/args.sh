@@ -1,16 +1,22 @@
 #!/bin/bash
 # Argument parsing for bootstrap.sh.
 #
-# Two flags supported:
+# Three flags supported:
 #   --dry-run         Print the install plan and exit. Side-effect-free:
 #                     no brew, no file writes, no module sourcing.
 #   --non-interactive Skip all prompts. Falls back to defaults
 #                     (--tier=recommended, workspace=~/code) with a loud
 #                     log line so the user knows what was assumed. Useful
 #                     for CI smoke tests and unattended re-runs.
-#
-# Both can be combined: `--dry-run --non-interactive` prints what a
-# non-interactive run *would* do.
+#   --launcher-only   Rebuild ~/Applications/Vibe Code.app and exit.
+#                     Skips preflight, Phase 0, tier selection, workspace
+#                     prompt, and all installer modules. Useful for
+#                     recovering from an accidentally-deleted launcher,
+#                     iterating on launcher/launch.sh during dev, or
+#                     manually testing the .app bundle without committing
+#                     to a full bootstrap run. Implies --non-interactive
+#                     (no prompts to ask). Composes with --dry-run
+#                     ("would rebuild ~/Applications/Vibe Code.app").
 #
 # Why a dedicated arg-parse module:
 #
@@ -34,11 +40,17 @@ Usage:
   ./bootstrap.sh                    Run the interactive installer
   ./bootstrap.sh --dry-run          Show the install plan and exit (safe)
   ./bootstrap.sh --non-interactive  Run with defaults, skip all prompts
+  ./bootstrap.sh --launcher-only    (Re)build ~/Applications/Vibe Code.app
+                                    and exit. Useful if the launcher was
+                                    deleted, or to test the .app bundle
+                                    without a full bootstrap run.
   ./bootstrap.sh --help             Show this help message
 
 Flags can be combined. Examples:
   ./bootstrap.sh --dry-run --non-interactive
       Show what an unattended run would do.
+  ./bootstrap.sh --launcher-only --dry-run
+      Show what a launcher rebuild would do, without actually rebuilding.
 
 Sets up a Mac for vibe-coding with OpenCode. Safe to run multiple times.
 https://github.com/skwid138/ai-dev-bootstrap-mac
@@ -49,6 +61,7 @@ EOF
 # Parse argv. Sets these env vars (exports for module visibility):
 #   BOOTSTRAP_DRY_RUN          ="1" if --dry-run was passed, else unset
 #   BOOTSTRAP_NONINTERACTIVE   ="1" if --non-interactive (or env) set
+#   BOOTSTRAP_LAUNCHER_ONLY    ="1" if --launcher-only was passed
 #
 # Honors AI_BOOTSTRAP_NONINTERACTIVE env as alias for --non-interactive
 # (preserves backward compat with the early workspace-prompt wiring).
@@ -81,6 +94,15 @@ args_parse() {
         export BOOTSTRAP_NONINTERACTIVE=1
         # Also set the legacy var so any code paths still checking it
         # see the same state.
+        export AI_BOOTSTRAP_NONINTERACTIVE=1
+        shift
+        ;;
+      --launcher-only)
+        export BOOTSTRAP_LAUNCHER_ONLY=1
+        # Implies non-interactive — there's nothing to prompt for in
+        # this mode. The launcher always reads workspace from the
+        # existing state.sh (or falls back to ~/code).
+        export BOOTSTRAP_NONINTERACTIVE=1
         export AI_BOOTSTRAP_NONINTERACTIVE=1
         shift
         ;;

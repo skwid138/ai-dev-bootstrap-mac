@@ -23,12 +23,14 @@ setup() {
   unset BOOTSTRAP_DRY_RUN
   unset BOOTSTRAP_NONINTERACTIVE
   unset AI_BOOTSTRAP_NONINTERACTIVE
+  unset BOOTSTRAP_LAUNCHER_ONLY
 }
 
 teardown() {
   unset BOOTSTRAP_DRY_RUN
   unset BOOTSTRAP_NONINTERACTIVE
   unset AI_BOOTSTRAP_NONINTERACTIVE
+  unset BOOTSTRAP_LAUNCHER_ONLY
 }
 
 @test "args_parse: no flags leaves all env vars unset" {
@@ -110,5 +112,37 @@ teardown() {
   [[ "$output" == *"AI Dev Bootstrap for Mac"* ]]
   [[ "$output" == *"--dry-run"* ]]
   [[ "$output" == *"--non-interactive"* ]]
+  [[ "$output" == *"--launcher-only"* ]]
   [[ "$output" == *"--help"* ]]
+}
+
+# ── --launcher-only ───────────────────────────────────────────────────────
+
+@test "args_parse: --launcher-only sets BOOTSTRAP_LAUNCHER_ONLY=1" {
+  args_parse --launcher-only
+  [ "$BOOTSTRAP_LAUNCHER_ONLY" = "1" ]
+}
+
+@test "args_parse: --launcher-only implies non-interactive" {
+  # No prompts in launcher-only mode — workspace is read from state.sh
+  # (or defaults), tier doesn't apply.
+  args_parse --launcher-only
+  [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+  [ "$AI_BOOTSTRAP_NONINTERACTIVE" = "1" ]
+}
+
+@test "args_parse: --launcher-only does NOT imply --dry-run" {
+  # Launcher-only actually rebuilds the .app — that's its whole point.
+  # Only --dry-run is fully side-effect-free.
+  args_parse --launcher-only
+  [ -z "${BOOTSTRAP_DRY_RUN:-}" ]
+}
+
+@test "args_parse: --launcher-only --dry-run composes (rebuild preview)" {
+  # The two together let users preview a launcher rebuild without
+  # actually doing it. Useful sanity check.
+  args_parse --launcher-only --dry-run
+  [ "$BOOTSTRAP_LAUNCHER_ONLY" = "1" ]
+  [ "$BOOTSTRAP_DRY_RUN" = "1" ]
+  [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
 }
