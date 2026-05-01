@@ -26,6 +26,7 @@ source "${BOOTSTRAP_DIR}/lib/checks.sh"
 source "${BOOTSTRAP_DIR}/config/packages.sh"
 source "${BOOTSTRAP_DIR}/config/tiers.sh"
 source "${BOOTSTRAP_DIR}/lib/common.sh"
+source "${BOOTSTRAP_DIR}/lib/workspace.sh"
 
 # ── Pre-flight ────────────────────────────────────────────────────────
 run_preflight
@@ -112,6 +113,58 @@ else
     SELECTED_PACKAGES+=("$pkg")
   done <<<"$(get_tier_packages "$SELECTED_TIER")"
 fi
+
+# ── Workspace anchor ─────────────────────────────────────────────────
+# Where the user keeps their code projects. Asked once, persisted to
+# ~/.config/ai-bootstrap/state.sh, referenced by aliases (cdc), the
+# .app launcher (Phase E), and any future module that needs it.
+echo ""
+ui_header "📁 Workspace"
+echo ""
+log_info "Pick a directory to keep your code projects in. We'll create it"
+log_info "if it doesn't exist, and the 'cdc' shortcut will jump there."
+echo ""
+
+WORKSPACE_DEFAULT=$(workspace_default_path)
+WORKSPACE_PATH=""
+
+while [ -z "$WORKSPACE_PATH" ]; do
+  if [ -n "${AI_BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+    user_input=""
+  else
+    user_input=$(ui_input "Workspace directory [$WORKSPACE_DEFAULT]:")
+  fi
+
+  if [ -z "$user_input" ]; then
+    candidate="$WORKSPACE_DEFAULT"
+  else
+    candidate=$(workspace_expand_path "$user_input")
+  fi
+
+  if workspace_validate_path "$candidate"; then
+    WORKSPACE_PATH="$candidate"
+  else
+    log_warn "Try again, or just press Enter to use $WORKSPACE_DEFAULT."
+    if [ -n "${AI_BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+      # In non-interactive mode there's no "try again" — fall back to default.
+      WORKSPACE_PATH="$WORKSPACE_DEFAULT"
+    fi
+  fi
+done
+
+if workspace_ensure_dir "$WORKSPACE_PATH"; then
+  log_installed "Workspace: $WORKSPACE_PATH"
+else
+  log_error "Failed to create workspace directory: $WORKSPACE_PATH"
+fi
+
+if workspace_write_state "$HOME/.config/ai-bootstrap/state.sh" "$WORKSPACE_PATH"; then
+  log_installed "Workspace path saved to ~/.config/ai-bootstrap/state.sh"
+else
+  log_error "Failed to write workspace state file"
+fi
+
+export AI_BOOTSTRAP_WORKSPACE="$WORKSPACE_PATH"
 
 # ── Run modules for selected packages ────────────────────────────────
 # Map package keys to module scripts.
