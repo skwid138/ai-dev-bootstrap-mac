@@ -1,0 +1,7 @@
+# GitHub linguist hints.
+#
+# By default, GitHub renders .zsh files as "Roff" or generic shell, which makes
+# diffs hard to read. Force bash highlighting for .zsh files — they're close
+# enough to bash that GitHub's bash highlighter does a good job, and it's far
+# better than the default.
+*.zsh linguist-language=Shell

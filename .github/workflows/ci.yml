@@ -8,27 +8,71 @@ on:
 
 jobs:
   shellcheck:
-    name: ShellCheck
+    name: ShellCheck (.sh files)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        env:
-          # Allow sourcing files dynamically (modules are sourced from bootstrap.sh)
-          # SC1091: not following sourced files (acceptable — they're checked individually)
-          # SC1090: can't follow non-constant source (modules sourced dynamically by design)
-          # SC2034: appears unused (zsh-plugin-consumed vars in dotfiles/)
-          # SC2155: declare and assign separately (style preference, not a bug)
-          SHELLCHECK_OPTS: -e SC1090 -e SC1091 -e SC2034 -e SC2155 -x
-        with:
-          scandir: '.'
-          # Skip generated/external content
-          ignore_paths: >-
-            tests/bats
-            tests/bats-assert
-            tests/bats-support
+      - name: Install shellcheck
+        run: |
+          # Retry + --fix-missing — apt on GHA ubuntu-latest flakes ~5% of runs
+          # at install time. Lifted from personal-plan rev. 6 Phase 4.7 (commit
+          # 9ed01d8). Without retry, transient mirror failures fail the whole job.
+          for attempt in 1 2 3; do
+            if sudo apt-get update \
+              && sudo apt-get install -y --fix-missing shellcheck; then
+              exit 0
+            fi
+            echo "apt attempt $attempt failed; sleeping 5s" >&2
+            sleep 5
+          done
+          exit 1
+
+      - name: Run shellcheck on .sh files
+        run: |
+          # SC1090: dynamic source by design (bootstrap.sh sources modules/*.sh by computed name).
+          # SC1091: don't follow sourced files individually — they're checked on their own.
+          # SC2034: dotfiles/zsh_*.sh used to define vars consumed by external zsh plugins.
+          #         The .sh files are gone post-Phase-1; SC2034 is now defensive — kept so
+          #         the lib/*.sh and modules/*.sh stays clean if a future helper does the same.
+          # SC2155: stylistic preference, not a bug class.
+          shellcheck -e SC1090 -e SC1091 -e SC2034 -e SC2155 -x \
+            bootstrap.sh lib/*.sh modules/*.sh config/*.sh
+
+  zsh-syntax:
+    name: zsh -n (.zsh files)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install zsh
+        run: |
+          # Retry + --fix-missing — same apt flakiness rationale as the shellcheck job.
+          for attempt in 1 2 3; do
+            if sudo apt-get update \
+              && sudo apt-get install -y --fix-missing zsh; then
+              exit 0
+            fi
+            echo "apt attempt $attempt failed; sleeping 5s" >&2
+            sleep 5
+          done
+          exit 1
+
+      - name: Parse-check every .zsh file
+        run: |
+          # zsh -n: parse-only, no execution. Catches syntax errors that shellcheck
+          # cannot lint (it dropped zsh support in v0.11.0). This is the dialect-aware
+          # gate for dotfiles/ after the three-tier refactor.
+          fail=0
+          while IFS= read -r f; do
+            if zsh -n "$f"; then
+              echo "OK:   $f"
+            else
+              echo "FAIL: $f" >&2
+              fail=1
+            fi
+          done < <(find dotfiles -type f -name '*.zsh')
+          exit $fail
 
   bats:
     name: Bats Tests
@@ -73,5 +117,8 @@ jobs:
           sudo mv /tmp/shfmt /usr/local/bin/shfmt
           shfmt --version
 
-      - name: Check formatting
-        run: shfmt -d -i 2 -ci -bn bootstrap.sh lib/ modules/ config/ dotfiles/
+      - name: Check formatting (.sh files)
+        run: shfmt -d -i 2 -ci -bn bootstrap.sh lib/ modules/ config/
+
+      - name: Check formatting (dotfiles/, dialect auto-detected from .zsh extension)
+        run: shfmt -d -i 2 -ci -bn dotfiles/
