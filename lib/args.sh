@@ -1,7 +1,7 @@
 #!/bin/bash
 # Argument parsing for bootstrap.sh.
 #
-# Three flags supported:
+# Five flags supported:
 #   --dry-run         Print the install plan and exit. Side-effect-free:
 #                     no brew, no file writes, no module sourcing.
 #   --non-interactive Skip all prompts. Falls back to defaults
@@ -17,6 +17,20 @@
 #                     to a full bootstrap run. Implies --non-interactive
 #                     (no prompts to ask). Composes with --dry-run
 #                     ("would rebuild ~/Applications/Vibe Code.app").
+#   --check-paths     Read-only staleness check on the baked Homebrew
+#                     prefix in ~/.config/ai-bootstrap/shell/env/paths.zsh.
+#                     Exits 0 (fresh) / 1 (stale) / 2 (error). Designed
+#                     to be agent-pollable: the opencode agent on the
+#                     user's machine runs this when it sees `command not
+#                     found`, then runs --refresh-paths if exit code is 1.
+#                     See plan §3.8 (rev-7).
+#   --refresh-paths   Re-run modules/10-shell-config.sh only with a
+#                     re-baked Homebrew prefix. Skips all other modules.
+#                     ~1–2 seconds. Idempotent. Implies --non-interactive.
+#                     Errors if state.sh is missing (no first install yet)
+#                     or if AI_BOOTSTRAP_TIER='custom' (we can't
+#                     reconstruct the custom package list from state.sh
+#                     alone — re-run full bootstrap instead).
 #
 # Why a dedicated arg-parse module:
 #
@@ -44,6 +58,16 @@ Usage:
                                     and exit. Useful if the launcher was
                                     deleted, or to test the .app bundle
                                     without a full bootstrap run.
+  ./bootstrap.sh --check-paths      Check whether the Homebrew prefix baked
+                                    into your shell config is still current.
+                                    Read-only. Exits 0 (fresh), 1 (stale),
+                                    or 2 (error). Useful when a CLI tool
+                                    suddenly stops working after a brew or
+                                    macOS upgrade.
+  ./bootstrap.sh --refresh-paths    Re-bake the Homebrew prefix into your
+                                    shell config (re-runs the shell-config
+                                    module only). ~1-2 seconds. Run after
+                                    --check-paths reports stale.
   ./bootstrap.sh --help             Show this help message
 
 Flags can be combined. Examples:
@@ -51,6 +75,8 @@ Flags can be combined. Examples:
       Show what an unattended run would do.
   ./bootstrap.sh --launcher-only --dry-run
       Show what a launcher rebuild would do, without actually rebuilding.
+  ./bootstrap.sh --refresh-paths --dry-run
+      Show what a paths-refresh would do, without actually rewriting.
 
 Sets up a Mac for vibe-coding with OpenCode. Safe to run multiple times.
 https://github.com/skwid138/ai-dev-bootstrap-mac
@@ -62,6 +88,8 @@ EOF
 #   BOOTSTRAP_DRY_RUN          ="1" if --dry-run was passed, else unset
 #   BOOTSTRAP_NONINTERACTIVE   ="1" if --non-interactive (or env) set
 #   BOOTSTRAP_LAUNCHER_ONLY    ="1" if --launcher-only was passed
+#   BOOTSTRAP_CHECK_PATHS      ="1" if --check-paths was passed
+#   BOOTSTRAP_REFRESH_PATHS    ="1" if --refresh-paths was passed
 #
 # Honors AI_BOOTSTRAP_NONINTERACTIVE env as alias for --non-interactive
 # (preserves backward compat with the early workspace-prompt wiring).
@@ -102,6 +130,21 @@ args_parse() {
         # Implies non-interactive — there's nothing to prompt for in
         # this mode. The launcher always reads workspace from the
         # existing state.sh (or falls back to ~/code).
+        export BOOTSTRAP_NONINTERACTIVE=1
+        export AI_BOOTSTRAP_NONINTERACTIVE=1
+        shift
+        ;;
+      --check-paths)
+        export BOOTSTRAP_CHECK_PATHS=1
+        # Implies non-interactive — read-only check; nothing to prompt.
+        export BOOTSTRAP_NONINTERACTIVE=1
+        export AI_BOOTSTRAP_NONINTERACTIVE=1
+        shift
+        ;;
+      --refresh-paths)
+        export BOOTSTRAP_REFRESH_PATHS=1
+        # Implies non-interactive — refresh re-runs module 10 with the
+        # tier already persisted in state.sh; nothing to prompt for.
         export BOOTSTRAP_NONINTERACTIVE=1
         export AI_BOOTSTRAP_NONINTERACTIVE=1
         shift

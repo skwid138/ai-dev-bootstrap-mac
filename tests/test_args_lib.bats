@@ -24,6 +24,8 @@ setup() {
   unset BOOTSTRAP_NONINTERACTIVE
   unset AI_BOOTSTRAP_NONINTERACTIVE
   unset BOOTSTRAP_LAUNCHER_ONLY
+  unset BOOTSTRAP_CHECK_PATHS
+  unset BOOTSTRAP_REFRESH_PATHS
 }
 
 teardown() {
@@ -31,6 +33,8 @@ teardown() {
   unset BOOTSTRAP_NONINTERACTIVE
   unset AI_BOOTSTRAP_NONINTERACTIVE
   unset BOOTSTRAP_LAUNCHER_ONLY
+  unset BOOTSTRAP_CHECK_PATHS
+  unset BOOTSTRAP_REFRESH_PATHS
 }
 
 @test "args_parse: no flags leaves all env vars unset" {
@@ -113,6 +117,8 @@ teardown() {
   [[ "$output" == *"--dry-run"* ]]
   [[ "$output" == *"--non-interactive"* ]]
   [[ "$output" == *"--launcher-only"* ]]
+  [[ "$output" == *"--check-paths"* ]]
+  [[ "$output" == *"--refresh-paths"* ]]
   [[ "$output" == *"--help"* ]]
 }
 
@@ -143,6 +149,61 @@ teardown() {
   # actually doing it. Useful sanity check.
   args_parse --launcher-only --dry-run
   [ "$BOOTSTRAP_LAUNCHER_ONLY" = "1" ]
+  [ "$BOOTSTRAP_DRY_RUN" = "1" ]
+  [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+}
+
+# ── --check-paths (Phase 4.5) ─────────────────────────────────────────────
+
+@test "args_parse: --check-paths sets BOOTSTRAP_CHECK_PATHS=1" {
+  args_parse --check-paths
+  [ "$BOOTSTRAP_CHECK_PATHS" = "1" ]
+}
+
+@test "args_parse: --check-paths implies non-interactive" {
+  # Read-only check; nothing to prompt for.
+  args_parse --check-paths
+  [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+  [ "$AI_BOOTSTRAP_NONINTERACTIVE" = "1" ]
+}
+
+@test "args_parse: --check-paths does NOT imply --dry-run" {
+  # The check is already side-effect-free — --dry-run is a no-op
+  # but we don't auto-set it.
+  args_parse --check-paths
+  [ -z "${BOOTSTRAP_DRY_RUN:-}" ]
+}
+
+@test "args_parse: --check-paths --dry-run composes (no-op but allowed)" {
+  # An agent that always passes --dry-run for safety should not error.
+  args_parse --check-paths --dry-run
+  [ "$BOOTSTRAP_CHECK_PATHS" = "1" ]
+  [ "$BOOTSTRAP_DRY_RUN" = "1" ]
+  [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+}
+
+# ── --refresh-paths (Phase 4.5) ───────────────────────────────────────────
+
+@test "args_parse: --refresh-paths sets BOOTSTRAP_REFRESH_PATHS=1" {
+  args_parse --refresh-paths
+  [ "$BOOTSTRAP_REFRESH_PATHS" = "1" ]
+}
+
+@test "args_parse: --refresh-paths implies non-interactive" {
+  args_parse --refresh-paths
+  [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+  [ "$AI_BOOTSTRAP_NONINTERACTIVE" = "1" ]
+}
+
+@test "args_parse: --refresh-paths does NOT imply --dry-run" {
+  # Refresh actually rewrites files — that's its whole point.
+  args_parse --refresh-paths
+  [ -z "${BOOTSTRAP_DRY_RUN:-}" ]
+}
+
+@test "args_parse: --refresh-paths --dry-run composes (refresh preview)" {
+  args_parse --refresh-paths --dry-run
+  [ "$BOOTSTRAP_REFRESH_PATHS" = "1" ]
   [ "$BOOTSTRAP_DRY_RUN" = "1" ]
   [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
 }

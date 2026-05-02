@@ -17,6 +17,7 @@ source "${BOOTSTRAP_DIR}/lib/brewfile.sh"
 source "${BOOTSTRAP_DIR}/lib/args.sh"
 source "${BOOTSTRAP_DIR}/lib/plan.sh"
 source "${BOOTSTRAP_DIR}/lib/launcher.sh"
+source "${BOOTSTRAP_DIR}/lib/paths_check.sh"
 
 # ── Parse flags ───────────────────────────────────────────────────────
 # args_parse exports BOOTSTRAP_DRY_RUN, BOOTSTRAP_NONINTERACTIVE, and
@@ -78,6 +79,102 @@ if [ -n "${BOOTSTRAP_LAUNCHER_ONLY:-}" ]; then
     exit 0
   else
     log_error "Launcher rebuild failed"
+    exit 1
+  fi
+fi
+
+# ── Check-paths fast path ─────────────────────────────────────────────
+# Read-only staleness check on the baked Homebrew prefix. Designed to be
+# agent-pollable: prints a single status line on stdout (`fresh` /
+# `stale: ...` / `error: ...`), exits 0/1/2. See plan §3.8 (rev-7) and
+# lib/paths_check.sh for the full contract.
+#
+# Composes with --dry-run: a check is already side-effect-free, so the
+# dry-run flag is a no-op here. We honor it (no output difference) so
+# `--check-paths --dry-run` doesn't surprise an agent that always passes
+# --dry-run for safety.
+if [ -n "${BOOTSTRAP_CHECK_PATHS:-}" ]; then
+  paths_check_run
+  exit $?
+fi
+
+# ── Refresh-paths fast path ───────────────────────────────────────────
+# Re-runs modules/10-shell-config.sh only with a freshly-resolved
+# Homebrew prefix. Skips all other modules. ~1-2 seconds. The module is
+# idempotent — re-emitting already-baked content is a no-op.
+#
+# Tier and workspace come from the persisted state.sh. If state.sh
+# doesn't exist, we error out: refresh has no meaning before a first
+# install, and trying to invent defaults would silently rewrite the
+# user's shell config based on assumptions.
+#
+# Custom-tier users get a clean error: state.sh records
+# AI_BOOTSTRAP_TIER='custom' but does NOT persist the per-package
+# selections. Reconstructing SELECTED_PACKAGES would require either
+# re-prompting (defeats --non-interactive) or treating "custom" as
+# "all packages" (would silently install conditional sub-files the user
+# explicitly opted out of). Better to refuse and tell them to re-run
+# the full installer.
+#
+# Composes with --dry-run: prints what the module would do without
+# actually re-running it.
+if [ -n "${BOOTSTRAP_REFRESH_PATHS:-}" ]; then
+  state_path="$HOME/.config/ai-bootstrap/state.sh"
+
+  if [ ! -f "$state_path" ]; then
+    log_error "No state.sh found at $state_path"
+    log_error "Run the full bootstrap first; --refresh-paths only works after a previous install."
+    exit 1
+  fi
+
+  # Read tier from state.sh.
+  if ! REFRESH_TIER=$(state_read_field "$state_path" "AI_BOOTSTRAP_TIER"); then
+    log_error "Could not read AI_BOOTSTRAP_TIER from $state_path"
+    log_error "state.sh may be corrupted. Re-run the full bootstrap to repair."
+    exit 1
+  fi
+
+  if [ "$REFRESH_TIER" = "custom" ]; then
+    log_error "--refresh-paths does not support custom-tier installs."
+    log_error "state.sh persists the tier name but not the package list, so we"
+    log_error "cannot reconstruct your selection. Re-run ./bootstrap.sh to refresh."
+    exit 1
+  fi
+
+  # Reconstruct SELECTED_PACKAGES from tier.
+  SELECTED_PACKAGES=()
+  while IFS= read -r pkg; do
+    [ -z "$pkg" ] && continue
+    SELECTED_PACKAGES+=("$pkg")
+  done <<<"$(get_tier_packages "$REFRESH_TIER")"
+  export SELECTED_PACKAGES
+
+  if [ -n "${BOOTSTRAP_DRY_RUN:-}" ]; then
+    echo ""
+    echo "========================================"
+    echo "  📋 Dry-run plan (refresh paths)"
+    echo "========================================"
+    echo ""
+    echo "  Would re-run: modules/10-shell-config.sh"
+    echo "  Tier:         $REFRESH_TIER"
+    echo "  This would re-resolve \`brew --prefix\` and re-bake it into"
+    echo "  ~/.config/ai-bootstrap/shell/env/paths.zsh, then re-emit the"
+    echo "  three-tier source lines into ~/.zshenv, ~/.zprofile, ~/.zshrc"
+    echo "  (idempotent — duplicates are filtered)."
+    echo ""
+    echo "  Nothing has been changed yet. Run without --dry-run to refresh."
+    echo ""
+    exit 0
+  fi
+
+  log_info "Refreshing baked Homebrew prefix (tier: $REFRESH_TIER)..."
+  if [ -f "${BOOTSTRAP_DIR}/modules/10-shell-config.sh" ]; then
+    # shellcheck source=modules/10-shell-config.sh
+    source "${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
+    log_installed "Shell config refreshed. Open a new terminal or run: source ~/.zshenv ~/.zprofile ~/.zshrc"
+    exit 0
+  else
+    log_error "modules/10-shell-config.sh not found at ${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
     exit 1
   fi
 fi
