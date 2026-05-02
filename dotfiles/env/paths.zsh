@@ -13,6 +13,9 @@
 #   with the resolved `brew --prefix` value (e.g. /opt/homebrew on Apple Silicon,
 #   /usr/local on Intel) when the file is copied to the install dir.
 
-# Homebrew bin: promote to front of PATH (handles path_helper demotion).
-_path_prepend "__BREW_PREFIX__/bin"
+# Homebrew bin/sbin: promote to front of PATH (handles path_helper demotion).
+# Order matters: the LAST _path_prepend call ends up at the very front, so we
+# prepend sbin first and bin second — bin is the more frequently used dir and
+# should be #1 in PATH.
 _path_prepend "__BREW_PREFIX__/sbin"
+_path_prepend "__BREW_PREFIX__/bin"

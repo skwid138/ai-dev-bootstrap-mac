@@ -6,9 +6,9 @@
 #   - MUST be silent on stdout AND stderr.
 #   - MUST be nounset-safe (callable from set -u contexts).
 #   - MUST NOT depend on tools beyond zsh builtins.
-
-[[ -n "${_AI_BOOTSTRAP_PATH_HELPERS_LOADED:-}" ]] && return
-_AI_BOOTSTRAP_PATH_HELPERS_LOADED=1
+#   - Re-sourcing MUST be safe and a no-op for observable behavior; the function
+#     is always (re)defined so init_profile.zsh can re-source the env-tier
+#     barrel for path_helper recovery without losing _path_prepend.
 
 # _path_prepend <dir>
 #
@@ -50,3 +50,8 @@ _path_prepend() {
   # Absent: prepend.
   export PATH="${dir}:${PATH:-}"
 }
+
+# Sentinel set AFTER function definition so re-source always (re)defines
+# _path_prepend. The sentinel exists as a load marker for diagnostics, not
+# as a guard — re-sourcing is intentionally idempotent and cheap.
+_AI_BOOTSTRAP_PATH_HELPERS_LOADED=1

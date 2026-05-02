@@ -50,6 +50,42 @@ teardown() {
   [ "$output" -eq 1 ]
 }
 
+@test "append_line_if_missing creates target file when absent (no pre-touch needed by callers)" {
+  # Phase 4 module wiring depends on this contract: the module appends source
+  # lines to ~/.zshenv / ~/.zprofile / ~/.zshrc without any pre-touch step.
+  # If a user's home is a fresh macOS account with no zsh dotfiles yet,
+  # append_line_if_missing must create the file rather than failing.
+  target_file="${TMP_DIR}/brand_new/.zshenv"
+  line="source ~/.config/ai-bootstrap/shell/init_env.zsh"
+
+  # Precondition: parent dir does NOT exist; file does NOT exist.
+  [ ! -e "$target_file" ]
+  [ ! -d "${TMP_DIR}/brand_new" ]
+
+  run append_line_if_missing "$line" "$target_file"
+  [ "$status" -eq 0 ]
+
+  # File must now exist with exactly the line in it.
+  [ -f "$target_file" ]
+  run sh -c "grep -c '^${line}$' \"$target_file\""
+  [ "$output" -eq 1 ]
+}
+
+@test "append_line_if_missing is idempotent across many invocations on a freshly-created file" {
+  target_file="${TMP_DIR}/fresh/.zshrc"
+  line="source ~/.config/ai-bootstrap/shell/init_rc.zsh"
+
+  run append_line_if_missing "$line" "$target_file"
+  [ "$status" -eq 0 ]
+  run append_line_if_missing "$line" "$target_file"
+  [ "$status" -eq 0 ]
+  run append_line_if_missing "$line" "$target_file"
+  [ "$status" -eq 0 ]
+
+  run sh -c "grep -c '^${line}$' \"$target_file\""
+  [ "$output" -eq 1 ]
+}
+
 @test "result tracking arrays start empty" {
   [ "${#RESULTS_INSTALLED[@]}" -eq 0 ]
   [ "${#RESULTS_SKIPPED[@]}" -eq 0 ]
