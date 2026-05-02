@@ -76,7 +76,6 @@ run_module_with_all_selected() {
 # ── Directory tree creation ──────────────────────────────────────────────────
 
 @test "module creates ~/.config/ai-bootstrap/shell with env/lib/profile/rc subdirs" {
-  skip "Phase 4: requires three-tier module rewrite (zsh_init_plan.md §4.1)"
 
   run_module_with_all_selected
 
@@ -90,7 +89,6 @@ run_module_with_all_selected() {
 # ── Barrel + tier file copy ──────────────────────────────────────────────────
 
 @test "module copies all three barrels to install dir" {
-  skip "Phase 4: requires three-tier module rewrite"
 
   run_module_with_all_selected
 
@@ -100,7 +98,6 @@ run_module_with_all_selected() {
 }
 
 @test "module copies env-tier files (vars.zsh, paths.zsh) and path_helpers.zsh" {
-  skip "Phase 4: requires three-tier module rewrite"
 
   run_module_with_all_selected
 
@@ -110,7 +107,6 @@ run_module_with_all_selected() {
 }
 
 @test "module copies rc-tier files (zsh_config.zsh, aliases.zsh) unconditionally" {
-  skip "Phase 4: requires three-tier module rewrite"
 
   run_module_with_all_selected
 
@@ -119,7 +115,6 @@ run_module_with_all_selected() {
 }
 
 @test "module copies rc/zsh_plugins.zsh ONLY when zplug is selected" {
-  skip "Phase 4: requires three-tier module rewrite + tier-coupling logic"
 
   bash -c "
     set -e
@@ -133,7 +128,6 @@ run_module_with_all_selected() {
 }
 
 @test "module copies profile/tool_hooks.zsh ONLY when mise is selected" {
-  skip "Phase 4: requires three-tier module rewrite + tier-coupling logic"
 
   bash -c "
     set -e
@@ -147,7 +141,6 @@ run_module_with_all_selected() {
 }
 
 @test "module copies rc/tool_hooks.zsh when mise OR direnv selected (rc-tier hooks)" {
-  skip "Phase 4: requires three-tier module rewrite + tier-coupling logic"
 
   bash -c "
     set -e
@@ -163,7 +156,6 @@ run_module_with_all_selected() {
 # ── __BREW_PREFIX__ substitution ─────────────────────────────────────────────
 
 @test "module substitutes __BREW_PREFIX__ in env/paths.zsh with brew --prefix output" {
-  skip "Phase 4: requires three-tier module rewrite + brew substitution"
 
   run_module_with_all_selected
 
@@ -175,13 +167,13 @@ run_module_with_all_selected() {
 }
 
 @test "module fails fast with clear error when brew --prefix unavailable" {
-  skip "Phase 4: requires three-tier module rewrite + brew presence check"
 
-  # Remove brew from PATH.
-  export PATH="${PATH//${MOCKS_DIR}:/}"
-
+  # Hermetic PATH: only the standard system dirs, no Homebrew, no MOCKS_DIR.
+  # The dev machine's outer PATH includes /opt/homebrew/bin, so simply
+  # removing MOCKS_DIR is insufficient — we need a known-no-brew PATH.
   run bash -c "
     set -e
+    PATH='/usr/bin:/bin:/usr/sbin:/sbin'
     BOOTSTRAP_DIR='$REPO_ROOT'
     SELECTED_PACKAGES=(zsh)
     source '$REPO_ROOT/lib/common.sh'
@@ -195,7 +187,6 @@ run_module_with_all_selected() {
 # ── Source-line wiring in user dotfiles ──────────────────────────────────────
 
 @test "module appends source line for init_env.zsh to ~/.zshenv" {
-  skip "Phase 4: requires three-tier module rewrite + dotfile wiring"
 
   run_module_with_all_selected
 
@@ -204,7 +195,6 @@ run_module_with_all_selected() {
 }
 
 @test "module appends source line for init_profile.zsh to ~/.zprofile" {
-  skip "Phase 4: requires three-tier module rewrite + dotfile wiring"
 
   run_module_with_all_selected
 
@@ -213,7 +203,6 @@ run_module_with_all_selected() {
 }
 
 @test "module appends source line for init_rc.zsh to ~/.zshrc" {
-  skip "Phase 4: requires three-tier module rewrite + dotfile wiring"
 
   run_module_with_all_selected
 
@@ -222,7 +211,6 @@ run_module_with_all_selected() {
 }
 
 @test "module emits a tier-tagged comment alongside each source line" {
-  skip "Phase 4: requires three-tier module rewrite + dotfile wiring"
 
   run_module_with_all_selected
 
@@ -236,7 +224,6 @@ run_module_with_all_selected() {
 # ── Idempotency ──────────────────────────────────────────────────────────────
 
 @test "module is idempotent: running twice does not duplicate source lines" {
-  skip "Phase 4: requires three-tier module rewrite + idempotent append"
 
   run_module_with_all_selected
   run_module_with_all_selected
@@ -248,7 +235,6 @@ run_module_with_all_selected() {
 }
 
 @test "module is idempotent: re-running does not corrupt env/paths.zsh substitution" {
-  skip "Phase 4: requires three-tier module rewrite + idempotent install"
 
   run_module_with_all_selected
   run_module_with_all_selected
@@ -259,7 +245,6 @@ run_module_with_all_selected() {
 }
 
 @test "module preserves existing user content in ~/.zshenv when appending" {
-  skip "Phase 4: requires three-tier module rewrite + non-destructive append"
 
   printf '# user content\nexport USER_VAR=foo\n' >"$HOME/.zshenv"
 
@@ -272,7 +257,6 @@ run_module_with_all_selected() {
 # ── Unconditional execution (§5.1 fix) ───────────────────────────────────────
 
 @test "module runs unconditionally — not gated on zplug-tier package selection" {
-  skip "Phase 4: requires bootstrap.sh:283 ungate + module unconditional"
 
   # Even with NO packages selected, the module must install the three-tier
   # baseline (per §5.1: 'shell config is foundational, not optional').
@@ -292,7 +276,6 @@ run_module_with_all_selected() {
 # ── Stale-layout detection (§5.3) ────────────────────────────────────────────
 
 @test "module warns when stale legacy ~/.config/ai-bootstrap/shell/init.sh exists" {
-  skip "Phase 4: requires staleness detection per zsh_init_plan.md §5.3"
 
   # Pre-seed the stale layout: old single-file init.sh from the pre-Phase-4
   # module.
@@ -308,7 +291,6 @@ run_module_with_all_selected() {
 }
 
 @test "module warns when ~/.zshrc still sources legacy init.sh path" {
-  skip "Phase 4: requires staleness detection per zsh_init_plan.md §5.3"
 
   # Pre-seed an old-style source line in ~/.zshrc.
   printf '# legacy line\nsource ~/.config/ai-bootstrap/shell/init.sh\n' >"$HOME/.zshrc"
@@ -320,7 +302,6 @@ run_module_with_all_selected() {
 }
 
 @test "module does NOT auto-delete stale files (warn-only per §5.3)" {
-  skip "Phase 4: requires staleness detection per zsh_init_plan.md §5.3"
 
   mkdir -p "$HOME/.config/ai-bootstrap/shell"
   echo '# stale' >"$HOME/.config/ai-bootstrap/shell/init.sh"

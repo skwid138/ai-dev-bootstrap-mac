@@ -280,7 +280,10 @@ run_module_if_selected "06-runtime.sh" "mise" "node_lts"
 run_module_if_selected "07-python.sh" "uv" "python"
 run_module_if_selected "08-cli-tools.sh" "ripgrep" "jq" "fd" "direnv" "tmux" "btop"
 run_module_if_selected "09-opencode.sh" "opencode"
-run_module_if_selected "10-shell-config.sh" "zplug" "spaceship" "zsh_syntax" "zsh_autosuggestions"
+# 10-shell-config.sh runs UNCONDITIONALLY (per zsh_init_plan.md §5.1 / rev-3 C1):
+# previously gated on zplug-tier packages, which left Essential-tier users
+# without working PATH config. Per-tool conditionals now live inside the module.
+source "${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
 run_module_if_selected "11-local-ai.sh" "ollama" "lm_studio"
 run_module_if_selected "12-containers.sh" "orbstack"
 run_module_if_selected "13-extras.sh" "playwright" "shfmt" "ffmpeg" "imagemagick"

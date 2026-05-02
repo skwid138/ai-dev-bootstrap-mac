@@ -116,6 +116,15 @@ plan_render() {
   echo "    ~/.config/ai-bootstrap/state.sh    (workspace + tier + version + run timestamps)"
   echo "    ~/.config/ai-bootstrap/Brewfile    (full brew snapshot for reproducibility)"
 
+  # Three-tier shell init dotfiles install for ALL tiers (per zsh_init_plan.md
+  # §5.1: shell config is foundational, not optional). Conditional sub-files
+  # (zsh_plugins, tool_hooks) are mentioned only when their gating package is
+  # selected.
+  echo "    ~/.zshenv                          (# ai-bootstrap source line for env-tier)"
+  echo "    ~/.zprofile                        (# ai-bootstrap source line for profile-tier)"
+  echo "    ~/.zshrc                           (# ai-bootstrap source line for rc-tier)"
+  echo "    ~/.config/ai-bootstrap/shell/      (three-tier init: env/, lib/, profile/, rc/)"
+
   # Conditional file writes — these only happen if the relevant package
   # is selected. Check presence in selected_keys.
   if plan_has_key "ghostty" "${selected_keys[@]}"; then
@@ -130,8 +139,13 @@ plan_render() {
     echo "    ~/.gitconfig                       (git user.name + user.email if unset)"
   fi
   if plan_has_key "zplug" "${selected_keys[@]}"; then
-    echo "    ~/.zshrc                           (zplug, prompt, aliases sourcing)"
-    echo "    ~/.config/ai-bootstrap/shell/      (aliases.sh including 'cdc')"
+    echo "    ~/.config/ai-bootstrap/shell/rc/zsh_plugins.zsh  (zplug + Spaceship prompt)"
+  fi
+  if plan_has_key "mise" "${selected_keys[@]}"; then
+    echo "    ~/.config/ai-bootstrap/shell/profile/tool_hooks.zsh  (mise activate)"
+  fi
+  if plan_has_key "mise" "${selected_keys[@]}" || plan_has_key "direnv" "${selected_keys[@]}"; then
+    echo "    ~/.config/ai-bootstrap/shell/rc/tool_hooks.zsh       (mise/direnv interactive hooks)"
   fi
 
   echo ""
