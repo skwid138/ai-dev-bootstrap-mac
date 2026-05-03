@@ -11,7 +11,7 @@ jobs:
     name: ShellCheck (.sh files)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install shellcheck
         run: |
@@ -43,7 +43,7 @@ jobs:
     name: zsh -n (.zsh files)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install zsh
         run: |
@@ -78,7 +78,7 @@ jobs:
     name: Bats Tests
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install bats-core
         run: brew install bats-core
@@ -90,7 +90,7 @@ jobs:
     name: shfmt (formatting check)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install shfmt
         run: |
