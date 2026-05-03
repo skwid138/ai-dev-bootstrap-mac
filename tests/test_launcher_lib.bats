@@ -169,13 +169,18 @@ _run_launch() {
 
   run _run_launch
   [ "$status" -eq 0 ]
-  # opencode is now resolved to its absolute path before being passed to
-  # ghostty (login shell PATH gotcha — see launch.sh comments). The mock
-  # lives at $SANDBOX/opencode, so that's what we expect in the argv.
-  grep -q "open -na Ghostty.app --args --working-directory=$SANDBOX/workspace -e $SANDBOX/opencode" "$MOCK_LOG"
+  # Phase 6 (Option A): launcher passes `--command=zsh -l -i -c <opencode>`
+  # via `--args` instead of `-e <opencode>`. The `-e` form was delivered
+  # twice by Ghostty (applicationDidFinishLaunching + LaunchServices open
+  # delegate), producing two tabs and a security prompt. The mock opencode
+  # lives at $SANDBOX/opencode.
+  grep -q "open -na Ghostty.app --args --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
+  # Belt-and-suspenders: explicitly assert the legacy -e form is not used.
+  saved="$(cat "$MOCK_LOG")"
+  [[ "$saved" != *" -e $SANDBOX/opencode"* ]]
 }
 
-@test "launch.sh: VIBE_CODE_LAUNCH_OPENCODE=0 omits the -e opencode arg" {
+@test "launch.sh: VIBE_CODE_LAUNCH_OPENCODE=0 omits the --command opencode arg" {
   _mock_open
   _mock_osascript present
   _mock_opencode
@@ -184,11 +189,10 @@ _run_launch() {
 
   run _run_launch VIBE_CODE_LAUNCH_OPENCODE=0
   [ "$status" -eq 0 ]
-  # opencode binary path must not appear in the open invocation. Since
-  # `-e ` substring matches benign log content, narrow check: assert
-  # the mock opencode path is absent from open args.
+  # Neither the opencode binary path nor the --command= arg should appear.
   saved="$(cat "$MOCK_LOG")"
   [[ "$saved" != *"$SANDBOX/opencode"* ]]
+  [[ "$saved" != *"--command="* ]]
   grep -q "open -na Ghostty.app --args --working-directory=$SANDBOX/workspace" "$MOCK_LOG"
 }
 
@@ -288,7 +292,7 @@ EOF
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
   [ "$status" -eq 0 ]
-  grep -q "\-e $SANDBOX/b/opencode" "$MOCK_LOG"
+  grep -q "\-\-command=zsh -l -i -c $SANDBOX/b/opencode" "$MOCK_LOG"
 }
 
 @test "launch.sh: falls back to PATH when no candidate path matches" {
@@ -313,7 +317,7 @@ EOF
     "PATH=$SANDBOX/custom:/usr/bin:/bin" \
     bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
   [ "$status" -eq 0 ]
-  grep -q "\-e $SANDBOX/custom/opencode" "$MOCK_LOG"
+  grep -q "\-\-command=zsh -l -i -c $SANDBOX/custom/opencode" "$MOCK_LOG"
 }
 
 # ── launcher_resolve_dest ──────────────────────────────────────────────────

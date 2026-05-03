@@ -7,21 +7,39 @@
 # build time. macOS launches it directly when the user opens the .app — no
 # AppleScript shim involved. Kept tiny so a curious user can read it.
 #
-# PATH resolution gotcha:
+# Why we use --command=, not -e:
 #
-#   When Ghostty is invoked via `open -na Ghostty.app -e <cmd>`, Ghostty
-#   spawns the command through `/usr/bin/login -flp <user> <cmd>`. That's
-#   a LOGIN shell (sources /etc/zprofile, ~/.zprofile, ~/.zshenv) but NOT
-#   an interactive shell — so ~/.zshrc never runs. Homebrew's shellenv is
-#   commonly added to ~/.zshrc rather than ~/.zprofile, so a bare
-#   `opencode` command fails with "No such file or directory" even though
-#   it works fine in the user's terminal.
+#   The original launcher passed `-e <opencode_bin>` to Ghostty via
+#   `open -na Ghostty.app --args -e <bin>`. That arg is delivered through
+#   TWO separate code paths inside Ghostty: once during
+#   applicationDidFinishLaunching, and once via the LaunchServices
+#   "open URLs/files" delegate. Both fire, both spawn a tab, both run the
+#   command — producing two tabs and an "Allow Ghostty to execute …"
+#   security prompt on every launch (Ghostty's own application-level
+#   prompt, GHSA-q9fg-cpmh-c78x).
 #
-#   Two ways to fix: (1) force `zsh -lic 'opencode'` so ~/.zshrc runs, or
-#   (2) resolve opencode's absolute path before invoking Ghostty. We use
-#   (2) — fewer moving parts, doesn't depend on the user's shell config
-#   being sane, and the path resolution is the same logic any shell init
-#   would do.
+#   Phase 5 verification (zsh_init_plan.md §A.1) confirmed that
+#   `--command=zsh -l -i -c <opencode_bin>` produces the desired UX:
+#   single tab, no security prompt, full login-shell PATH inside the tab.
+#   That's the form we use here. Decision matrix at §8 line 868
+#   selected this as Option A.
+#
+# PATH resolution belt-and-suspenders:
+#
+#   The three-tier shell init shipped by this bootstrap (env/profile/rc)
+#   guarantees /opt/homebrew/bin is on PATH for any login shell, so
+#   `--command=zsh -l -i -c opencode` (bare name) would also work after
+#   a successful install. We pass the absolute path anyway because:
+#     (1) It works on machines that didn't run this bootstrap (custom
+#         dotfiles, partial installs).
+#     (2) It side-steps any path_helper / login-shell PATH ordering
+#         surprises in `/etc/zprofile`.
+#     (3) `resolve_opencode` already does the lookup; reusing its output
+#         is free.
+#   The `zsh -l -i -c` wrapper still earns its keep: it ensures the
+#   shell that hosts opencode has a fully-initialized environment
+#   (aliases, functions, $LANG, mise shims, etc.) so opencode's tool
+#   calls inherit a sane PATH and locale.
 
 set -u
 
@@ -91,7 +109,8 @@ fi
 
 args=(-na "$GHOSTTY_APP" --args "--working-directory=$workspace")
 if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
-  args+=(-e "$opencode_bin")
+  # See header comment for why --command= replaces -e.
+  args+=("--command=zsh -l -i -c $opencode_bin")
 fi
 
 exec "$OPEN_BIN" "${args[@]}"
