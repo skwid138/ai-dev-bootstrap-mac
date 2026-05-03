@@ -34,10 +34,14 @@ setup() {
 @test "plan_render: essential tier lists essential packages only" {
   run plan_render "essential" "/Users/test/code" ""
   [ "$status" -eq 0 ]
-  # Essential includes git, opencode, ripgrep.
+  # Essential includes git, opencode, ripgrep, and (Phase 7.5) bash.
   [[ "$output" == *"Git"* ]]
   [[ "$output" == *"OpenCode"* ]]
   [[ "$output" == *"ripgrep"* ]]
+  # Phase 7.5: Homebrew bash 5.x ships at the essential tier so dry-run
+  # output must surface "Bash" (display name) for the user before they
+  # confirm the install.
+  [[ "$output" == *"Bash"* ]]
   # Essential does NOT include ghostty (recommended) or ollama (complete).
   [[ "$output" != *"Ghostty"* ]]
   [[ "$output" != *"Ollama"* ]]

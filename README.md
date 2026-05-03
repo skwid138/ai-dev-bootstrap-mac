@@ -26,7 +26,7 @@ cd ai-dev-bootstrap-mac
 
 | Tier | Packages | What you get | Key tools |
 | --- | --- | --- | --- |
-| **Essential** | 13 | Minimum setup for AI‑assisted dev | Xcode CLT, Homebrew, Git, VS Code, Node, Python, OpenCode |
+| **Essential** | 14 | Minimum setup for AI‑assisted dev | Xcode CLT, Homebrew, Bash 5, Git, VS Code, Node, Python, OpenCode |
 | **Recommended** | +10 | Quality‑of‑life upgrades | Ghostty, tmux, direnv, zplug, Spaceship prompt, zsh plugins |
 | **Complete** | +7 | Power‑user extras | Ollama or LM Studio, OrbStack, Playwright, ffmpeg |
 
@@ -35,10 +35,11 @@ Want more control? Choose **Custom** in the installer and pick exactly what you 
 ## 📋 What Gets Installed
 
 <details>
-<summary><strong>Essential (13 packages)</strong></summary>
+<summary><strong>Essential (14 packages)</strong></summary>
 
 - **Xcode Command Line Tools** — Build tools and system git
 - **Homebrew** — Package manager
+- **Bash** — Modern bash 5.x (macOS ships 3.2)
 - **Gum** — Interactive terminal UI
 - **Git** — Version control
 - **GitHub CLI (gh)** — GitHub auth and repo tools

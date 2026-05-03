@@ -7,7 +7,7 @@ Welcome. This project sets up Macs for non-techy users to vibe-code with OpenCod
 You need:
 
 - macOS 15+ (the bootstrap targets it; CI also runs bats here)
-- `bash` 5+ (`brew install bash` if needed — macOS ships 3.2)
+- `bash` 5+ (installed automatically by `./bootstrap.sh` at the Essential tier; or `brew install bash` if you've cloned this repo without running bootstrap. macOS ships bash 3.2.)
 - `shellcheck` (`brew install shellcheck`)
 - `shfmt` (`brew install shfmt`)
 - `bats-core` (`brew install bats-core`)

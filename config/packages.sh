@@ -1,5 +1,13 @@
 #!/bin/bash
 # Package registry using parallel arrays (bash 3.2 compatible).
+#
+# This file MUST stay bash-3.2-compatible: bootstrap.sh is invoked via
+# curl-pipe (`/bin/bash -c "$(curl ... bootstrap.sh)"`, see README) on
+# unprovisioned macs where Homebrew bash 5.x does NOT yet exist. The
+# bootstrap registers `bash` as an essential package (see Phase 7.5
+# in zsh_init_plan.md) so that *after* bootstrap, the user has bash
+# 5.x available; the bootstrap codebase itself does not depend on it.
+# No associative arrays, no `mapfile`, no `${var,,}`-style expansions.
 
 PACKAGES=()
 PKG_NAMES=()
@@ -27,6 +35,7 @@ register_package() {
 # Essential tier packages.
 register_package "xcode" "Xcode Command Line Tools" "system" "xcode-clt" "essential" "Build tools and git"
 register_package "homebrew" "Homebrew" "system" "homebrew" "essential" "Package manager"
+register_package "bash" "Bash" "formula" "bash" "essential" "Modern bash 5.x (macOS ships 3.2)"
 register_package "gum" "Gum" "formula" "gum" "essential" "Interactive UI for installers"
 register_package "git" "Git" "formula" "git" "essential" "Version control"
 register_package "gh" "GitHub CLI" "formula" "gh" "essential" "GitHub repo and auth tools"

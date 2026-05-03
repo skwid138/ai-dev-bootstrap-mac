@@ -23,6 +23,11 @@ collect_tier() {
   [ "$output" -eq 1 ]
   run sh -c "echo \"$essential_packages\" | grep -c '^homebrew$'"
   [ "$output" -eq 1 ]
+  # Phase 7.5: Homebrew bash 5.x is essential. macOS ships bash 3.2;
+  # learners and AI-tutor sessions assume bash 5+. Bootstrap installs
+  # it once, ships forever. Regression gate for the registry change.
+  run sh -c "echo \"$essential_packages\" | grep -c '^bash$'"
+  [ "$output" -eq 1 ]
   run sh -c "echo \"$essential_packages\" | grep -c '^git$'"
   [ "$output" -eq 1 ]
   run sh -c "echo \"$essential_packages\" | grep -c '^opencode$'"
