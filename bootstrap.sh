@@ -433,7 +433,7 @@ fi
 
 echo ""
 log_info "Next steps:"
-log_info "  1. Open a new terminal window (or run: source ~/.zshrc)"
+log_info "  1. Open a new terminal window (or run: source ~/.zshenv ~/.zprofile ~/.zshrc)"
 log_info "  2. Try running: opencode"
 log_info "  3. Start building something! 🎉"
 echo ""

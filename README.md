@@ -98,6 +98,8 @@ If you install the **Recommended** tier (or higher), the bootstrap drops a one�
 
 Open it from Spotlight, Launchpad, or Finder — drag it to your Dock for one‑click access. It opens Ghostty in your saved workspace folder and starts OpenCode automatically. No commands to remember.
 
+> **Fresh every time.** Vibe Code always opens a single window with a single tab running OpenCode, regardless of what Ghostty had open last time. macOS would normally restore your previous Ghostty windows on launch; Vibe Code suppresses that just for itself so the experience stays predictable. One side effect: if you open extra tabs inside a Vibe Code window and then quit Ghostty (`Cmd+Q`), those extra tabs won't come back the next time you click Vibe Code. Manual Spotlight/Dock launches of Ghostty are unaffected — they restore normally.
+
 > Want a plain shell instead? Open **Terminal** or **Ghostty** directly. Vibe Code is purely a convenience launcher; it doesn't change anything else on your system.
 
 ## 🐚 Shell Configuration
@@ -108,14 +110,46 @@ This project uses a modular dotfile setup stored in:
 ~/.config/ai-bootstrap/shell/
 ```
 
-Your existing `~/.zshrc` is never replaced. A single, guarded line is appended so you can remove it at any time:
+Your existing `~/.zshenv`, `~/.zprofile`, and `~/.zshrc` are never replaced. Three small, guarded blocks are appended (one per file) so you can remove them at any time:
 
 ```bash
-# AI Dev Bootstrap
-[[ -f ~/.config/ai-bootstrap/shell/init.sh ]] && source ~/.config/ai-bootstrap/shell/init.sh
+# ai-bootstrap
+[[ -f ~/.config/ai-bootstrap/shell/init_env.zsh ]] && source ~/.config/ai-bootstrap/shell/init_env.zsh
+
+# ai-bootstrap
+[[ -f ~/.config/ai-bootstrap/shell/init_profile.zsh ]] && source ~/.config/ai-bootstrap/shell/init_profile.zsh
+
+# ai-bootstrap
+[[ -f ~/.config/ai-bootstrap/shell/init_rc.zsh ]] && source ~/.config/ai-bootstrap/shell/init_rc.zsh
 ```
 
-The shell setup includes **zplug**, the **Spaceship** prompt, and quality‑of‑life plugins like **syntax highlighting** and **autosuggestions**.
+### Shell init layers
+
+Zsh runs three different startup files depending on how a shell is opened, and each one has a different job. The bootstrap mirrors that split so the right things load at the right time:
+
+- **`init_env.zsh`** (sourced from `~/.zshenv`) — runs in **every** zsh, including non‑interactive scripts. Sets up `PATH` and other environment variables. Stays silent and fast so background scripts and editor integrations aren't slowed down.
+- **`init_profile.zsh`** (sourced from `~/.zprofile`) — runs in **login** shells (your first shell after logging in, or `ssh` sessions). Re‑applies `PATH` after macOS's `path_helper` runs, and activates tools like `mise` that need login‑shell context.
+- **`init_rc.zsh`** (sourced from `~/.zshrc`) — runs in **interactive** shells (any terminal you actually type into). Loads zsh plugins (`zplug`), the **Spaceship** prompt, syntax highlighting, autosuggestions, and quality‑of‑life aliases.
+
+Each block is sentinel‑guarded against double‑sourcing and uses idempotent `PATH` manipulation, so re‑running the bootstrap or having extra dotfiles around won't break anything.
+
+## 🛠 Troubleshooting
+
+**A CLI tool stopped working after `brew upgrade` (or after a long time without re‑running bootstrap).** Run:
+
+```bash
+~/code/ai-dev-bootstrap-mac/bootstrap.sh --refresh-paths
+```
+
+This re‑bakes Homebrew's prefix paths into your shell config without touching anything else.
+
+**Want to check whether your paths are stale without making changes?**
+
+```bash
+~/code/ai-dev-bootstrap-mac/bootstrap.sh --check-paths
+```
+
+Exits `0` if paths are healthy, non‑zero if they look stale.
 
 ## 🔁 Re‑running
 
