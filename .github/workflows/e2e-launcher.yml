@@ -1,0 +1,240 @@
+# End-to-end verification on a clean macos-latest runner.
+#
+# Spec: zsh_init_plan.md §6.5 (rev-4) + §9 Phase 8.
+#
+# Why workflow_dispatch + e2e label only (not on every push):
+#   A full run is ~5 min (full bootstrap install + zsh -l shell start +
+#   re-run for idempotency + launcher rebuild). Gating behind a manual
+#   trigger / explicit PR label avoids burning CI minutes on every commit
+#   while keeping the workflow reachable when an actual change needs
+#   end-to-end coverage. See §10 risk row "GHA e2e-launcher.yml flakes".
+#
+# Why this is the sole end-to-end gate:
+#   The author's dev machine is not a clean install target — the
+#   installer must never run there (zsh_init_plan.md §0 hard rules).
+#   This workflow on a fresh macos-latest VM is the only place a real
+#   ./bootstrap.sh invocation is exercised end to end.
+#
+# What this workflow CANNOT cover (deferred per §9 Phase 8):
+#   The Spotlight launch test (§6.4 #5) needs a real GUI session;
+#   macOS GHA runners are headless. Documented as SKIPPED in §B.
+
+name: e2e-launcher
+
+on:
+  workflow_dispatch:
+  pull_request:
+    types: [labeled, opened, synchronize]
+
+jobs:
+  e2e:
+    # Fire on manual dispatch always. On PRs, fire only when the `e2e`
+    # label is present — the label trigger above ensures a labeled PR
+    # re-runs the workflow when newly labeled.
+    if: github.event_name == 'workflow_dispatch' || contains(github.event.pull_request.labels.*.name, 'e2e')
+    runs-on: macos-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Verify clean machine
+        run: |
+          # GHA macos-latest runners ship without ai-bootstrap. Sanity-check
+          # so a future runner-image change that pre-installs anything
+          # surfaces here as an obvious failure rather than as a confusing
+          # idempotency-test miss later.
+          test ! -d "$HOME/.config/ai-bootstrap" || {
+            echo "FAIL: $HOME/.config/ai-bootstrap already exists on the runner" >&2
+            exit 1
+          }
+          if [ -f "$HOME/.zshenv" ] && grep -q "ai-bootstrap" "$HOME/.zshenv"; then
+            echo "FAIL: ~/.zshenv already references ai-bootstrap on the runner" >&2
+            exit 1
+          fi
+
+      - name: Run bootstrap (essential tier, headless)
+        run: |
+          # Headless mode: AI_BOOTSTRAP_NONINTERACTIVE skips prompts;
+          # AI_BOOTSTRAP_TIER picks the install tier without UI.
+          # Essential tier is the cheapest (smallest install surface)
+          # while still exercising the unconditional shell-config
+          # module (§5.1 rev-3 fix: Essential users now get the
+          # three-tier dotfiles too).
+          AI_BOOTSTRAP_NONINTERACTIVE=1 \
+          AI_BOOTSTRAP_TIER=essential \
+            ./bootstrap.sh
+
+      - name: Verify three-tier files installed
+        run: |
+          # The three barrels must land in the install dir.
+          test -f "$HOME/.config/ai-bootstrap/shell/init_env.zsh"
+          test -f "$HOME/.config/ai-bootstrap/shell/init_profile.zsh"
+          test -f "$HOME/.config/ai-bootstrap/shell/init_rc.zsh"
+
+          # Each shell init target must reference ai-bootstrap (the
+          # `# ai-bootstrap` comment header — see modules/10-shell-config.sh).
+          grep -q "ai-bootstrap" "$HOME/.zshenv"
+          grep -q "ai-bootstrap" "$HOME/.zprofile"
+          grep -q "ai-bootstrap" "$HOME/.zshrc"
+
+      - name: Verify two-line blocks in each shell init target
+        run: |
+          # Per module: one `# ai-bootstrap` comment + one source line per
+          # file. Assert exactly one of each so a future module change that
+          # accidentally double-emits surfaces here.
+          for f in "$HOME/.zshenv" "$HOME/.zprofile" "$HOME/.zshrc"; do
+            comments=$(grep -c '^# ai-bootstrap$' "$f" || true)
+            if [ "$comments" -ne 1 ]; then
+              echo "FAIL: $f has $comments '# ai-bootstrap' headers (expected 1)" >&2
+              exit 1
+            fi
+          done
+
+          # Each target sources its tier-specific barrel exactly once.
+          test "$(grep -c 'init_env.zsh' "$HOME/.zshenv")" -eq 1
+          test "$(grep -c 'init_profile.zsh' "$HOME/.zprofile")" -eq 1
+          test "$(grep -c 'init_rc.zsh' "$HOME/.zshrc")" -eq 1
+
+      - name: PATH ordering check (path_helper recovery)
+        run: |
+          # `zsh -l` is a login shell — exercises the macOS path_helper
+          # demotion that runs from /etc/zprofile between zshenv and
+          # zprofile, plus the recovery via _path_prepend's promotion
+          # semantics in init_profile.zsh (§3.6 / §C2).
+          path_first=$(zsh -l -c 'echo $PATH' | tr : '\n' | head -1)
+          case "$path_first" in
+            /opt/homebrew/bin | /usr/local/bin)
+              echo "PASS: $path_first first"
+              ;;
+            *)
+              echo "FAIL: PATH first entry is '$path_first' (expected Homebrew bin)" >&2
+              echo "Full PATH:" >&2
+              zsh -l -c 'echo $PATH' >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Verify command -v bash resolves to Homebrew bash
+        run: |
+          # If PATH ordering is broken, bash resolves to /bin/bash (3.2).
+          # Real Homebrew bash lives at $BREW_PREFIX/bin/bash. This is the
+          # canonical regression test for the launcher's PATH contract.
+          resolved=$(zsh -l -c 'command -v bash')
+          case "$resolved" in
+            /opt/homebrew/bin/bash | /usr/local/bin/bash)
+              echo "PASS: $resolved"
+              ;;
+            *)
+              echo "FAIL: bash resolves to '$resolved' (expected Homebrew bash, got system bash 3.2 path)" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: --check-paths exit code
+        run: |
+          # Read-only staleness check. After a fresh install the baked
+          # prefix matches the resolved one — expected exit 0 + 'fresh'.
+          # See lib/paths_check.sh for the exit-code contract.
+          out=$(./bootstrap.sh --check-paths)
+          rc=$?
+          echo "stdout: $out"
+          echo "exit:   $rc"
+          test "$rc" -eq 0
+          echo "$out" | grep -q '^fresh'
+
+      - name: Re-run bootstrap (idempotency)
+        run: |
+          # Second run with the same tier. Module re-emits source lines
+          # but append_line_if_missing must dedupe — counts stay at 1.
+          AI_BOOTSTRAP_NONINTERACTIVE=1 \
+          AI_BOOTSTRAP_TIER=essential \
+            ./bootstrap.sh
+
+          test "$(grep -c 'init_env.zsh' "$HOME/.zshenv")" -eq 1
+          test "$(grep -c 'init_profile.zsh' "$HOME/.zprofile")" -eq 1
+          test "$(grep -c 'init_rc.zsh' "$HOME/.zshrc")" -eq 1
+          test "$(grep -c '^# ai-bootstrap$' "$HOME/.zshenv")" -eq 1
+          test "$(grep -c '^# ai-bootstrap$' "$HOME/.zprofile")" -eq 1
+          test "$(grep -c '^# ai-bootstrap$' "$HOME/.zshrc")" -eq 1
+
+      - name: Rebuild Vibe Code.app (launcher-only)
+        run: |
+          # --launcher-only does NOT install Ghostty; it just produces the
+          # .app bundle from launcher/launch.sh. Used here to inspect the
+          # built launcher script in the bundle (the Phase 6.5 static-grep
+          # regression gate).
+          ./bootstrap.sh --launcher-only
+
+      - name: Static grep on built launcher (Phase 6.5 / rev-8 regression gate)
+        run: |
+          # The built executable lives at Contents/MacOS/launch (matches
+          # CFBundleExecutable). On macos-latest /Applications is writable
+          # so the bundle lands there; on locked-down Macs it falls back to
+          # ~/Applications. Try /Applications first then ~/Applications.
+          app="/Applications/Vibe Code.app"
+          test -d "$app" || app="$HOME/Applications/Vibe Code.app"
+          test -d "$app" || {
+            echo "FAIL: Vibe Code.app not found in /Applications or ~/Applications" >&2
+            exit 1
+          }
+          launch="$app/Contents/MacOS/launch"
+          test -f "$launch" || {
+            echo "FAIL: $launch missing" >&2
+            exit 1
+          }
+          echo "Inspecting: $launch"
+
+          # Phase 6 (commit f3852cd): launcher must use --command=zsh -l,
+          # not -e. Asserts the post-Phase-6 arg shape.
+          grep -qF -- '--command=zsh -l' "$launch" || {
+            echo "FAIL: launcher missing '--command=zsh -l' (Phase 6 regression)" >&2
+            exit 1
+          }
+
+          # Phase 6.5 / rev-8 (commit d959cc5): -nFa flag cluster suppresses
+          # window restoration AND keeps -a positioned to consume the next
+          # token as its app argument. The plan's prescribed -naF was an
+          # erratum (see top-of-file note in zsh_init_plan.md) — macOS 26.x
+          # parses -naF such that Ghostty.app becomes a positional file
+          # path. Implementation uses -nFa.
+          grep -qF -- '-nFa' "$launch" || {
+            echo "FAIL: launcher missing '-nFa' (Phase 6.5 fresh-launch regression)" >&2
+            exit 1
+          }
+
+          # Phase 6.5 / rev-8: --title=Vibe Code identifies the spawned
+          # window as launcher-originated. Tags the window in the title bar
+          # and reinforces the "Vibe Code is its own thing" UX.
+          grep -qF -- '--title=Vibe Code' "$launch" || {
+            echo "FAIL: launcher missing '--title=Vibe Code' (Phase 6.5 regression)" >&2
+            exit 1
+          }
+
+          # Phase 6.5 / rev-8: negative regression assertion. Bare '-na '
+          # (with trailing space) without -F would re-introduce the
+          # window-restore behavior. The flag-cluster form '-nFa' contains
+          # the substring '-nF', not '-na ', so this assertion stays clean.
+          if grep -qF -- '-na ' "$launch"; then
+            echo "FAIL: launcher contains bare '-na ' (Phase 6.5 fresh-launch regression — -F must be in the cluster)" >&2
+            grep -nF -- '-na ' "$launch" >&2 || true
+            exit 1
+          fi
+
+          echo "PASS: launcher contains --command=zsh -l, -nFa, --title=Vibe Code; no bare '-na '"
+
+      # Optional: full launcher exercise. Disabled until Ghostty cask
+      # install on GHA is verified stable (§10 risk row).
+      - name: Install Ghostty cask
+        if: false
+        run: |
+          brew install --cask ghostty
+          test -d /Applications/Ghostty.app
+
+      - name: Headless launcher invocation
+        if: false
+        run: |
+          # Run the same zsh -l -c command the launcher emits. Validates
+          # path_helper recovery in the exact subshell shape the launcher
+          # produces. Cannot exercise window/tab behavior on a headless VM.
+          launched_path=$(zsh -l -i -c 'command -v opencode' || true)
+          echo "opencode resolves to: $launched_path"

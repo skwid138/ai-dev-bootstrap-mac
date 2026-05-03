@@ -231,8 +231,32 @@ echo ""
 if [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
   # Non-interactive mode: default to recommended. Loud log so the user
   # is never surprised about what got installed in CI / unattended runs.
-  SELECTED_TIER="recommended"
-  log_info "Non-interactive: using default tier '$SELECTED_TIER'"
+  # AI_BOOTSTRAP_TIER env var lets headless callers (notably the GHA
+  # e2e-launcher workflow) pick a specific tier without an interactive
+  # prompt. Validate against the known tier names; reject `custom` because
+  # custom-tier requires per-package selection that has no env-var
+  # equivalent today (matches the --refresh-paths constraint at line 137).
+  if [ -n "${AI_BOOTSTRAP_TIER:-}" ]; then
+    case "$AI_BOOTSTRAP_TIER" in
+      essential | recommended | complete)
+        SELECTED_TIER="$AI_BOOTSTRAP_TIER"
+        ;;
+      custom)
+        log_error "AI_BOOTSTRAP_TIER='custom' is not supported in non-interactive mode."
+        log_error "Custom tier requires interactive package selection."
+        exit 1
+        ;;
+      *)
+        log_error "AI_BOOTSTRAP_TIER='$AI_BOOTSTRAP_TIER' is not a valid tier."
+        log_error "Valid values: essential, recommended, complete."
+        exit 1
+        ;;
+    esac
+    log_info "Non-interactive: using tier '$SELECTED_TIER' from AI_BOOTSTRAP_TIER"
+  else
+    SELECTED_TIER="recommended"
+    log_info "Non-interactive: using default tier '$SELECTED_TIER'"
+  fi
 else
   log_info "Choose an install tier:"
   echo ""
