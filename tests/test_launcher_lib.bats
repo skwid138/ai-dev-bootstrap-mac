@@ -174,10 +174,14 @@ _run_launch() {
   # twice by Ghostty (applicationDidFinishLaunching + LaunchServices open
   # delegate), producing two tabs and a security prompt. The mock opencode
   # lives at $SANDBOX/opencode.
-  grep -q "open -na Ghostty.app --args --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
+  grep -q "open -nFa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
   # Belt-and-suspenders: explicitly assert the legacy -e form is not used.
   saved="$(cat "$MOCK_LOG")"
   [[ "$saved" != *" -e $SANDBOX/opencode"* ]]
+  # rev-8 / Phase 6.5 regression gate: the bare `-na` (without `F`) form
+  # must NOT appear — it would re-introduce macOS save-state restoration
+  # on Vibe Code launches. See zsh_init_plan.md §3.10.
+  [[ "$saved" != *"open -na "* ]]
 }
 
 @test "launch.sh: VIBE_CODE_LAUNCH_OPENCODE=0 omits the --command opencode arg" {
@@ -193,7 +197,10 @@ _run_launch() {
   saved="$(cat "$MOCK_LOG")"
   [[ "$saved" != *"$SANDBOX/opencode"* ]]
   [[ "$saved" != *"--command="* ]]
-  grep -q "open -na Ghostty.app --args --working-directory=$SANDBOX/workspace" "$MOCK_LOG"
+  # rev-8 / Phase 6.5: even with opencode disabled, `-naF` and the title
+  # arg must still be present.
+  grep -q "open -nFa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace" "$MOCK_LOG"
+  [[ "$saved" != *"open -na "* ]]
 }
 
 @test "launch.sh: missing state file falls back to \$HOME" {
@@ -204,7 +211,7 @@ _run_launch() {
 
   run _run_launch
   [ "$status" -eq 0 ]
-  grep -q "open -na Ghostty.app --args --working-directory=$HOME" "$MOCK_LOG"
+  grep -q "open -nFa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
 }
 
 @test "launch.sh: invalid workspace path in state falls back to \$HOME" {
@@ -215,7 +222,7 @@ _run_launch() {
 
   run _run_launch
   [ "$status" -eq 0 ]
-  grep -q "open -na Ghostty.app --args --working-directory=$HOME" "$MOCK_LOG"
+  grep -q "open -nFa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
 }
 
 @test "launch.sh: missing ghostty shows alert and exits 1 without opening" {
@@ -227,7 +234,9 @@ _run_launch() {
   [ "$status" -eq 1 ]
   # No `open` call should have been made.
   saved="$(cat "$MOCK_LOG")"
-  [[ "$saved" != *"open -na"* ]]
+  [[ "$saved" != *"open -nFa"* ]]
+  [[ "$saved" != *"open -naF"* ]]
+  [[ "$saved" != *"open -na "* ]]
   # User-facing alert must be issued.
   grep -q "display alert" "$MOCK_LOG"
 }
@@ -241,7 +250,7 @@ _run_launch() {
 
   run _run_launch VIBE_CODE_GHOSTTY_APP=Wezterm.app
   [ "$status" -eq 0 ]
-  grep -q "open -na Wezterm.app --args" "$MOCK_LOG"
+  grep -q "open -nFa Wezterm.app --args --title=Vibe Code" "$MOCK_LOG"
 }
 
 # ── opencode resolution ────────────────────────────────────────────────────
@@ -265,7 +274,9 @@ _run_launch() {
     bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
   [ "$status" -eq 1 ]
   saved="$(cat "$MOCK_LOG")"
-  [[ "$saved" != *"open -na"* ]]
+  [[ "$saved" != *"open -nFa"* ]]
+  [[ "$saved" != *"open -naF"* ]]
+  [[ "$saved" != *"open -na "* ]]
   grep -q "display alert" "$MOCK_LOG"
   grep -q "OpenCode is not installed" "$MOCK_LOG"
 }

@@ -40,6 +40,34 @@
 #   shell that hosts opencode has a fully-initialized environment
 #   (aliases, functions, $LANG, mise shims, etc.) so opencode's tool
 #   calls inherit a sane PATH and locale.
+#
+# Why we use `open -F` and `--title=Vibe Code` (rev-8 / Phase 6.5):
+#
+#   `-F` (see `man open`) opens the application "fresh," without
+#   restoring saved windows. Without it, clicking Vibe Code reopens
+#   whatever windows/tabs/panes the user had when Ghostty was last
+#   quit — macOS app-restoration fires through `open -na` and Ghostty
+#   (with default `window-save-state = default`) cooperates. That
+#   violates the "1 window, 1 tab, opencode" UX contract for this
+#   launcher's target audience. `-F` is per-invocation: it does NOT
+#   modify the user's ~/.config/ghostty/config and does NOT affect
+#   Spotlight/Dock/manual `open -a` launches of Ghostty. The accepted
+#   trade-off is that manually-added tabs in a Vibe Code session do
+#   not persist across `Cmd+Q` and re-launch (see zsh_init_plan.md
+#   §3.10). `--title=Vibe Code` sets the spawned window's title bar
+#   so the launcher origin is visually identifiable.
+#
+#   Flag-cluster ordering matters: we use `-nFa "$GHOSTTY_APP"`, NOT
+#   `-naF`. macOS `open(1)` parses `-naF` such that `-a`'s required
+#   argument is not satisfied by the next token, so `Ghostty.app`
+#   becomes a positional file path (resolved against cwd, which is
+#   `/` for Finder/Spotlight launches) and the launch fails with
+#   "The file /Ghostty.app does not exist." Putting `-a` last in
+#   the cluster (`-nFa`) lets it consume the next token as its app
+#   argument. This was discovered during Phase 6.5 manual matrix
+#   verification on 2026-05-03 — the original plan §3.10 prescribed
+#   `-naF`; that prescription is corrected in the plan erratum at the
+#   top of zsh_init_plan.md.
 
 set -u
 
@@ -107,7 +135,7 @@ if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
   fi
 fi
 
-args=(-na "$GHOSTTY_APP" --args "--working-directory=$workspace")
+args=(-nFa "$GHOSTTY_APP" --args "--title=Vibe Code" "--working-directory=$workspace")
 if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
   # See header comment for why --command= replaces -e.
   args+=("--command=zsh -l -i -c $opencode_bin")
