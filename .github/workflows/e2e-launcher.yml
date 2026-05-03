@@ -18,6 +18,10 @@
 # What this workflow CANNOT cover (deferred per §9 Phase 8):
 #   The Spotlight launch test (§6.4 #5) needs a real GUI session;
 #   macOS GHA runners are headless. Documented as SKIPPED in §B.
+#   The headless launcher exec was considered and dropped: the
+#   bats suite + the static-grep step on Contents/MacOS/launch
+#   already cover what a headless exec would (and the bundle can't
+#   open a real window on a headless VM anyway).
 
 name: e2e-launcher
 
@@ -251,19 +255,32 @@ jobs:
 
           echo "PASS: launcher contains --command=zsh -l, -nFa, --title=Vibe Code; no bare '-na '"
 
-      # Optional: full launcher exercise. Disabled until Ghostty cask
-      # install on GHA is verified stable (§10 risk row).
+      # Cask install: proves the user-facing happy path on a clean Mac.
+      # Wrapped in a retry loop because Homebrew cask installs on
+      # macos-latest occasionally flake on network / DMG mount. Three
+      # attempts with exponential-ish backoff balances "real flakes
+      # recover" with "real failures surface within ~3 min".
       - name: Install Ghostty cask
-        if: false
         run: |
-          brew install --cask ghostty
-          test -d /Applications/Ghostty.app
-
-      - name: Headless launcher invocation
-        if: false
-        run: |
-          # Run the same zsh -l -c command the launcher emits. Validates
-          # path_helper recovery in the exact subshell shape the launcher
-          # produces. Cannot exercise window/tab behavior on a headless VM.
-          launched_path=$(zsh -l -i -c 'command -v opencode' || true)
-          echo "opencode resolves to: $launched_path"
+          attempt=1
+          max=3
+          delay=15
+          while :; do
+            echo "Ghostty cask install attempt $attempt/$max"
+            if brew install --cask ghostty; then
+              break
+            fi
+            if [ "$attempt" -ge "$max" ]; then
+              echo "FAIL: Ghostty cask install failed after $max attempts" >&2
+              exit 1
+            fi
+            attempt=$((attempt + 1))
+            echo "Retrying in ${delay}s..."
+            sleep "$delay"
+            delay=$((delay * 2))
+          done
+          test -d /Applications/Ghostty.app || {
+            echo "FAIL: /Applications/Ghostty.app not found after install" >&2
+            exit 1
+          }
+          echo "PASS: Ghostty.app installed"
