@@ -394,6 +394,10 @@ run_module_if_selected() {
 }
 
 # Modules 00-02 already ran above. Run the rest in order.
+# 02a (bash) is foundational — installs Homebrew bash 5.x so downstream
+# tooling and the user's own shell sessions get a modern bash. macOS
+# ships 3.2; see zsh_init_plan.md Phase 7.5 and modules/02a-bash.sh.
+run_module_if_selected "02a-bash.sh" "bash"
 run_module_if_selected "03-terminal.sh" "ghostty"
 run_module_if_selected "04-git.sh" "git" "gh"
 run_module_if_selected "05-editor.sh" "vscode"
