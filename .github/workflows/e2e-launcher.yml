@@ -101,18 +101,47 @@ jobs:
           # demotion that runs from /etc/zprofile between zshenv and
           # zprofile, plus the recovery via _path_prepend's promotion
           # semantics in init_profile.zsh (§3.6 / §C2).
-          path_first=$(zsh -l -c 'echo $PATH' | tr : '\n' | head -1)
-          case "$path_first" in
-            /opt/homebrew/bin | /usr/local/bin)
-              echo "PASS: $path_first first"
+          #
+          # The semantic we care about: did path_helper recovery work?
+          # path_helper would put /usr/bin BEFORE /opt/homebrew/bin if
+          # init_profile.zsh failed to re-source env-tier. Verify by
+          # asserting /opt/homebrew/bin appears, AND it appears before
+          # /usr/bin.
+          #
+          # We don't assert /opt/homebrew/bin is the *first* entry on PATH:
+          # mise's profile-tier activation (profile/tool_hooks.zsh) runs
+          # AFTER env-tier and prepends its own shim paths
+          # (~/.local/share/mise/installs/<tool>/bin), which is the
+          # desired behavior for runtime version management. Asserting
+          # "Homebrew first" would fail for any tier that includes mise
+          # (essential, recommended, complete — i.e. all of them).
+          full_path=$(zsh -l -c 'echo $PATH')
+          echo "Full PATH: $full_path"
+
+          case ":$full_path:" in
+            *:/opt/homebrew/bin:* | *:/usr/local/bin:*)
+              : # Homebrew bin present — continue
               ;;
             *)
-              echo "FAIL: PATH first entry is '$path_first' (expected Homebrew bin)" >&2
-              echo "Full PATH:" >&2
-              zsh -l -c 'echo $PATH' >&2
+              echo "FAIL: neither /opt/homebrew/bin nor /usr/local/bin appear on PATH" >&2
               exit 1
               ;;
           esac
+
+          # path_helper recovery check: Homebrew bin must appear before
+          # /usr/bin. Compute character offsets; smaller = earlier.
+          brew_idx=$(printf '%s' "$full_path" | awk -v RS=: '/^\/opt\/homebrew\/bin$/ || /^\/usr\/local\/bin$/ {print NR; exit}')
+          usrbin_idx=$(printf '%s' "$full_path" | awk -v RS=: '/^\/usr\/bin$/ {print NR; exit}')
+          echo "Homebrew bin field: $brew_idx; /usr/bin field: $usrbin_idx"
+          if [ -z "$brew_idx" ] || [ -z "$usrbin_idx" ]; then
+            echo "FAIL: could not locate one of Homebrew bin / /usr/bin in PATH" >&2
+            exit 1
+          fi
+          if [ "$brew_idx" -ge "$usrbin_idx" ]; then
+            echo "FAIL: Homebrew bin (field $brew_idx) is NOT before /usr/bin (field $usrbin_idx) — path_helper demotion not recovered" >&2
+            exit 1
+          fi
+          echo "PASS: Homebrew bin (field $brew_idx) precedes /usr/bin (field $usrbin_idx)"
 
       - name: Verify command -v bash resolves to Homebrew bash
         run: |
