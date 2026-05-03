@@ -84,6 +84,10 @@ if opencode_has_github_auth; then
 
   if [ "${OPENCODE_BOOTSTRAP_TEST:-0}" = "1" ]; then
     use_copilot="${OPENCODE_TEST_USE_COPILOT:-yes}"
+  elif [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+    # Headless bootstrap: never trigger interactive Copilot OAuth login.
+    # Provider setup is the user's job to complete on first interactive run.
+    use_copilot="no"
   else
     if ui_confirm "Use GitHub Copilot for AI?"; then
       use_copilot="yes"
@@ -109,6 +113,10 @@ if [ -z "$opencode_provider_id" ]; then
 
   if [ "${OPENCODE_BOOTSTRAP_TEST:-0}" = "1" ]; then
     selection_id="${OPENCODE_TEST_MENU_SELECTION:-skip}"
+  elif [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+    # Headless bootstrap: skip provider setup entirely. The user
+    # configures a real provider on first interactive run.
+    selection_id="skip"
   else
     menu_label=$(ui_choose \
       "Anthropic Claude — Pro/Max sub from claude.ai (~\$20/mo) or API key (~\$3-15/M tokens)" \

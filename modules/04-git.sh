@@ -11,9 +11,16 @@ install_brew_formula "gh"
 # ── GitHub CLI auth ─────────────────────────────────────────────────────────
 if command_exists gh; then
   if ! gh auth status >/dev/null 2>&1; then
-    log_info "GitHub CLI is not authenticated yet."
-    log_info "Starting GitHub authentication..."
-    gh auth login
+    if [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+      # `gh auth login` blocks on a device-code flow that needs a human.
+      # In headless mode (notably the GHA e2e-launcher workflow) we skip
+      # it — auth is the user's job to complete on first interactive run.
+      log_skip "gh auth (non-interactive: skipped device-code login)"
+    else
+      log_info "GitHub CLI is not authenticated yet."
+      log_info "Starting GitHub authentication..."
+      gh auth login
+    fi
   else
     log_skip "gh already authenticated"
   fi
@@ -49,7 +56,11 @@ fi
 # user.name and user.email — prompt only if both are unset. We don't
 # prompt if just one is missing because the user may be in an unusual
 # state (e.g. one set via $GIT_AUTHOR_NAME) and we shouldn't pester them.
-if ! git_is_set_global user.name && ! git_is_set_global user.email; then
+# Skipped entirely in non-interactive mode: the headless caller (CI,
+# the GHA e2e-launcher workflow) has no human to answer the prompt.
+if [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+  log_skip "git: user.name/user.email (non-interactive: skipped prompt)"
+elif ! git_is_set_global user.name && ! git_is_set_global user.email; then
   echo ""
   log_info "Git needs a name and email to attach to your commits."
   log_info "(These appear in commit history and are visible on GitHub.)"
