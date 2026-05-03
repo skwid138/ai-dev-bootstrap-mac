@@ -10,9 +10,10 @@
 # Why we use --command=, not -e:
 #
 #   The original launcher passed `-e <opencode_bin>` to Ghostty via
-#   `open -na Ghostty.app --args -e <bin>`. That arg is delivered through
-#   TWO separate code paths inside Ghostty: once during
-#   applicationDidFinishLaunching, and once via the LaunchServices
+#   `open` with the `-n` and `-a` flags (i.e. `-n -a Ghostty.app
+#   --args -e <bin>`, or the equivalent flag-cluster `-na`). That arg
+#   is delivered through TWO separate code paths inside Ghostty: once
+#   during applicationDidFinishLaunching, and once via the LaunchServices
 #   "open URLs/files" delegate. Both fire, both spawn a tab, both run the
 #   command — producing two tabs and an "Allow Ghostty to execute …"
 #   security prompt on every launch (Ghostty's own application-level
