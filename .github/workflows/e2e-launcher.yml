@@ -224,14 +224,28 @@ jobs:
             exit 1
           }
 
-          # Phase 6.5 / rev-8 (commit d959cc5): -nFa flag cluster suppresses
+          # Phase 6.5 / rev-8 (commit d959cc5): -Fa flag cluster suppresses
           # window restoration AND keeps -a positioned to consume the next
           # token as its app argument. The plan's prescribed -naF was an
           # erratum (see top-of-file note in zsh_init_plan.md) — macOS 26.x
           # parses -naF such that Ghostty.app becomes a positional file
-          # path. Implementation uses -nFa.
-          grep -qF -- '-nFa' "$launch" || {
-            echo "FAIL: launcher missing '-nFa' (Phase 6.5 fresh-launch regression)" >&2
+          # path.
+          #
+          # Phase 6.6 (launcher_improvement_plan.md §1.5.4.2): the `-n`
+          # flag is now CONDITIONAL on Ghostty's running state. From a
+          # `.app`-bundle context (Finder/Dock/Spotlight launches), passing
+          # `-n` cold-state spawns an extra bare ghostty process alongside
+          # the flagged one — the original "no window" symptom. We detect
+          # via `osascript -e 'running of application "Ghostty"'` and only
+          # add `-n` if Ghostty is already running. The grep below asserts
+          # the `-Fa` cluster is present (always required) and the
+          # detection call is wired up.
+          grep -qF -- '-Fa' "$launch" || {
+            echo "FAIL: launcher missing '-Fa' (Phase 6.5 fresh-launch regression)" >&2
+            exit 1
+          }
+          grep -qF -- 'running of application' "$launch" || {
+            echo "FAIL: launcher missing 'running of application' detection (Phase 6.6 conditional-n regression — see launcher_improvement_plan.md §1.5.4.2)" >&2
             exit 1
           }
 
@@ -245,15 +259,16 @@ jobs:
 
           # Phase 6.5 / rev-8: negative regression assertion. Bare '-na '
           # (with trailing space) without -F would re-introduce the
-          # window-restore behavior. The flag-cluster form '-nFa' contains
-          # the substring '-nF', not '-na ', so this assertion stays clean.
+          # window-restore behavior. The flag-cluster forms '-Fa' / '-nFa'
+          # contain the substring '-Fa', not '-na ', so this assertion stays
+          # clean.
           if grep -qF -- '-na ' "$launch"; then
             echo "FAIL: launcher contains bare '-na ' (Phase 6.5 fresh-launch regression — -F must be in the cluster)" >&2
             grep -nF -- '-na ' "$launch" >&2 || true
             exit 1
           fi
 
-          echo "PASS: launcher contains --command=zsh -l, -nFa, --title=Vibe Code; no bare '-na '"
+          echo "PASS: launcher contains --command=zsh -l, -Fa, conditional -n detection, --title=Vibe Code; no bare '-na '"
 
       # Cask install: proves the user-facing happy path on a clean Mac.
       # Wrapped in a retry loop because Homebrew cask installs on

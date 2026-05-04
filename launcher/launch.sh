@@ -42,7 +42,7 @@
 #   (aliases, functions, $LANG, mise shims, etc.) so opencode's tool
 #   calls inherit a sane PATH and locale.
 #
-# Why we use `open -F` and `--title=Vibe Code` (rev-8 / Phase 6.5):
+# Why we use `open -F`, conditional `-n`, and `--title=Vibe Code` (rev-8 / Phase 6.5 / Phase 6.6):
 #
 #   `-F` (see `man open`) opens the application "fresh," without
 #   restoring saved windows. Without it, clicking Vibe Code reopens
@@ -58,14 +58,46 @@
 #   §3.10). `--title=Vibe Code` sets the spawned window's title bar
 #   so the launcher origin is visually identifiable.
 #
-#   Flag-cluster ordering matters: we use `-nFa "$GHOSTTY_APP"`, NOT
-#   `-naF`. macOS `open(1)` parses `-naF` such that `-a`'s required
-#   argument is not satisfied by the next token, so `Ghostty.app`
-#   becomes a positional file path (resolved against cwd, which is
-#   `/` for Finder/Spotlight launches) and the launch fails with
-#   "The file /Ghostty.app does not exist." Putting `-a` last in
-#   the cluster (`-nFa`) lets it consume the next token as its app
-#   argument. This was discovered during Phase 6.5 manual matrix
+#   `-n` is **conditional** on Ghostty's running state at launch time:
+#
+#     * If Ghostty is NOT running (cold-state): we use `-Fa` (no `-n`).
+#       Adding `-n` from a `.app`-bundle context cold-state spawns an
+#       extra bare `ghostty` process alongside the flagged one — a
+#       persistent invisible "ghost" with no window. This is the bug
+#       that motivated the original launcher investigation; verified
+#       reproducible 2026-05-03 in launcher_improvement_plan.md §1.5.4.2
+#       H4. Hypothesis: from a `.app` parent context, LaunchServices
+#       interprets `open -n -a Ghostty.app --args …` as two distinct
+#       lifecycle events (a bundle-launch event + a `--args` URL-event
+#       delivery), and the bundle-launch fork emerges as a separate
+#       bare `ghostty` process. From Terminal context the two events
+#       fold into one fork, which is why the bug only manifests for
+#       end-users (Finder/Dock/Spotlight clicks all go through `.app`
+#       parent context).
+#
+#     * If Ghostty IS running (hot-state): we use `-nFa` (with `-n`).
+#       Without `-n`, `open -a` against an already-running Ghostty
+#       activates the existing process and **silently discards `--args`**
+#       — no new window, no error, no signal. Verified 2026-05-03 in
+#       launcher_improvement_plan.md §1.5.4.1 hypothesis 3.
+#
+#   Detection uses `osascript -e 'running of application "Ghostty"'`,
+#   which returns "true" / "false" without firing TCC prompts (the same
+#   `osascript` binary already used for the existence check below).
+#   Reuses `OSASCRIPT_BIN` so tests can substitute a mock. There is a
+#   ~200ms TOCTOU window between the check and `open`; in practice this
+#   only matters if the user double-clicks Vibe Code.app twice within
+#   200ms of a fresh login, which collapses to a single window (matching
+#   typical Finder UX).
+#
+#   Flag-cluster ordering matters: we use `-Fa "$GHOSTTY_APP"` (cold) or
+#   `-nFa "$GHOSTTY_APP"` (hot), NOT `-naF` or `-aF`. macOS `open(1)`
+#   parses these such that `-a`'s required argument is not satisfied by
+#   the next token, so `Ghostty.app` becomes a positional file path
+#   (resolved against cwd, which is `/` for Finder/Spotlight launches)
+#   and the launch fails with "The file /Ghostty.app does not exist."
+#   Putting `-a` last in the cluster lets it consume the next token as
+#   its app argument. This was discovered during Phase 6.5 manual matrix
 #   verification on 2026-05-03 — the original plan §3.10 prescribed
 #   `-naF`; that prescription is corrected in the plan erratum at the
 #   top of zsh_init_plan.md.
@@ -78,6 +110,11 @@ STATE_FILE="${AI_BOOTSTRAP_STATE_FILE:-$HOME/.config/ai-bootstrap/state.sh}"
 GHOSTTY_APP="${VIBE_CODE_GHOSTTY_APP:-Ghostty.app}"
 OPEN_BIN="${VIBE_CODE_OPEN_BIN:-/usr/bin/open}"
 OSASCRIPT_BIN="${VIBE_CODE_OSASCRIPT_BIN:-/usr/bin/osascript}"
+
+# Where to look for the Ghostty bundle, in priority order. Standard macOS
+# install dirs first; overridable via VIBE_CODE_GHOSTTY_SEARCH_PATHS
+# (colon-separated parent dirs) for tests / per-user overrides.
+GHOSTTY_SEARCH_PATHS="${VIBE_CODE_GHOSTTY_SEARCH_PATHS:-/Applications:$HOME/Applications}"
 
 # Where to look for opencode, in priority order. Apple Silicon brew, Intel
 # brew, opencode's own installer fallback, then PATH (in case the user
@@ -120,7 +157,22 @@ fi
 # Verify Ghostty is installed before invoking `open`. `open` would surface a
 # generic "could not find application" dialog otherwise; this gives a clearer
 # message in Console.app for anyone debugging.
-if ! "$OSASCRIPT_BIN" -e "exists application \"$GHOSTTY_APP\"" >/dev/null 2>&1; then
+#
+# IMPORTANT: We use a filesystem check here, NOT `osascript -e 'exists
+# application "Ghostty.app"'`. The osascript form triggers LaunchServices to
+# *launch* Ghostty as a side effect of resolving the bundle — producing an
+# extra bare `ghostty` process (the original "two Dock icons" / "ghost
+# process" symptom diagnosed across Phase 6.5/6.6 and §1.5.4 of
+# `launcher_improvement_plan.md`). The filesystem check is side-effect-free.
+ghostty_found=0
+IFS=':' read -ra _search_dirs <<<"$GHOSTTY_SEARCH_PATHS"
+for _dir in "${_search_dirs[@]}"; do
+  if [[ -d "$_dir/$GHOSTTY_APP" ]]; then
+    ghostty_found=1
+    break
+  fi
+done
+if [[ "$ghostty_found" -eq 0 ]]; then
   "$OSASCRIPT_BIN" -e 'display alert "Vibe Code" message "Ghostty is not installed. Re-run the bootstrap installer to set it up." as critical' >/dev/null 2>&1 || true
   exit 1
 fi
@@ -136,7 +188,23 @@ if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
   fi
 fi
 
-args=(-nFa "$GHOSTTY_APP" --args "--title=Vibe Code" "--working-directory=$workspace")
+# Detect whether Ghostty is already running. The result determines whether
+# we pass `-n` to `open` — see the "conditional `-n`" header comment above.
+# `osascript -e 'running of application "..."'` returns "true" or "false";
+# a non-zero exit (which we map to "false") means osascript itself failed.
+# Note: empty array expansion under `set -u` differs across bash versions
+# (3.x on stock macOS errors on `${arr[@]}` when arr is empty), so we
+# expand a flat string instead.
+n_flag=""
+if "$OSASCRIPT_BIN" -e "running of application \"${GHOSTTY_APP%.app}\"" 2>/dev/null | grep -qx "true"; then
+  n_flag="-n"
+fi
+
+if [[ -n "$n_flag" ]]; then
+  args=("$n_flag" -Fa "$GHOSTTY_APP" --args "--title=Vibe Code" "--working-directory=$workspace")
+else
+  args=(-Fa "$GHOSTTY_APP" --args "--title=Vibe Code" "--working-directory=$workspace")
+fi
 if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
   # See header comment for why --command= replaces -e.
   args+=("--command=zsh -l -i -c $opencode_bin")

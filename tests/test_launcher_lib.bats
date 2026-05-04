@@ -23,6 +23,10 @@ setup() {
   MOCK_LOG="$SANDBOX/mock.log"
   : >"$MOCK_LOG"
   export MOCK_LOG
+  # Default: pretend Ghostty is installed by dropping a fake bundle dir at
+  # $SANDBOX/Ghostty.app. Tests that simulate "Ghostty not installed"
+  # remove this with `rm -rf "$SANDBOX/Ghostty.app"` (see _unmock_ghostty).
+  mkdir -p "$SANDBOX/Ghostty.app"
 }
 
 teardown() {
@@ -40,16 +44,28 @@ EOF
   chmod +x "$SANDBOX/open"
 }
 
-# Drop a mock `osascript`. By default, "exists application" succeeds; alerts
-# are accepted silently. Pass "missing" as $1 to make the existence check fail
-# (simulating Ghostty not installed).
+# Drop a mock `osascript`. Default behavior:
+#   * "running of application …" → echoes "false" (Ghostty NOT running, the
+#     cold-state default). Pass "running" as $2 to echo "true" instead.
+#   * "exists application …" → exits 0 (legacy behavior; the production
+#     launcher no longer calls this — the existence check moved to a
+#     filesystem `[[ -d ]]` to avoid the LaunchServices side-effect that
+#     spawns Ghostty as a "ghost" process. The mock retains the branch in
+#     case any callsite is ever added back, and so older tests still parse.
+#     Pass "missing" as $1 to make it exit 1.)
+#   * Any other invocation (display alert, etc.) is accepted silently.
 _mock_osascript() {
-  local mode="${1:-present}"
+  local exists_mode="${1:-present}"
+  local running_mode="${2:-not-running}"
   cat >"$SANDBOX/osascript" <<EOF
 #!/usr/bin/env bash
 echo "osascript \$*" >>"\$MOCK_LOG"
 case "\$*" in
-  *"exists application"*) [[ "$mode" == "missing" ]] && exit 1 || exit 0 ;;
+  *"exists application"*) [[ "$exists_mode" == "missing" ]] && exit 1 || exit 0 ;;
+  *"running of application"*)
+    if [[ "$running_mode" == "running" ]]; then echo "true"; else echo "false"; fi
+    exit 0
+    ;;
   *) exit 0 ;;
 esac
 EOF
@@ -72,14 +88,24 @@ EOF
 # Always points VIBE_CODE_OPENCODE_PATHS at the mock so opencode resolves
 # without polluting $PATH; tests that want to test the not-found path can
 # override by passing VIBE_CODE_OPENCODE_PATHS=/nonexistent explicitly.
+# VIBE_CODE_GHOSTTY_SEARCH_PATHS points at $SANDBOX where _mock_ghostty
+# drops a fake bundle (or doesn't, for the missing case).
 _run_launch() {
   env \
     "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
     "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
     "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/opencode" \
+    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     "$@" \
     bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
+}
+
+# Drop a fake Ghostty.app bundle dir in $SANDBOX so the launcher's
+# filesystem existence check finds it. Setup creates this by default;
+# call _unmock_ghostty to simulate "Ghostty not installed".
+_unmock_ghostty() {
+  rm -rf "$SANDBOX/Ghostty.app"
 }
 
 # ── lib/launcher.sh ─────────────────────────────────────────────────────────
@@ -160,7 +186,7 @@ _run_launch() {
 
 # ── launcher/launch.sh ──────────────────────────────────────────────────────
 
-@test "launch.sh: defaults launch ghostty with --working-directory + opencode" {
+@test "launch.sh: defaults launch ghostty with --working-directory + opencode (cold-state)" {
   _mock_open
   _mock_osascript present
   _mock_opencode
@@ -174,7 +200,12 @@ _run_launch() {
   # twice by Ghostty (applicationDidFinishLaunching + LaunchServices open
   # delegate), producing two tabs and a security prompt. The mock opencode
   # lives at $SANDBOX/opencode.
-  grep -q "open -nFa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
+  #
+  # Phase 6.6: cold-state (Ghostty NOT running, the mock's default) uses
+  # `-Fa` WITHOUT `-n`. With `-n` from a .app-bundle context cold-state,
+  # an extra bare ghostty process spawns alongside the flagged one (the
+  # ghost). See launcher_improvement_plan.md §1.5.4.2.
+  grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
   # Belt-and-suspenders: explicitly assert the legacy -e form is not used.
   saved="$(cat "$MOCK_LOG")"
   [[ "$saved" != *" -e $SANDBOX/opencode"* ]]
@@ -182,6 +213,28 @@ _run_launch() {
   # must NOT appear — it would re-introduce macOS save-state restoration
   # on Vibe Code launches. See zsh_init_plan.md §3.10.
   [[ "$saved" != *"open -na "* ]]
+  # Phase 6.6 regression gate: cold-state must NOT include `-n`.
+  [[ "$saved" != *"open -nFa"* ]]
+  [[ "$saved" != *"open -nF "* ]]
+}
+
+@test "launch.sh: hot-state (Ghostty already running) launches with -nFa" {
+  _mock_open
+  _mock_osascript present running
+  _mock_opencode
+  mkdir -p "$SANDBOX/workspace"
+  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+
+  run _run_launch
+  [ "$status" -eq 0 ]
+  # Phase 6.6: hot-state (Ghostty already running) uses `-nFa` WITH `-n`.
+  # Without `-n`, `open -a` activates the running Ghostty and silently
+  # discards `--args` — no new window. See launcher_improvement_plan.md
+  # §1.5.4.1 hypothesis 3.
+  grep -q "open -n -Fa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
+  saved="$(cat "$MOCK_LOG")"
+  # Detection occurred via osascript "running of application".
+  grep -q "running of application" "$MOCK_LOG"
 }
 
 @test "launch.sh: VIBE_CODE_LAUNCH_OPENCODE=0 omits the --command opencode arg" {
@@ -197,10 +250,12 @@ _run_launch() {
   saved="$(cat "$MOCK_LOG")"
   [[ "$saved" != *"$SANDBOX/opencode"* ]]
   [[ "$saved" != *"--command="* ]]
-  # rev-8 / Phase 6.5: even with opencode disabled, `-naF` and the title
-  # arg must still be present.
-  grep -q "open -nFa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace" "$MOCK_LOG"
+  # rev-8 / Phase 6.5: even with opencode disabled, `-Fa` (cold-state) and
+  # the title arg must still be present. Phase 6.6: cold-state default,
+  # so no `-n`.
+  grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace" "$MOCK_LOG"
   [[ "$saved" != *"open -na "* ]]
+  [[ "$saved" != *"open -nFa"* ]]
 }
 
 @test "launch.sh: missing state file falls back to \$HOME" {
@@ -211,7 +266,8 @@ _run_launch() {
 
   run _run_launch
   [ "$status" -eq 0 ]
-  grep -q "open -nFa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
+  # Cold-state default — no `-n`.
+  grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
 }
 
 @test "launch.sh: invalid workspace path in state falls back to \$HOME" {
@@ -222,19 +278,22 @@ _run_launch() {
 
   run _run_launch
   [ "$status" -eq 0 ]
-  grep -q "open -nFa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
+  # Cold-state default — no `-n`.
+  grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
 }
 
 @test "launch.sh: missing ghostty shows alert and exits 1 without opening" {
   _mock_open
-  _mock_osascript missing
+  _mock_osascript
   _mock_opencode
+  _unmock_ghostty
 
   run _run_launch
   [ "$status" -eq 1 ]
   # No `open` call should have been made.
   saved="$(cat "$MOCK_LOG")"
   [[ "$saved" != *"open -nFa"* ]]
+  [[ "$saved" != *"open -Fa"* ]]
   [[ "$saved" != *"open -naF"* ]]
   [[ "$saved" != *"open -na "* ]]
   # User-facing alert must be issued.
@@ -246,11 +305,14 @@ _run_launch() {
   _mock_osascript present
   _mock_opencode
   mkdir -p "$SANDBOX/workspace"
+  # Drop a matching fake bundle so the filesystem existence check finds it.
+  mkdir -p "$SANDBOX/Wezterm.app"
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
   run _run_launch VIBE_CODE_GHOSTTY_APP=Wezterm.app
   [ "$status" -eq 0 ]
-  grep -q "open -nFa Wezterm.app --args --title=Vibe Code" "$MOCK_LOG"
+  # Cold-state default — no `-n`.
+  grep -q "open -Fa Wezterm.app --args --title=Vibe Code" "$MOCK_LOG"
 }
 
 # ── opencode resolution ────────────────────────────────────────────────────
@@ -275,6 +337,7 @@ _run_launch() {
   [ "$status" -eq 1 ]
   saved="$(cat "$MOCK_LOG")"
   [[ "$saved" != *"open -nFa"* ]]
+  [[ "$saved" != *"open -Fa"* ]]
   [[ "$saved" != *"open -naF"* ]]
   [[ "$saved" != *"open -na "* ]]
   grep -q "display alert" "$MOCK_LOG"
