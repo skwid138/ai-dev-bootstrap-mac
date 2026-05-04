@@ -198,29 +198,98 @@ jobs:
           # regression gate).
           ./bootstrap.sh --launcher-only
 
-      - name: Static grep on built launcher (Phase 6.5 / rev-8 regression gate)
+      - name: Static grep on built launcher (Phase 6.5 / rev-8 / Branch F regression gate)
         run: |
-          # The built executable lives at Contents/MacOS/launch (matches
-          # CFBundleExecutable). On macos-latest /Applications is writable
-          # so the bundle lands there; on locked-down Macs it falls back to
-          # ~/Applications. Try /Applications first then ~/Applications.
+          # Branch F (launcher_improvement_plan.md §8): the bundle is now
+          # an osacompile-built AppleScript applet. The bash logic moved
+          # from Contents/MacOS/launch to Contents/Resources/launch-helper.sh;
+          # CFBundleExecutable is now `applet` (the AppleScript runtime
+          # Mach-O — NOT a script we can grep). The regression assertions
+          # below run against the helper script, plus a fresh set of
+          # AppleScript-host gates against the committed source.
+          #
+          # On macos-latest /Applications is writable so the bundle lands
+          # there; on locked-down Macs it falls back to ~/Applications.
+          # Try /Applications first then ~/Applications.
           app="/Applications/Vibe Code.app"
           test -d "$app" || app="$HOME/Applications/Vibe Code.app"
           test -d "$app" || {
             echo "FAIL: Vibe Code.app not found in /Applications or ~/Applications" >&2
             exit 1
           }
-          launch="$app/Contents/MacOS/launch"
-          test -f "$launch" || {
-            echo "FAIL: $launch missing" >&2
+
+          # Branch F bundle structure: applet executable + helper script.
+          applet="$app/Contents/MacOS/applet"
+          helper="$app/Contents/Resources/launch-helper.sh"
+          scpt="$app/Contents/Resources/Scripts/main.scpt"
+          icns="$app/Contents/Resources/VibeCode.icns"
+          for required in "$applet" "$helper" "$scpt" "$icns"; do
+            test -e "$required" || {
+              echo "FAIL: required bundle file missing: $required" >&2
+              exit 1
+            }
+          done
+          test -x "$applet" || {
+            echo "FAIL: $applet is not executable" >&2
             exit 1
           }
-          echo "Inspecting: $launch"
+          test -x "$helper" || {
+            echo "FAIL: $helper is not executable" >&2
+            exit 1
+          }
+
+          # Default-icon ambiguity (osacompile's applet.icns + Assets.car)
+          # must be removed by build.sh — otherwise modern macOS asset
+          # catalog resolution may prefer the default applet icon over
+          # our piggy-bank. See launcher_improvement_plan.md §1.5.3.
+          for forbidden in \
+            "$app/Contents/Resources/applet.icns" \
+            "$app/Contents/Resources/Assets.car"; do
+            if [ -e "$forbidden" ]; then
+              echo "FAIL: default-icon ambiguity not cleaned: $forbidden present" >&2
+              exit 1
+            fi
+          done
+
+          # Branch F bundle identity. CFBundleIdentifier must be distinct
+          # from Ghostty's `com.mitchellh.ghostty` so LaunchServices treats
+          # Vibe Code as its own app (separate Dock tile, separate TCC
+          # entry, separate Cmd-Tab card). Both icon keys must point at
+          # VibeCode (modern macOS may prefer CFBundleIconName).
+          plist="$app/Contents/Info.plist"
+          want_id="dev.aibootstrap.vibecode"
+          got_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist")
+          if [ "$got_id" != "$want_id" ]; then
+            echo "FAIL: CFBundleIdentifier=$got_id (expected $want_id)" >&2
+            exit 1
+          fi
+          got_name=$(/usr/libexec/PlistBuddy -c "Print :CFBundleName" "$plist")
+          if [ "$got_name" != "Vibe Code" ]; then
+            echo "FAIL: CFBundleName=$got_name (expected 'Vibe Code')" >&2
+            exit 1
+          fi
+          got_iconfile=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$plist")
+          got_iconname=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconName" "$plist")
+          if [ "$got_iconfile" != "VibeCode" ] || [ "$got_iconname" != "VibeCode" ]; then
+            echo "FAIL: icon keys mismatch (file=$got_iconfile, name=$got_iconname; both expected VibeCode)" >&2
+            exit 1
+          fi
+
+          # Bundle must be ad-hoc-signed with the Vibe Code identifier
+          # post-plist-edit. Without re-signing, macOS Gatekeeper refuses
+          # to launch.
+          if ! codesign -dv "$app" 2>&1 | grep -q "Identifier=$want_id"; then
+            echo "FAIL: bundle is not signed with Identifier=$want_id" >&2
+            codesign -dv "$app" >&2 || true
+            exit 1
+          fi
+
+          echo "Inspecting helper: $helper"
 
           # Phase 6 (commit f3852cd): launcher must use --command=zsh -l,
           # not -e. Asserts the post-Phase-6 arg shape.
-          grep -qF -- '--command=zsh -l' "$launch" || {
-            echo "FAIL: launcher missing '--command=zsh -l' (Phase 6 regression)" >&2
+          grep -qF -- '--command=zsh -l' "$helper" || {
+            echo "FAIL: helper missing '--command=zsh -l' (Phase 6 regression)" >&2
             exit 1
           }
 
@@ -240,20 +309,20 @@ jobs:
           # add `-n` if Ghostty is already running. The grep below asserts
           # the `-Fa` cluster is present (always required) and the
           # detection call is wired up.
-          grep -qF -- '-Fa' "$launch" || {
-            echo "FAIL: launcher missing '-Fa' (Phase 6.5 fresh-launch regression)" >&2
+          grep -qF -- '-Fa' "$helper" || {
+            echo "FAIL: helper missing '-Fa' (Phase 6.5 fresh-launch regression)" >&2
             exit 1
           }
-          grep -qF -- 'running of application' "$launch" || {
-            echo "FAIL: launcher missing 'running of application' detection (Phase 6.6 conditional-n regression — see launcher_improvement_plan.md §1.5.4.2)" >&2
+          grep -qF -- 'running of application' "$helper" || {
+            echo "FAIL: helper missing 'running of application' detection (Phase 6.6 conditional-n regression — see launcher_improvement_plan.md §1.5.4.2)" >&2
             exit 1
           }
 
           # Phase 6.5 / rev-8: --title=Vibe Code identifies the spawned
           # window as launcher-originated. Tags the window in the title bar
           # and reinforces the "Vibe Code is its own thing" UX.
-          grep -qF -- '--title=Vibe Code' "$launch" || {
-            echo "FAIL: launcher missing '--title=Vibe Code' (Phase 6.5 regression)" >&2
+          grep -qF -- '--title=Vibe Code' "$helper" || {
+            echo "FAIL: helper missing '--title=Vibe Code' (Phase 6.5 regression)" >&2
             exit 1
           }
 
@@ -262,13 +331,50 @@ jobs:
           # window-restore behavior. The flag-cluster forms '-Fa' / '-nFa'
           # contain the substring '-Fa', not '-na ', so this assertion stays
           # clean.
-          if grep -qF -- '-na ' "$launch"; then
-            echo "FAIL: launcher contains bare '-na ' (Phase 6.5 fresh-launch regression — -F must be in the cluster)" >&2
-            grep -nF -- '-na ' "$launch" >&2 || true
+          if grep -qF -- '-na ' "$helper"; then
+            echo "FAIL: helper contains bare '-na ' (Phase 6.5 fresh-launch regression — -F must be in the cluster)" >&2
+            grep -nF -- '-na ' "$helper" >&2 || true
             exit 1
           fi
 
-          echo "PASS: launcher contains --command=zsh -l, -Fa, conditional -n detection, --title=Vibe Code; no bare '-na '"
+          # rev-6 / Branch F constraint (launcher_improvement_plan.md
+          # §1.5.4.3 + §1.5.6): the AppleScript host source MUST NOT use
+          # `tell application "Ghostty"` or `exists application "Ghostty"`.
+          # Both compile to LaunchServices bundle-resolution calls that
+          # LAUNCH Ghostty as a side effect — the original ghost-process
+          # bug that motivated Phase 6.6 in the first place. Strip
+          # AppleScript line comments (-- to end of line) before grepping
+          # so the source's documentation explaining WHY the constructs
+          # are banned doesn't trigger the gate.
+          src="launcher/launch.applescript"
+          test -f "$src" || {
+            echo "FAIL: $src missing (committed Branch F source-of-truth)" >&2
+            exit 1
+          }
+          stripped=$(sed -E 's/--.*$//' "$src")
+          if echo "$stripped" | grep -qE 'tell[[:space:]]+application[[:space:]]+"Ghostty"'; then
+            echo "FAIL: $src contains banned 'tell application \"Ghostty\"' (Branch F rev-6 regression — see launcher_improvement_plan.md §1.5.4.3 Test 5)" >&2
+            grep -nE 'tell[[:space:]]+application[[:space:]]+"Ghostty"' "$src" >&2 || true
+            exit 1
+          fi
+          if echo "$stripped" | grep -qE 'exists[[:space:]]+application[[:space:]]+"Ghostty"'; then
+            echo "FAIL: $src contains banned 'exists application \"Ghostty\"' (Branch F rev-6 regression — see launcher_improvement_plan.md §1.5.4.3 Test 5)" >&2
+            grep -nE 'exists[[:space:]]+application[[:space:]]+"Ghostty"' "$src" >&2 || true
+            exit 1
+          fi
+
+          # Branch F: the AppleScript MUST invoke /usr/bin/open (or rely
+          # on launch-helper.sh which does). Spawning Ghostty's Mach-O
+          # directly from a 3rd-party .app prompts for Automation TCC
+          # permission (§1.5.4.2 H11). The committed AppleScript delegates
+          # to the helper, so we just check the source doesn't reference
+          # the Ghostty Mach-O path directly.
+          if echo "$stripped" | grep -qE '/Applications/Ghostty\.app/Contents/MacOS/ghostty'; then
+            echo "FAIL: $src spawns Ghostty's Mach-O directly (TCC trap — see §1.5.4.2 H11)" >&2
+            exit 1
+          fi
+
+          echo "PASS: bundle structure + identity + helper logic + AppleScript regression gates all hold"
 
       # Cask install: proves the user-facing happy path on a clean Mac.
       # Wrapped in a retry loop because Homebrew cask installs on

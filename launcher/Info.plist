@@ -1,5 +1,62 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  Vibe Code.app curated Info.plist (Branch F — AppleScript-applet host).
+
+  This plist is written into Vibe Code.app/Contents/Info.plist by
+  launcher/build.sh AFTER osacompile generates the bundle skeleton. The
+  osacompile-generated plist would otherwise show the bundle as "applet"
+  in Finder/Dock/Cmd-Tab; we override every relevant identity key here.
+
+  Key choices, with rationale:
+
+    CFBundleExecutable=applet
+      The osacompile-generated Mach-O is named "applet" and is the
+      AppleScript runtime entry point. Renaming it breaks the bundle —
+      see launcher_improvement_plan.md §1.5.2 (osacompile mechanics).
+      The Activity Monitor process name is driven by CFBundleName, not
+      this filename, so renaming buys nothing and breaks everything.
+
+    CFBundleIdentifier=dev.aibootstrap.vibecode
+      Reverse-DNS identifier distinct from Ghostty's
+      `com.mitchellh.ghostty`. Used by LaunchServices to track the
+      bundle as a separate app (separate Dock tile, separate
+      preferences, separate TCC entry).
+
+    CFBundleIconFile=VibeCode  AND  CFBundleIconName=VibeCode
+      BOTH keys must be set. Modern macOS asset-catalog resolution
+      can prefer CFBundleIconName; if only CFBundleIconFile is set,
+      the Dock may fall back to the default `applet` icon stored in
+      Assets.car. See §1.5.3 finding 1. build.sh deletes both
+      Assets.car and the default applet.icns to remove the
+      ambiguity entirely.
+
+    LSRequiresCarbon=true  AND  OSAAppletShowStartupScreen=false
+      Standard AppleScript-applet boilerplate inherited from
+      osacompile's default plist. LSRequiresCarbon is misleadingly
+      named — it just signals "this bundle hosts an AppleScript
+      runtime" to LaunchServices. OSAAppletShowStartupScreen=false
+      suppresses the "click Run to start" splash screen that
+      osacompile applets show by default; we want silent launch.
+
+    NSHighResolutionCapable=true
+      Retina icons / Cmd-Tab tile.
+
+    LSApplicationCategoryType=public.app-category.developer-tools
+      Categorization for App Store / Spotlight (purely cosmetic but
+      avoids the "uncategorized" default).
+
+    LSUIElement is intentionally absent / false. Setting LSUIElement=true
+      would HIDE the Dock tile — defeating the entire point of Branch F.
+      We want the persistent Dock tile.
+
+    NSAppleEventsUsageDescription is intentionally absent. We do not
+      send any AppleEvents (no `tell application` calls). The only
+      shell-out is via `do shell script`, which doesn't require
+      Automation TCC permission (since the helper invokes /usr/bin/open,
+      not an AppleEvent target). Adding this key would prompt the user
+      for permission they don't actually need.
+-->
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>
@@ -13,18 +70,26 @@
   <key>CFBundleShortVersionString</key>
   <string>1.0</string>
   <key>CFBundleExecutable</key>
-  <string>launch</string>
+  <string>applet</string>
   <key>CFBundleIconFile</key>
+  <string>VibeCode</string>
+  <key>CFBundleIconName</key>
   <string>VibeCode</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
+  <key>CFBundleSignature</key>
+  <string>aplt</string>
   <key>CFBundleInfoDictionaryVersion</key>
   <string>6.0</string>
   <key>LSMinimumSystemVersion</key>
   <string>11.0</string>
+  <key>LSApplicationCategoryType</key>
+  <string>public.app-category.developer-tools</string>
+  <key>LSRequiresCarbon</key>
+  <true/>
   <key>NSHighResolutionCapable</key>
   <true/>
-  <key>LSBackgroundOnly</key>
+  <key>OSAAppletShowStartupScreen</key>
   <false/>
 </dict>
 </plist>

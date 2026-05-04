@@ -1,11 +1,30 @@
 #!/usr/bin/env bash
 #
-# Vibe Code launcher — opens Ghostty in the user's workspace and starts opencode.
+# Vibe Code launcher helper — opens Ghostty in the user's workspace and
+# starts opencode.
 #
-# This script ships in the repo as launcher/launch.sh and is copied into
-# Vibe Code.app/Contents/MacOS/launch (the bundle's CFBundleExecutable) at
-# build time. macOS launches it directly when the user opens the .app — no
-# AppleScript shim involved. Kept tiny so a curious user can read it.
+# This script ships in the repo as launcher/launch-helper.sh and is copied
+# into Vibe Code.app/Contents/Resources/launch-helper.sh at build time.
+# It is invoked by the AppleScript host (Vibe Code.app/Contents/MacOS/applet,
+# compiled from launcher/launch.applescript) via `do shell script`. The
+# AppleScript host owns the Dock tile / Cmd+Tab / Activity Monitor identity
+# (Branch F, launcher_improvement_plan.md §8); this helper is the
+# behavioral core (probe Ghostty install, resolve opencode, conditional -n,
+# `/usr/bin/open` invocation). Kept as a standalone bash script so:
+#   1. The bats suite (tests/test_launcher_lib.bats) can exercise it
+#      directly with mocked open/osascript binaries — AppleScript itself
+#      has no good unit-test framework, so the testable logic stays in
+#      bash.
+#   2. A curious user can `cat` it and read what the launcher does.
+#
+# Pre-Branch-F (commits up to 086c419 on main), this script lived at
+# launcher/launch.sh and was the bundle's CFBundleExecutable directly.
+# That meant the bundle's process was a transient bash → exec'd open →
+# Ghostty took over the Dock identity. Branch F inserts an AppleScript
+# applet host so macOS sees a persistent "Vibe Code" process with the
+# piggy-bank icon. The shell logic below is unchanged from the rev-6
+# version that shipped on 086c419 — Branch F is purely an identity win,
+# not a behavioral change.
 #
 # Why we use --command=, not -e:
 #

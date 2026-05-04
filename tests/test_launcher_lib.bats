@@ -2,9 +2,19 @@
 # Helper- and bundle-level tests for the Vibe Code launcher.
 #
 # Three layers covered here:
-#   1. lib/launcher.sh        — install / uninstall helpers (file IO).
-#   2. launcher/build.sh      — bundle assembly (structure + plist sanity).
-#   3. launcher/launch.sh     — runtime behavior with mocked open/osascript.
+#   1. lib/launcher.sh                 — install / uninstall helpers (file IO).
+#   2. launcher/build.sh               — bundle assembly (structure + plist sanity).
+#   3. launcher/launch-helper.sh       — runtime behavior with mocked open/osascript.
+#
+# Bundle layout note (Branch F, launcher_improvement_plan.md §8):
+#   The bundle is now an osacompile-built AppleScript applet. The bash
+#   launcher logic — which is what these tests exercise — moved from
+#   Contents/MacOS/launch (pre-Branch-F) to Contents/Resources/launch-helper.sh.
+#   The CFBundleExecutable is now Contents/MacOS/applet (the AppleScript
+#   runtime stub, NOT a script we control). The behavioral tests run the
+#   helper directly via `bash launcher/launch-helper.sh` — same logic as
+#   the production AppleScript invokes via `do shell script`, just without
+#   the AppleScript wrapper.
 #
 # Real `open` and `osascript` are never invoked. We override the binary paths
 # via VIBE_CODE_OPEN_BIN / VIBE_CODE_OSASCRIPT_BIN, drop tiny shell mocks at
@@ -83,7 +93,7 @@ EOF
   chmod +x "$SANDBOX/opencode"
 }
 
-# Run launch.sh with overrides pointed at the mocks. Any extra args are
+# Run launch-helper.sh with overrides pointed at the mocks. Any extra args are
 # treated as VAR=VALUE env-var overrides, layered on top of the defaults.
 # Always points VIBE_CODE_OPENCODE_PATHS at the mock so opencode resolves
 # without polluting $PATH; tests that want to test the not-found path can
@@ -98,7 +108,7 @@ _run_launch() {
     "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     "$@" \
-    bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
+    bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
 }
 
 # Drop a fake Ghostty.app bundle dir in $SANDBOX so the launcher's
@@ -117,8 +127,18 @@ _unmock_ghostty() {
   [ "$output" = "installed" ]
   [ -d "$dest/Vibe Code.app" ]
   [ -f "$dest/Vibe Code.app/Contents/Info.plist" ]
-  [ -x "$dest/Vibe Code.app/Contents/MacOS/launch" ]
+  # Branch F: bundle executable is the osacompile-built `applet` Mach-O
+  # (the AppleScript runtime stub). The bash logic is now a Resources/
+  # helper invoked by the AppleScript via `do shell script`.
+  [ -x "$dest/Vibe Code.app/Contents/MacOS/applet" ]
+  [ -f "$dest/Vibe Code.app/Contents/Resources/Scripts/main.scpt" ]
+  [ -x "$dest/Vibe Code.app/Contents/Resources/launch-helper.sh" ]
   [ -f "$dest/Vibe Code.app/Contents/Resources/VibeCode.icns" ]
+  # Default-icon ambiguity (osacompile's applet.icns + Assets.car) must
+  # be removed by build.sh so macOS can't fall back to the default
+  # AppleScript-applet icon. See launcher_improvement_plan.md §1.5.3.
+  [ ! -f "$dest/Vibe Code.app/Contents/Resources/applet.icns" ]
+  [ ! -f "$dest/Vibe Code.app/Contents/Resources/Assets.car" ]
 }
 
 @test "launcher_install: creates dest dir if missing" {
@@ -136,7 +156,8 @@ _unmock_ghostty() {
   run launcher_install "${BOOTSTRAP_DIR}/launcher/build.sh" "$dest"
   [ "$status" -eq 0 ]
   [ ! -f "$dest/Vibe Code.app/STALE" ]
-  [ -x "$dest/Vibe Code.app/Contents/MacOS/launch" ]
+  # Branch F: applet is the AppleScript runtime executable.
+  [ -x "$dest/Vibe Code.app/Contents/MacOS/applet" ]
 }
 
 @test "launcher_install: errors when build script missing" {
@@ -169,13 +190,65 @@ _unmock_ghostty() {
   [ "$status" -eq 0 ]
 }
 
-@test "build.sh: bundle declares correct CFBundleExecutable + CFBundleIconFile" {
+@test "build.sh: bundle declares correct CFBundleExecutable + CFBundleIconFile + CFBundleIdentifier" {
   "${BOOTSTRAP_DIR}/launcher/build.sh" "$SANDBOX" >/dev/null
   plist="$SANDBOX/Vibe Code.app/Contents/Info.plist"
+
+  # Branch F: CFBundleExecutable is `applet` (the osacompile AppleScript
+  # runtime stub). DO NOT change this — renaming the Mach-O breaks the
+  # bundle. See launcher_improvement_plan.md §1.5.2.
   run /usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$plist"
-  [ "$output" = "launch" ]
+  [ "$output" = "applet" ]
+
+  # Both icon keys must point at VibeCode (modern macOS asset-catalog
+  # resolution can prefer CFBundleIconName). See §1.5.3 finding 1.
   run /usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$plist"
   [ "$output" = "VibeCode" ]
+  run /usr/libexec/PlistBuddy -c "Print :CFBundleIconName" "$plist"
+  [ "$output" = "VibeCode" ]
+
+  # Bundle identity drives Dock tile / Cmd-Tab / Activity Monitor name.
+  # CFBundleName is what shows in the Dock and Activity Monitor's "Process
+  # Name" column. CFBundleIdentifier must be distinct from Ghostty's
+  # `com.mitchellh.ghostty` so LaunchServices treats Vibe Code as its
+  # own app.
+  run /usr/libexec/PlistBuddy -c "Print :CFBundleName" "$plist"
+  [ "$output" = "Vibe Code" ]
+  run /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist"
+  [ "$output" = "dev.aibootstrap.vibecode" ]
+}
+
+@test "build.sh: bundle is ad-hoc code-signed with Vibe Code identifier" {
+  # osacompile signs ad-hoc; build.sh re-signs after plist + resource
+  # edits to refresh the seal. Without re-signing, macOS Gatekeeper
+  # refuses to launch ("damaged and can't be opened"). The signed
+  # identifier should match CFBundleIdentifier.
+  "${BOOTSTRAP_DIR}/launcher/build.sh" "$SANDBOX" >/dev/null
+  run codesign -dv "$SANDBOX/Vibe Code.app"
+  [ "$status" -eq 0 ]
+  # codesign -dv writes to stderr; bats captures it via $output.
+  [[ "$output" == *"Identifier=dev.aibootstrap.vibecode"* ]]
+  [[ "$output" == *"Signature=adhoc"* ]]
+}
+
+@test "build.sh: AppleScript host source contains no banned LaunchServices triggers" {
+  # Regression gate from launcher_improvement_plan.md §1.5.6 (rev-6
+  # constraints): the AppleScript host MUST NOT use `tell application
+  # "Ghostty"` or `exists application "Ghostty"`. Both compile to
+  # LaunchServices bundle-resolution calls that LAUNCH Ghostty as a side
+  # effect — the original ghost-process bug. The committed
+  # launcher/launch.applescript must stay clean.
+  #
+  # Strip AppleScript line comments (-- to end of line) before grepping
+  # so that the file's documentation explaining WHY these constructs are
+  # banned doesn't trigger the gate. AppleScript's only line-comment
+  # syntax is `--` (block comments use `(* ... *)` and we don't use them
+  # here).
+  src="${BOOTSTRAP_DIR}/launcher/launch.applescript"
+  [ -f "$src" ]
+  stripped="$(sed -E 's/--.*$//' "$src")"
+  ! echo "$stripped" | grep -qE 'tell[[:space:]]+application[[:space:]]+"Ghostty"'
+  ! echo "$stripped" | grep -qE 'exists[[:space:]]+application[[:space:]]+"Ghostty"'
 }
 
 @test "build.sh: errors with usage when called with no args" {
@@ -184,9 +257,9 @@ _unmock_ghostty() {
   [[ "$output" == *"usage:"* ]]
 }
 
-# ── launcher/launch.sh ──────────────────────────────────────────────────────
+# ── launcher/launch-helper.sh ──────────────────────────────────────────────────────
 
-@test "launch.sh: defaults launch ghostty with --working-directory + opencode (cold-state)" {
+@test "launch-helper.sh: defaults launch ghostty with --working-directory + opencode (cold-state)" {
   _mock_open
   _mock_osascript present
   _mock_opencode
@@ -218,7 +291,7 @@ _unmock_ghostty() {
   [[ "$saved" != *"open -nF "* ]]
 }
 
-@test "launch.sh: hot-state (Ghostty already running) launches with -nFa" {
+@test "launch-helper.sh: hot-state (Ghostty already running) launches with -nFa" {
   _mock_open
   _mock_osascript present running
   _mock_opencode
@@ -237,7 +310,7 @@ _unmock_ghostty() {
   grep -q "running of application" "$MOCK_LOG"
 }
 
-@test "launch.sh: VIBE_CODE_LAUNCH_OPENCODE=0 omits the --command opencode arg" {
+@test "launch-helper.sh: VIBE_CODE_LAUNCH_OPENCODE=0 omits the --command opencode arg" {
   _mock_open
   _mock_osascript present
   _mock_opencode
@@ -258,7 +331,7 @@ _unmock_ghostty() {
   [[ "$saved" != *"open -nFa"* ]]
 }
 
-@test "launch.sh: missing state file falls back to \$HOME" {
+@test "launch-helper.sh: missing state file falls back to \$HOME" {
   _mock_open
   _mock_osascript present
   _mock_opencode
@@ -270,7 +343,7 @@ _unmock_ghostty() {
   grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
 }
 
-@test "launch.sh: invalid workspace path in state falls back to \$HOME" {
+@test "launch-helper.sh: invalid workspace path in state falls back to \$HOME" {
   _mock_open
   _mock_osascript present
   _mock_opencode
@@ -282,7 +355,7 @@ _unmock_ghostty() {
   grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
 }
 
-@test "launch.sh: missing ghostty shows alert and exits 1 without opening" {
+@test "launch-helper.sh: missing ghostty shows alert and exits 1 without opening" {
   _mock_open
   _mock_osascript
   _mock_opencode
@@ -300,7 +373,7 @@ _unmock_ghostty() {
   grep -q "display alert" "$MOCK_LOG"
 }
 
-@test "launch.sh: respects VIBE_CODE_GHOSTTY_APP override (e.g. for forks)" {
+@test "launch-helper.sh: respects VIBE_CODE_GHOSTTY_APP override (e.g. for forks)" {
   _mock_open
   _mock_osascript present
   _mock_opencode
@@ -317,7 +390,7 @@ _unmock_ghostty() {
 
 # ── opencode resolution ────────────────────────────────────────────────────
 
-@test "launch.sh: missing opencode shows alert and exits 1 without opening" {
+@test "launch-helper.sh: missing opencode shows alert and exits 1 without opening" {
   # Regression: the very bug that made you file the issue. If opencode
   # can't be found in any of the candidate paths, we must NOT pass the
   # bare string `opencode` to Ghostty (which would then fail to find it
@@ -333,7 +406,7 @@ _unmock_ghostty() {
     "VIBE_CODE_OPENCODE_PATHS=/nonexistent/opencode" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     "PATH=/usr/bin:/bin" \
-    bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
+    bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
   [ "$status" -eq 1 ]
   saved="$(cat "$MOCK_LOG")"
   [[ "$saved" != *"open -nFa"* ]]
@@ -344,9 +417,9 @@ _unmock_ghostty() {
   grep -q "OpenCode is not installed" "$MOCK_LOG"
 }
 
-@test "launch.sh: resolves opencode from first candidate path that exists" {
+@test "launch-helper.sh: resolves opencode from first candidate path that exists" {
   # Multiple candidates; pick the first existing one. Simulates the
-  # priority-order in launch.sh: /opt/homebrew/bin first, then
+  # priority-order in launch-helper.sh: /opt/homebrew/bin first, then
   # /usr/local/bin, then ~/.local/bin.
   _mock_open
   _mock_osascript present
@@ -364,12 +437,12 @@ EOF
     "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
     "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/a/opencode:$SANDBOX/b/opencode" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
-    bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
+    bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
   [ "$status" -eq 0 ]
   grep -q "\-\-command=zsh -l -i -c $SANDBOX/b/opencode" "$MOCK_LOG"
 }
 
-@test "launch.sh: falls back to PATH when no candidate path matches" {
+@test "launch-helper.sh: falls back to PATH when no candidate path matches" {
   # If a user installed opencode somewhere unusual (not /opt/homebrew,
   # not /usr/local, not ~/.local), but it IS on their PATH, the launcher
   # should still find it. Simulate by putting opencode on a custom PATH.
@@ -389,7 +462,7 @@ EOF
     "VIBE_CODE_OPENCODE_PATHS=/nonexistent" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     "PATH=$SANDBOX/custom:/usr/bin:/bin" \
-    bash "${BOOTSTRAP_DIR}/launcher/launch.sh"
+    bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
   [ "$status" -eq 0 ]
   grep -q "\-\-command=zsh -l -i -c $SANDBOX/custom/opencode" "$MOCK_LOG"
 }
