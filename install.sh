@@ -111,6 +111,18 @@ else
 fi
 
 # ── Hand off ──────────────────────────────────────────────────────────
+# Strip a leading `--` sentinel if present. This is an artifact of the
+# `bash -c "$(curl …)" -s -- --flag` curl-pipe idiom, NOT a meaningful
+# flag the user passed. bootstrap.sh's args parser doesn't recognize
+# `--` and would error out with "Unknown flag: --". Strip it here so
+# the curl-pipe form Just Works.
+#
+# We only strip ONE leading `--`; a `--` deeper in the arg list is
+# treated as user-provided and forwarded as-is.
+if [ "${1:-}" = "--" ]; then
+  shift
+fi
+
 # exec, not invoke: replace this process so the user sees bootstrap.sh's
 # output unmediated and signal handling (Ctrl-C) goes to the right place.
 # Pass through any args we received (--dry-run, --launcher-only, --tier=…, etc.).
