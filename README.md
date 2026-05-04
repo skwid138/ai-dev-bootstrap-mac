@@ -101,6 +101,8 @@ Open it from Spotlight, Launchpad, or Finder — drag it to your Dock for one‑
 
 > **Fresh every time.** Vibe Code always opens a single window with a single tab running OpenCode, regardless of what Ghostty had open last time. macOS would normally restore your previous Ghostty windows on launch; Vibe Code suppresses that just for itself so the experience stays predictable. One side effect: if you open extra tabs inside a Vibe Code window and then quit Ghostty (`Cmd+Q`), those extra tabs won't come back the next time you click Vibe Code. Manual Spotlight/Dock launches of Ghostty are unaffected — they restore normally.
 
+> **Branded identity, two things to quit.** Vibe Code shows up as **Vibe Code** (with a piggy-bank icon) in your Dock, Cmd-Tab switcher, and Activity Monitor — distinct from Ghostty. The launcher and the terminal are two separate processes by design: this is what lets the launcher have its own identity. The trade-off is that quitting Vibe Code (`Cmd+Q` from its Cmd-Tab card or right-click → Quit on the Dock tile) does **not** quit the Ghostty window it spawned, and vice versa. Quit them separately. Cmd-Tabbing to the Vibe Code card focuses the launcher process (which has no window); to bring the terminal forward, Cmd-Tab to the Ghostty card instead.
+
 > Want a plain shell instead? Open **Terminal** or **Ghostty** directly. Vibe Code is purely a convenience launcher; it doesn't change anything else on your system.
 
 ## 🐚 Shell Configuration
