@@ -8,19 +8,30 @@ AI Dev Bootstrap for Mac is an interactive installer that prepares a brand‑new
 
 ## ⚡ Quick Start
 
+You have two ways to install. Pick whichever you prefer — they end up at the same place.
+
 **One‑liner (recommended):**
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/skwid138/ai-dev-bootstrap-mac/main/bootstrap.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/skwid138/ai-dev-bootstrap-mac/main/install.sh)"
 ```
 
-**Or clone the repo:**
+This downloads a small bootstrapper that clones the repo into `~/code/ai-dev-bootstrap-mac` and then runs the installer. Requires `git` (which ships with the Xcode Command Line Tools — the bootstrapper will prompt to install them if missing).
+
+To pass flags through the one‑liner, add `-s --` and your flags after the closing paren:
 
 ```bash
-git clone https://github.com/skwid138/ai-dev-bootstrap-mac.git
-cd ai-dev-bootstrap-mac
-./bootstrap.sh
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/skwid138/ai-dev-bootstrap-mac/main/install.sh)" -s -- --dry-run
 ```
+
+**Or clone the repo yourself:**
+
+```bash
+git clone https://github.com/skwid138/ai-dev-bootstrap-mac.git ~/code/ai-dev-bootstrap-mac
+~/code/ai-dev-bootstrap-mac/bootstrap.sh
+```
+
+Either way, the repo lives at `~/code/ai-dev-bootstrap-mac` afterward and you can re‑run `bootstrap.sh` (or just `./bootstrap.sh --launcher-only`) any time.
 
 ## 📦 Install Tiers
 
