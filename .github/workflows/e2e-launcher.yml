@@ -338,14 +338,19 @@ jobs:
           fi
 
           # rev-6 / Branch F constraint (launcher_improvement_plan.md
-          # §1.5.4.3 + §1.5.6): the AppleScript host source MUST NOT use
-          # `tell application "Ghostty"` or `exists application "Ghostty"`.
-          # Both compile to LaunchServices bundle-resolution calls that
-          # LAUNCH Ghostty as a side effect — the original ghost-process
-          # bug that motivated Phase 6.6 in the first place. Strip
-          # AppleScript line comments (-- to end of line) before grepping
-          # so the source's documentation explaining WHY the constructs
-          # are banned doesn't trigger the gate.
+          # §1.5.4.3 + §1.5.6) + Branch F.1 (§8.7): the AppleScript host
+          # source MUST NOT use `tell application "Ghostty"`,
+          # `tell application id "com.mitchellh…"`, or
+          # `exists application "Ghostty"`. All three compile to
+          # LaunchServices bundle-resolution calls that LAUNCH Ghostty as
+          # a side effect — the original ghost-process bug that motivated
+          # Phase 6.6 in the first place. `tell application "System
+          # Events"` IS allowed: System Events is an Apple-shipped
+          # automation broker that's always running, not a LaunchServices
+          # bundle target. Strip AppleScript line comments (-- to end of
+          # line) before grepping so the source's documentation
+          # explaining WHY the constructs are banned doesn't trigger the
+          # gate.
           src="launcher/launch.applescript"
           test -f "$src" || {
             echo "FAIL: $src missing (committed Branch F source-of-truth)" >&2
@@ -357,9 +362,23 @@ jobs:
             grep -nE 'tell[[:space:]]+application[[:space:]]+"Ghostty"' "$src" >&2 || true
             exit 1
           fi
+          if echo "$stripped" | grep -qE 'tell[[:space:]]+application[[:space:]]+id[[:space:]]+"com\.mitchellh'; then
+            echo "FAIL: $src contains banned 'tell application id \"com.mitchellh…\"' (Branch F rev-6 regression — see launcher_improvement_plan.md §1.5.4.3)" >&2
+            grep -nE 'tell[[:space:]]+application[[:space:]]+id[[:space:]]+"com\.mitchellh' "$src" >&2 || true
+            exit 1
+          fi
           if echo "$stripped" | grep -qE 'exists[[:space:]]+application[[:space:]]+"Ghostty"'; then
             echo "FAIL: $src contains banned 'exists application \"Ghostty\"' (Branch F rev-6 regression — see launcher_improvement_plan.md §1.5.4.3 Test 5)" >&2
             grep -nE 'exists[[:space:]]+application[[:space:]]+"Ghostty"' "$src" >&2 || true
+            exit 1
+          fi
+
+          # Branch F.1 / §8.7: the `on reopen` Cmd-Tab focus handler
+          # must be present. Without it, Cmd-Tabbing to "Vibe Code"
+          # while the applet is already running does nothing visible
+          # (the applet has no UI window) — the cosmetic gap §8.7 fixes.
+          if ! echo "$stripped" | grep -qE '^[[:space:]]*on[[:space:]]+reopen[[:space:]]*$'; then
+            echo "FAIL: $src missing 'on reopen' handler (Branch F.1 §8.7 regression)" >&2
             exit 1
           fi
 
@@ -371,6 +390,18 @@ jobs:
           # the Ghostty Mach-O path directly.
           if echo "$stripped" | grep -qE '/Applications/Ghostty\.app/Contents/MacOS/ghostty'; then
             echo "FAIL: $src spawns Ghostty's Mach-O directly (TCC trap — see §1.5.4.2 H11)" >&2
+            exit 1
+          fi
+
+          # Branch F.1 / §8.7: the helper must capture the spawned
+          # ghostty's PID via `pgrep -nf "Ghostty.app/Contents/MacOS/ghostty…"`
+          # so the AppleScript `on reopen` handler can resolve which
+          # process to focus. A future refactor that drops the pgrep
+          # call (e.g. inlining the launch flow back into `exec open`)
+          # would silently break the focus feature; this gate surfaces
+          # that.
+          if ! grep -qF -- 'pgrep -nf "Ghostty.app/Contents/MacOS/ghostty' "$helper"; then
+            echo "FAIL: $helper missing PID-capture (Branch F.1 §8.7 regression — pgrep -nf \"Ghostty.app/Contents/MacOS/ghostty…\")" >&2
             exit 1
           fi
 

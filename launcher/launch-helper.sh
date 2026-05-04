@@ -229,4 +229,46 @@ if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
   args+=("--command=zsh -l -i -c $opencode_bin")
 fi
 
-exec "$OPEN_BIN" "${args[@]}"
+# `open -Fa` returns immediately (the spawned ghostty is reparented to
+# launchd). We invoke it synchronously rather than exec'ing into it so
+# that we can subsequently capture the spawned ghostty's PID for the
+# Branch F.1 reopen-focus handler (launcher_improvement_plan.md §8.7).
+"$OPEN_BIN" "${args[@]}"
+open_rc=$?
+
+# ── Branch F.1 (§8.7): track spawned Ghostty PID for the reopen handler ──
+#
+# After `open` returns, poll for up to 2s for the most recent ghostty
+# process whose argv contains both `Ghostty.app/Contents/MacOS/ghostty`
+# (the canonical Mach-O path — only Ghostty's own binary runs from
+# there) AND `--title=Vibe Code` (so we don't pick up an unrelated
+# user-launched ghostty). Write the PID to $TMPDIR/vibe-code/ghostty.pid
+# so `on reopen` in launch.applescript can resolve it.
+#
+# Failure to capture is non-fatal: the AppleScript reopen handler reads
+# the file and falls back to a fresh `runHelper()` call when missing.
+# The 2s deadline guards against runaway polling on hosts where ghostty
+# never appears (e.g. crashed mid-launch); 250ms is the typical
+# real-world time for the process to show up.
+#
+# Gated behind VIBE_CODE_TRACK_GHOSTTY_PID so the feature can be
+# disabled without rebuilding the bundle (§8.7.6 rollback / off-switch).
+if [[ "${VIBE_CODE_TRACK_GHOSTTY_PID:-1}" = "1" ]]; then
+  _pid_dir="${TMPDIR:-/tmp}/vibe-code"
+  _pid_file="$_pid_dir/ghostty.pid"
+  _deadline=$(($(date +%s) + 2))
+  _ghostty_pid=""
+  while [ "$(date +%s)" -lt "$_deadline" ]; do
+    _ghostty_pid="$(pgrep -nf "Ghostty.app/Contents/MacOS/ghostty .*--title=Vibe Code" 2>/dev/null || true)"
+    if [[ -n "$_ghostty_pid" ]]; then
+      break
+    fi
+    sleep 0.1
+  done
+  if [[ -n "$_ghostty_pid" ]]; then
+    mkdir -p "$_pid_dir" 2>/dev/null || true
+    printf '%s\n' "$_ghostty_pid" >"$_pid_file" 2>/dev/null || true
+  fi
+fi
+
+exit "$open_rc"

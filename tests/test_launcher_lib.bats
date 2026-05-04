@@ -93,6 +93,26 @@ EOF
   chmod +x "$SANDBOX/opencode"
 }
 
+# Drop a mock `pgrep` at $SANDBOX/pgrep that echoes whatever is configured
+# via $PGREP_OUTPUT_FILE (or empty if unset). Optional: writes its argv to
+# the log so tests can assert on the search pattern. Each call also sleeps
+# briefly if $PGREP_SLEEP_MS is set (in milliseconds), so tests can
+# simulate slow polling without blowing the 2s deadline.
+_mock_pgrep() {
+  local payload="${1:-}"
+  cat >"$SANDBOX/pgrep" <<EOF
+#!/usr/bin/env bash
+echo "pgrep \$*" >>"\$MOCK_LOG"
+if [ -n "\${PGREP_SLEEP_MS:-}" ]; then
+  # bash 3.2-compatible decimal sleep (sleep accepts fractional seconds on macOS).
+  sleep "\$(awk "BEGIN { print \$PGREP_SLEEP_MS / 1000 }")"
+fi
+printf '%s' "${payload}"
+if [ -n "${payload}" ]; then printf '\n'; fi
+EOF
+  chmod +x "$SANDBOX/pgrep"
+}
+
 # Run launch-helper.sh with overrides pointed at the mocks. Any extra args are
 # treated as VAR=VALUE env-var overrides, layered on top of the defaults.
 # Always points VIBE_CODE_OPENCODE_PATHS at the mock so opencode resolves
@@ -107,6 +127,9 @@ _run_launch() {
     "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/opencode" \
     "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
+    "VIBE_CODE_TRACK_GHOSTTY_PID=${VIBE_CODE_TRACK_GHOSTTY_PID:-0}" \
+    "TMPDIR=$SANDBOX/tmp" \
+    "PATH=$SANDBOX:/usr/bin:/bin" \
     "$@" \
     bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
 }
@@ -386,6 +409,74 @@ _unmock_ghostty() {
   [ "$status" -eq 0 ]
   # Cold-state default — no `-n`.
   grep -q "open -Fa Wezterm.app --args --title=Vibe Code" "$MOCK_LOG"
+}
+
+# ── Branch F.1 (§8.7): ghostty PID capture for `on reopen` focus ───────────
+
+@test "launch-helper.sh: writes ghostty PID file when pgrep resolves a process" {
+  _mock_open
+  _mock_osascript present
+  _mock_opencode
+  _mock_pgrep "12345"
+  mkdir -p "$SANDBOX/workspace"
+  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+
+  run _run_launch VIBE_CODE_TRACK_GHOSTTY_PID=1
+  [ "$status" -eq 0 ]
+  # PID file lives under $TMPDIR/vibe-code/ghostty.pid; _run_launch sets
+  # TMPDIR=$SANDBOX/tmp.
+  pid_file="$SANDBOX/tmp/vibe-code/ghostty.pid"
+  [ -f "$pid_file" ]
+  [ "$(cat "$pid_file")" = "12345" ]
+  # pgrep argv must include both the canonical Mach-O path and the
+  # --title=Vibe Code key. Belt-and-suspenders: a future refactor that
+  # narrows the pattern in a way that picks up unrelated ghostty
+  # processes will trip this gate.
+  grep -q 'pgrep -nf Ghostty.app/Contents/MacOS/ghostty .*--title=Vibe Code' "$MOCK_LOG"
+}
+
+@test "launch-helper.sh: skips PID write when pgrep returns nothing within deadline" {
+  _mock_open
+  _mock_osascript present
+  _mock_opencode
+  _mock_pgrep ""
+  mkdir -p "$SANDBOX/workspace"
+  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+
+  run _run_launch VIBE_CODE_TRACK_GHOSTTY_PID=1
+  [ "$status" -eq 0 ]
+  # No pid file should exist (PID capture is best-effort).
+  [ ! -e "$SANDBOX/tmp/vibe-code/ghostty.pid" ]
+  # Helper still polls — verify pgrep was actually invoked.
+  grep -q 'pgrep -nf' "$MOCK_LOG"
+}
+
+@test "launch-helper.sh: PID-write deadline does not block helper exit > 2.5s" {
+  _mock_open
+  _mock_osascript present
+  _mock_opencode
+  # pgrep returns empty + sleeps 100ms each call. The helper polls every
+  # 100ms with a 2s deadline, so this must still come in under 2.5s.
+  _mock_pgrep ""
+  mkdir -p "$SANDBOX/workspace"
+  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+
+  start_ms=$(perl -MTime::HiRes=time -e 'printf "%d\n", time()*1000')
+  run env PGREP_SLEEP_MS=100 _run_launch_inner=1 \
+    "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
+    "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/opencode" \
+    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
+    "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
+    "VIBE_CODE_TRACK_GHOSTTY_PID=1" \
+    "TMPDIR=$SANDBOX/tmp" \
+    "PATH=$SANDBOX:/usr/bin:/bin" \
+    bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
+  end_ms=$(perl -MTime::HiRes=time -e 'printf "%d\n", time()*1000')
+  [ "$status" -eq 0 ]
+  elapsed=$((end_ms - start_ms))
+  echo "elapsed: ${elapsed}ms"
+  [ "$elapsed" -lt 2500 ]
 }
 
 # ── opencode resolution ────────────────────────────────────────────────────

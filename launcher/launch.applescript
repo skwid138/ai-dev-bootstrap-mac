@@ -27,24 +27,32 @@
 -- §1.5.6) — DO NOT VIOLATE:
 --
 --   1. NEVER use `tell application "Ghostty" to ...`.
---   2. NEVER use `exists application "Ghostty"`.
---      Both compile to LaunchServices bundle-resolution calls that LAUNCH
---      Ghostty as a side effect — the original "ghost ghostty process"
---      bug. Use `do shell script` calling out to filesystem checks
---      (test -d) instead. The launch-helper.sh already does this; this
---      AppleScript must not re-introduce the trap.
+--   2. NEVER use `tell application id "com.mitchellh.ghostty" ...`.
+--   3. NEVER use `exists application "Ghostty"`.
+--      All three compile to LaunchServices bundle-resolution calls that
+--      LAUNCH Ghostty as a side effect — the original "ghost ghostty
+--      process" bug. Use `do shell script` calling out to filesystem
+--      checks (test -d) instead. The launch-helper.sh already does this;
+--      this AppleScript must not re-introduce the trap.
 --
---   2. `running of application "Ghostty"` IS safe — it queries process
+--   4. `running of application "Ghostty"` IS safe — it queries process
 --      state without bundle resolution. Verified §1.5.4.3 Tests 4+7. The
 --      helper script uses it for cold/hot detection; this AppleScript
 --      could too if it ever needed to, but currently does not.
 --
---   3. NEVER spawn Ghostty's Mach-O directly. `/usr/bin/open` only.
+--   5. `tell application "System Events"` IS safe (Branch F.1 / §8.7).
+--      System Events is an Apple-shipped automation broker that is
+--      already running and is NOT subject to the LaunchServices
+--      bundle-resolution trap of constraint #1. We use it in
+--      `focusGhostty` to bring a tracked Ghostty window forward via its
+--      unix PID (no bundle resolution required).
+--
+--   6. NEVER spawn Ghostty's Mach-O directly. `/usr/bin/open` only.
 --      Spawning the binary directly triggers TCC Automation prompts on
 --      first launch (§1.5.4.2 H11). `open` is a shell binary, not an
 --      AppleEvent target — no prompt.
 --
---   4. NEVER edit ~/.config/ghostty/config. Hard rule.
+--   7. NEVER edit ~/.config/ghostty/config. Hard rule.
 --
 -- Stay-alive behavior (Option A from §8.3, ratified at Branch F ship):
 --   We use `on idle ... return 600` so the runtime stays alive owning the
@@ -103,6 +111,71 @@ on run
     -- Fall through to `on idle` for stay-alive behavior. The default
     -- idle interval is 30s; we return a longer interval below.
 end run
+
+-- ── Branch F.1 (§8.7): Cmd-Tab focus handler ────────────────────────────
+--
+-- AppleScript fires `on reopen` when the user clicks the Vibe Code Dock
+-- tile (or Cmd-Tabs to its card) while the applet is already running.
+-- Because the applet has no UI window, the default behavior is "nothing
+-- visibly happens" — confusing UX. Instead, bring the spawned Ghostty
+-- window forward via its tracked unix PID, or fall through to a fresh
+-- launch if no PID is tracked / the tracked process is dead.
+--
+-- `on reopen` does NOT fire on the first launch — `on run` handles that.
+-- The two handlers cleanly partition cold-state and warm-state launches.
+on reopen
+    my refocusOrRelaunch()
+end reopen
+
+-- Read the spawned Ghostty's PID from the tempfile written by
+-- launch-helper.sh after `open -Fa`. Returns the integer PID on success,
+-- 0 on any failure (missing file, unreadable, non-numeric content). 0
+-- signals the caller to fall through to `runHelper()`.
+on readGhostyPid()
+    try
+        set pidText to do shell script "cat \"${TMPDIR:-/tmp}/vibe-code/ghostty.pid\""
+        return (pidText as integer)
+    on error
+        return 0
+    end try
+end readGhostyPid
+
+-- Bring the process with the given unix PID to the foreground via
+-- System Events. System Events queries process state directly (no
+-- LaunchServices bundle resolution), so this is safe per §8.7.2 — the
+-- analog of `running of application` verified in §1.5.4.3 Tests 4+7.
+--
+-- Returns true on success, false if the process no longer exists or
+-- System Events refused (e.g. Accessibility permission denied). The
+-- caller treats false as "PID is stale; relaunch".
+on focusGhostty(pid)
+    try
+        tell application "System Events"
+            set frontmost of (first process whose unix id is pid) to true
+        end tell
+        return true
+    on error
+        return false
+    end try
+end focusGhostty
+
+-- Reopen orchestrator: try to focus the tracked Ghostty window; if
+-- there's no tracked PID OR the tracked PID is stale, fall through to
+-- a cold-state launch (and clear the stale pidfile so we don't loop).
+on refocusOrRelaunch()
+    set pid to my readGhostyPid()
+    if pid is 0 then
+        -- No tracked PID. Cold-state semantics.
+        my runHelper()
+        return
+    end if
+    if my focusGhostty(pid) then
+        return
+    end if
+    -- PID was stale. Clear the file and relaunch.
+    do shell script "rm -f \"${TMPDIR:-/tmp}/vibe-code/ghostty.pid\""
+    my runHelper()
+end refocusOrRelaunch
 
 -- Periodic idle handler. Returning N tells the AppleScript runtime to
 -- call us again after N seconds, keeping the process alive (and the
