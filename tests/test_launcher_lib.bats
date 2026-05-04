@@ -404,6 +404,7 @@ _unmock_ghostty() {
     "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
     "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
     "VIBE_CODE_OPENCODE_PATHS=/nonexistent/opencode" \
+    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     "PATH=/usr/bin:/bin" \
     bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
@@ -436,6 +437,7 @@ EOF
     "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
     "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
     "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/a/opencode:$SANDBOX/b/opencode" \
+    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
   [ "$status" -eq 0 ]
@@ -460,6 +462,7 @@ EOF
     "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
     "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
     "VIBE_CODE_OPENCODE_PATHS=/nonexistent" \
+    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     "PATH=$SANDBOX/custom:/usr/bin:/bin" \
     bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
