@@ -104,6 +104,24 @@ Want more control? Choose **Custom** in the installer and pick exactly what you 
 5. **OpenCode provider setup** with guided API key prompts.
 6. **Summary** of what was installed, skipped, or failed.
 
+## 💬 What Working With OpenCode Looks Like
+
+The bootstrap configures OpenCode to behave like a careful project manager — not a code-spitting machine. The goal: you describe what you want in plain English, the AI figures out whether it's a small thing or a big thing, and you stay in the driver's seat for every change.
+
+**For small, obvious requests** ("fix this typo", "rename this variable") the AI confirms it understood you, shows the change it wants to make, and waits for your "yes" before touching the file. No ceremony — just a quick approval before any edit lands.
+
+**For bigger requests** ("build me a Mac app that reminds me to drink water") the AI takes a slower path:
+
+1. **Asks clarifying questions** — usually multiple-choice, with a recommended default — so it understands what you actually want.
+2. **Writes a plan** in plain language to a file under `.project-plans/` so you can read it, push back, and resume the work later if needed.
+3. **Has a second AI audit the plan** for risks, missing pieces, and bad assumptions. The audit findings are shown to you (even if there were none).
+4. **Asks if you want to build it** before writing any code.
+5. **Builds in small, reviewable steps** instead of dropping a wall of code at once.
+
+You can approve, push back, or change direction at any step. Destructive commands (`rm -rf`, force-pushing to git, system-level tools) are blocked at the OpenCode permission layer regardless — so even an over-eager AI can't accidentally wreck your machine.
+
+If you want the deep technical details of how this is wired up, see [`opencode/README.md`](opencode/README.md) inside this repo.
+
 ## 🐷 Vibe Code Launcher
 
 If you install the **Recommended** tier (or higher), the bootstrap drops a one‑click app called **Vibe Code** into your `~/Applications` folder.
