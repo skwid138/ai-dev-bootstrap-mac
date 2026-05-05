@@ -95,6 +95,22 @@ teardown() {
   [ -f "${OPENCODE_DIR}/plugins/orchestration.ts" ]
 }
 
+@test "opencode/dcp.jsonc.template exists" {
+  [ -f "${OPENCODE_DIR}/dcp.jsonc.template" ]
+}
+
+@test "opencode/dcp.jsonc.template: valid JSONC (parses after stripping // comments)" {
+  # JSONC = JSON + // line comments. Strip them and validate with jq.
+  run bash -c "sed 's|//.*||' '${OPENCODE_DIR}/dcp.jsonc.template' | jq ."
+  [ "$status" -eq 0 ]
+}
+
+@test "opencode/dcp.jsonc.template: sets compress.maxContextLimit to 65%" {
+  run bash -c "sed 's|//.*||' '${OPENCODE_DIR}/dcp.jsonc.template' | jq -r '.compress.maxContextLimit'"
+  [ "$status" -eq 0 ]
+  [ "$output" = "65%" ]
+}
+
 # ── opencode.json.template ───────────────────────────────────────────────────
 
 @test "opencode.json.template is valid JSON" {

@@ -124,6 +124,40 @@ teardown() {
   [ "$status" -ne 0 ]
 }
 
+# ── opencode_deploy_dcp_config ───────────────────────────────────────────────
+
+@test "opencode_deploy_dcp_config: installs when destination missing" {
+  src="$SANDBOX/dcp.jsonc"
+  dest="$SANDBOX/dest/dcp.jsonc"
+  echo '{ "compress": { "maxContextLimit": "65%" } }' >"$src"
+
+  run opencode_deploy_dcp_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "installed" ]
+  [ -f "$dest" ]
+  run grep -q '"maxContextLimit": "65%"' "$dest"
+  [ "$status" -eq 0 ]
+}
+
+@test "opencode_deploy_dcp_config: skips when destination exists (overwrite-protect)" {
+  src="$SANDBOX/dcp.jsonc"
+  dest="$SANDBOX/dest/dcp.jsonc"
+  echo '{ "new": true }' >"$src"
+  mkdir -p "$(dirname "$dest")"
+  echo '{ "user_tweaked": true }' >"$dest"
+
+  run opencode_deploy_dcp_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "skipped" ]
+  run cat "$dest"
+  [ "$output" = '{ "user_tweaked": true }' ]
+}
+
+@test "opencode_deploy_dcp_config: errors when source missing" {
+  run opencode_deploy_dcp_config "$SANDBOX/nope.jsonc" "$SANDBOX/dest/dcp.jsonc"
+  [ "$status" -ne 0 ]
+}
+
 # ── opencode_render_config ───────────────────────────────────────────────────
 
 @test "opencode_render_config: sets model when provided" {

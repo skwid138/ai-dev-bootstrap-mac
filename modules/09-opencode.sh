@@ -65,6 +65,16 @@ case "$agents_md_result" in
   *) log_error "AGENTS.md deployment returned unexpected: $agents_md_result" ;;
 esac
 
+dcp_config_result=$(opencode_deploy_dcp_config \
+  "${BOOTSTRAP_DIR}/opencode/dcp.jsonc.template" \
+  "$OPENCODE_CONFIG_DIR/dcp.jsonc")
+
+case "$dcp_config_result" in
+  installed) log_installed "dcp.jsonc installed (auto-compress at 65% context)" ;;
+  skipped) log_skip "dcp.jsonc already exists (preserving your edits)" ;;
+  *) log_error "dcp.jsonc deployment returned unexpected: $dcp_config_result" ;;
+esac
+
 # ── 3. Provider configuration ────────────────────────────────────────────────
 echo ""
 ui_header "🔑 AI Provider Setup"

@@ -1,0 +1,36 @@
+// dcp (dynamic context pruning) plugin configuration.
+//
+// dcp is loaded by opencode via the `plugin: ["@tarquinen/opencode-dcp"]`
+// entry in opencode.json. It reads its own sibling config file
+// (this one — dcp.jsonc) at one of these paths, in priority order:
+//   1. ./.opencode/dcp.jsonc          (per-project)
+//   2. $OPENCODE_CONFIG_DIR/dcp.jsonc (env override)
+//   3. ~/.config/opencode/dcp.jsonc   (global — this file's install dest)
+//
+// Why this lives in its own file (not opencode.json):
+//   dcp ignores any `dcp` key inside opencode.json. The plugin uses a
+//   sibling file so its schema can evolve independently of opencode core.
+//
+// What this config does:
+//   `compress.maxContextLimit: "65%"` tells dcp to fire its auto-compress
+//   nudge when the conversation reaches 65% of the model's context window.
+//   The default (100000 absolute tokens) misbehaves on small-context
+//   models and doesn't track model-specific limits. The percent form
+//   resolves at runtime once dcp has cached the model's context limit.
+//
+// Tuning notes:
+//   - Lower the percent (e.g. "55%") if you find auto-notes triggers too
+//     late and you've been losing context fidelity by the time it fires.
+//   - Raise it (e.g. "75%") if you find the nudges are interrupting
+//     productive flow before context pressure is real.
+//   - Number form (e.g. 65000) is also accepted but doesn't adapt to
+//     model changes; prefer the percent string.
+//
+// Schema reference:
+//   https://github.com/Opencode-DCP/opencode-dynamic-context-pruning
+//   (compress.maxContextLimit accepts: number | "<N>%" string)
+{
+  "compress": {
+    "maxContextLimit": "65%"
+  }
+}

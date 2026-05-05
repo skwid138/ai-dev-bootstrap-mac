@@ -85,6 +85,41 @@ opencode_deploy_agents_md() {
   echo "installed"
 }
 
+# ── opencode_deploy_dcp_config ───────────────────────────────────────────────
+# Install ~/.config/opencode/dcp.jsonc with overwrite protection.
+#
+# dcp (the dynamic-context-pruning plugin loaded via opencode.json's
+# `plugin` array) reads its config from a sibling file, NOT from
+# opencode.json. The user may tune `compress.maxContextLimit` to taste,
+# so this function preserves their edits on re-bootstrap (same semantics
+# as opencode_deploy_agents_md).
+#
+# Args:
+#   $1: source dcp.jsonc.template path
+#   $2: dest   dcp.jsonc path
+#
+# Returns: 0 if installed or skipped cleanly, 1 on error.
+# Stdout: "installed", "skipped", or "" on error (machine-readable).
+opencode_deploy_dcp_config() {
+  local src="$1"
+  local dest="$2"
+
+  if [ ! -f "$src" ]; then
+    echo "opencode_deploy_dcp_config: source file not found: $src" >&2
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$dest")"
+
+  if [ -f "$dest" ]; then
+    echo "skipped"
+    return 0
+  fi
+
+  cp "$src" "$dest"
+  echo "installed"
+}
+
 # ── opencode_render_config ───────────────────────────────────────────────────
 # Render opencode.json from the template, optionally setting the model.
 #

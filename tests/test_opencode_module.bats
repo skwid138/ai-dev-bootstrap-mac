@@ -86,6 +86,7 @@ run_module() {
   [ -d "$HOME/.config/opencode/instruction" ]
   [ -d "$HOME/.config/opencode/plugins" ]
   [ -f "$HOME/.config/opencode/AGENTS.md" ]
+  [ -f "$HOME/.config/opencode/dcp.jsonc" ]
 
   # Brew install was attempted. (The module skips 'brew tap' when our
   # mock's bare 'brew tap' already lists anomalyco/tap, which is the
@@ -186,6 +187,10 @@ run_module() {
   mkdir -p "$HOME/.config/opencode/skill/my-custom-skill"
   echo "custom" >"$HOME/.config/opencode/skill/my-custom-skill/SKILL.md"
 
+  # User also tunes their dcp threshold.
+  echo '{ "compress": { "maxContextLimit": "80%" } }' >"$HOME/.config/opencode/dcp.jsonc"
+  user_dcp_hash=$(md5 -q "$HOME/.config/opencode/dcp.jsonc")
+
   # User damages a curated asset to verify it gets restored.
   bug_hunter="$HOME/.config/opencode/skill/bug-hunter/SKILL.md"
   echo "DAMAGED" >"$bug_hunter"
@@ -200,6 +205,10 @@ run_module() {
   # AGENTS.md preserved bit-for-bit.
   rerun_hash=$(md5 -q "$HOME/.config/opencode/AGENTS.md")
   [ "$user_agents_md_hash" = "$rerun_hash" ]
+
+  # dcp.jsonc preserved bit-for-bit (user-tunable, same overwrite-protect).
+  rerun_dcp_hash=$(md5 -q "$HOME/.config/opencode/dcp.jsonc")
+  [ "$user_dcp_hash" = "$rerun_dcp_hash" ]
 
   # User's custom skill survived (we copy curated dirs but don't nuke
   # untouched user files inside them — verify).
