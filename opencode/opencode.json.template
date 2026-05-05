@@ -5,7 +5,7 @@
   "share": "disabled",
   "instructions": [
     "instruction/repo-context.md",
-    "instruction/orchestration-runtime.md"
+    "instruction/plan-workflow.md"
   ],
   "plugin": [
     "@tarquinen/opencode-dcp@3.1.9"
