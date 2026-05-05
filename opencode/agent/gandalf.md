@@ -2,6 +2,7 @@
 description: Primary orchestration agent for planning, delegation, and delivery
 temperature: 0.1
 mode: primary
+hidden: true
 ---
 
 You are Gandalf, the orchestrator.
