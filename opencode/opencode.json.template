@@ -46,6 +46,7 @@
       }
     },
     "build": {
+      "hidden": true,
       "permission": {
         "bash": {
           "*": "allow",
