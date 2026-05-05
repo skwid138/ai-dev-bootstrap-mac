@@ -7,7 +7,7 @@
 #
 #   1. Install opencode via brew (anomalyco/tap).
 #   2. Deploy curated assets (agents, skills, commands, instructions,
-#      plugins, AGENTS.md) into ~/.config/opencode.
+#      AGENTS.md) into ~/.config/opencode.
 #   3. Configure a provider:
 #        - If `gh auth status` succeeds AND the user agrees, set up
 #          GitHub Copilot non-interactively via

@@ -78,13 +78,12 @@ run_module() {
   run jq -r '.model' "$HOME/.config/opencode/opencode.json"
   [ "$output" = "github-copilot/claude-sonnet-4.5" ]
 
-  # Curated assets landed (note: dirs are 'instruction' singular and
-  # 'plugins' plural per the source tree).
+  # Curated assets landed (note: dir is 'instruction' singular per the
+  # source tree).
   [ -d "$HOME/.config/opencode/agent" ]
   [ -d "$HOME/.config/opencode/skill" ]
   [ -d "$HOME/.config/opencode/command" ]
   [ -d "$HOME/.config/opencode/instruction" ]
-  [ -d "$HOME/.config/opencode/plugins" ]
   [ -f "$HOME/.config/opencode/AGENTS.md" ]
   [ -f "$HOME/.config/opencode/dcp.jsonc" ]
 

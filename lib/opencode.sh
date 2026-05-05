@@ -20,7 +20,7 @@
 #   $2: dest dir   (typically "$HOME/.config/opencode")
 #
 # Behavior:
-# - Copies these subtrees: agent/, skill/, command/, instruction/, plugins/
+# - Copies these subtrees: agent/, skill/, command/, instruction/
 # - Does NOT touch AGENTS.md (handled separately, see opencode_deploy_agents_md).
 # - Does NOT touch opencode.json (handled separately, see opencode_render_config).
 # - Overwrites destination files unconditionally — they're maintained by
@@ -42,7 +42,7 @@ opencode_deploy_assets() {
   mkdir -p "$dest"
 
   local subdir
-  for subdir in agent skill command instruction plugins; do
+  for subdir in agent skill command instruction; do
     if [ -d "$src/$subdir" ]; then
       mkdir -p "$dest/$subdir"
       # cp -R src/sub/. dest/sub/ — the trailing /. on the source ensures

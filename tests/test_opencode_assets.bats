@@ -33,7 +33,7 @@ teardown() {
 # ── Agents ───────────────────────────────────────────────────────────────────
 
 @test "opencode/agent: all 4 curated agents exist" {
-  for agent in gandalf celebrimbor treebeard legolas; do
+  for agent in radagast celebrimbor treebeard legolas; do
     [ -f "${OPENCODE_DIR}/agent/${agent}.md" ]
   done
 }
@@ -89,10 +89,6 @@ teardown() {
 
 @test "opencode/AGENTS.md exists" {
   [ -f "${OPENCODE_DIR}/AGENTS.md" ]
-}
-
-@test "opencode/plugins/orchestration.ts exists" {
-  [ -f "${OPENCODE_DIR}/plugins/orchestration.ts" ]
 }
 
 @test "opencode/dcp.jsonc.template exists" {

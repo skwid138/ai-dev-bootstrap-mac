@@ -29,12 +29,11 @@ teardown() {
 @test "opencode_deploy_assets: copies expected subtrees" {
   src="$SANDBOX/src"
   dest="$SANDBOX/dest"
-  mkdir -p "$src"/{agent,skill/foo,command,instruction,plugins}
+  mkdir -p "$src"/{agent,skill/foo,command,instruction}
   echo "agent" >"$src/agent/x.md"
   echo "skill" >"$src/skill/foo/SKILL.md"
   echo "cmd" >"$src/command/c.md"
   echo "ins" >"$src/instruction/i.md"
-  echo "plug" >"$src/plugins/p.ts"
 
   run opencode_deploy_assets "$src" "$dest"
   [ "$status" -eq 0 ]
@@ -43,7 +42,6 @@ teardown() {
   [ -f "$dest/skill/foo/SKILL.md" ]
   [ -f "$dest/command/c.md" ]
   [ -f "$dest/instruction/i.md" ]
-  [ -f "$dest/plugins/p.ts" ]
 }
 
 @test "opencode_deploy_assets: skips missing subdirs gracefully" {
@@ -51,7 +49,7 @@ teardown() {
   dest="$SANDBOX/dest"
   mkdir -p "$src/agent"
   echo "agent" >"$src/agent/x.md"
-  # Note: no skill/, command/, instruction/, plugins/ — should be fine.
+  # Note: no skill/, command/, instruction/ — should be fine.
 
   run opencode_deploy_assets "$src" "$dest"
   [ "$status" -eq 0 ]
