@@ -1,6 +1,8 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "",
+  "default_agent": "plan",
+  "share": "disabled",
   "instructions": [
     "instruction/repo-context.md",
     "instruction/orchestration-runtime.md"
