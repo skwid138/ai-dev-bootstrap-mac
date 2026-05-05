@@ -201,7 +201,6 @@ ai-dev-bootstrap-mac/
 ├── launcher/
 ├── opencode/
 ├── tests/
-├── PLAN.md
 └── README.md
 ```
 
