@@ -26,7 +26,4 @@ build/
 *.app/
 
 # Local working docs (not for shipping)
-ANALYSIS_AND_PLAN.md
-PLAN.md
-zsh_init_plan.md
-launcher_improvement_plan.md
+/.project-plans/
