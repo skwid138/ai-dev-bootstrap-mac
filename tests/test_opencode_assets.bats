@@ -82,7 +82,7 @@ teardown() {
 
 @test "opencode/instruction: both curated instructions exist" {
   [ -f "${OPENCODE_DIR}/instruction/repo-context.md" ]
-  [ -f "${OPENCODE_DIR}/instruction/orchestration-runtime.md" ]
+  [ -f "${OPENCODE_DIR}/instruction/plan-workflow.md" ]
 }
 
 # ── Top-level files ──────────────────────────────────────────────────────────
