@@ -10,6 +10,54 @@
   "plugin": [
     "@tarquinen/opencode-dcp@3.1.9"
   ],
+  "permission": {
+    "edit": { "*": "ask" },
+    "bash": {
+      "*": "ask",
+      "ls *": "allow",
+      "cat *": "allow",
+      "rg *": "allow",
+      "fd *": "allow",
+      "git status*": "allow",
+      "git diff*": "allow",
+      "git log*": "allow",
+      "git show*": "allow",
+      "git push*": "ask",
+      "git push --force*": "deny",
+      "git reset --hard*": "deny",
+      "rm -rf *": "deny",
+      "sudo *": "deny"
+    }
+  },
+  "agent": {
+    "plan": {
+      "permission": {
+        "bash": {
+          "*": "ask",
+          "ls *": "allow",
+          "cat *": "allow",
+          "rg *": "allow",
+          "fd *": "allow",
+          "git status*": "allow",
+          "git diff*": "allow",
+          "git log*": "allow",
+          "git show*": "allow"
+        }
+      }
+    },
+    "build": {
+      "permission": {
+        "bash": {
+          "*": "allow",
+          "git push*": "ask",
+          "git push --force*": "deny",
+          "git reset --hard*": "deny",
+          "rm -rf *": "deny",
+          "sudo *": "deny"
+        }
+      }
+    }
+  },
   "mcp": {
     "chrome-devtools": {
       "type": "local",
