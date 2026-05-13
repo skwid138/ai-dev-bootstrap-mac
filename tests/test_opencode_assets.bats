@@ -33,7 +33,10 @@ teardown() {
 # ── Agents ───────────────────────────────────────────────────────────────────
 
 @test "opencode/agent: all 4 curated agents exist" {
-  for agent in radagast celebrimbor treebeard legolas; do
+  agents=("${OPENCODE_DIR}"/agent/*.md)
+  [ "${#agents[@]}" -eq 4 ]
+
+  for agent in radagast aragorn treebeard legolas; do
     [ -f "${OPENCODE_DIR}/agent/${agent}.md" ]
   done
 }
@@ -56,10 +59,29 @@ teardown() {
   done
 }
 
+@test "opencode/agent: leaf agents deny recursive task delegation" {
+  for agent in treebeard legolas radagast; do
+    run grep -Eq '^  task: deny$' "${OPENCODE_DIR}/agent/${agent}.md"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "opencode/agent: exploration agents are read-only" {
+  for agent in legolas radagast; do
+    run grep -Eq '^  write: deny$' "${OPENCODE_DIR}/agent/${agent}.md"
+    [ "$status" -eq 0 ]
+    run grep -Eq '^  edit: deny$' "${OPENCODE_DIR}/agent/${agent}.md"
+    [ "$status" -eq 0 ]
+  done
+}
+
 # ── Skills ───────────────────────────────────────────────────────────────────
 
-@test "opencode/skill: all 3 curated skills have SKILL.md" {
-  for skill in tdd bug-hunter git-flow; do
+@test "opencode/skill: all 7 curated skills have SKILL.md" {
+  skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
+  [ "${#skills[@]}" -eq 7 ]
+
+  for skill in tdd bug-hunter git-flow diagnose grill-me prototype improve-codebase-architecture; do
     [ -f "${OPENCODE_DIR}/skill/${skill}/SKILL.md" ]
   done
 }
@@ -72,16 +94,23 @@ teardown() {
 
 # ── Commands ─────────────────────────────────────────────────────────────────
 
-@test "opencode/command: all 4 curated commands exist" {
-  for cmd in help-me explain safer commit; do
+@test "opencode/command: all 8 curated commands exist" {
+  commands=("${OPENCODE_DIR}"/command/*.md)
+  [ "${#commands[@]}" -eq 8 ]
+
+  for cmd in help-me explain safer commit diagnose grill prototype architecture; do
     [ -f "${OPENCODE_DIR}/command/${cmd}.md" ]
   done
 }
 
 # ── Instructions ─────────────────────────────────────────────────────────────
 
-@test "opencode/instruction: both curated instructions exist" {
+@test "opencode/instruction: all 3 curated instructions exist" {
+  instructions=("${OPENCODE_DIR}"/instruction/*.md)
+  [ "${#instructions[@]}" -eq 3 ]
+
   [ -f "${OPENCODE_DIR}/instruction/repo-context.md" ]
+  [ -f "${OPENCODE_DIR}/instruction/agent-defaults.md" ]
   [ -f "${OPENCODE_DIR}/instruction/plan-workflow.md" ]
 }
 
@@ -133,6 +162,30 @@ teardown() {
   [ "$output" = "1" ]
   run jq -r '.plugin[0]' "${OPENCODE_DIR}/opencode.json.template"
   [[ "$output" == @tarquinen/opencode-dcp@* ]]
+}
+
+# ── Cross-pollination guardrails ─────────────────────────────────────────────
+
+@test "opencode/: personal agent names are absent from active assets" {
+  run grep -RiiE \
+    -e '(^|[^a-z0-9_-])gandalf([^a-z0-9_-]|$)' \
+    -e '(^|[^a-z0-9_-])saruman([^a-z0-9_-]|$)' \
+    "${OPENCODE_DIR}/agent" \
+    "${OPENCODE_DIR}/skill" \
+    "${OPENCODE_DIR}/command" \
+    "${OPENCODE_DIR}/instruction"
+  [ "$status" -eq 1 ]
+}
+
+@test "opencode/: skills and instructions do not reference external glossary docs" {
+  run grep -RE \
+    -e 'CONTEXT\.md' \
+    -e 'docs/adr' \
+    -e '(^|[^A-Za-z0-9_-])ADR([^A-Za-z0-9_-]|$)' \
+    -e '(^|[^A-Za-z0-9_-])ADRs([^A-Za-z0-9_-]|$)' \
+    "${OPENCODE_DIR}/skill" \
+    "${OPENCODE_DIR}/instruction"
+  [ "$status" -eq 1 ]
 }
 
 # ── Forbidden tokens (single sweep across whole tree) ────────────────────────
