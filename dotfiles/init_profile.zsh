@@ -2,7 +2,7 @@
 #
 # Sourced from ~/.zprofile. Runs once per login shell, between
 # ~/.zshenv and ~/.zshrc. Login shells include: ssh, GUI re-login,
-# `zsh -l`, `login -flp ... zsh`, and the Vibe Code launcher's
+# `zsh -l`, `login -flp ... zsh`, and the Just Vibes launcher's
 # planned `zsh -l -i -c` invocation.
 #
 # Contract:
