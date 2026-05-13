@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Assembles a "Vibe Code.app" macOS app bundle from the source files in this
+# Assembles a "Just Vibes.app" macOS app bundle from the source files in this
 # directory. Branch F (launcher_improvement_plan.md §8): the bundle is built
 # by `osacompile` from launch.applescript, then post-processed to swap in
 # our curated Info.plist, piggy-bank icon, and the bash helper script that
@@ -8,12 +8,12 @@
 #
 # Bundle layout produced:
 #
-#   Vibe Code.app/
+#   Just Vibes.app/
 #     Contents/
 #       Info.plist                          (curated; from launcher/Info.plist)
 #       MacOS/applet                        (AppleScript runtime, from osacompile)
 #       Resources/
-#         VibeCode.icns                     (piggy-bank icon)
+#         JustVibes.icns                    (piggy-bank icon)
 #         launch-helper.sh                  (the bash logic the AppleScript invokes)
 #         Scripts/main.scpt                 (compiled AppleScript, from osacompile)
 #         description.rtfd/                 (osacompile boilerplate; harmless)
@@ -40,12 +40,12 @@
 #   applet.icns at Resources/applet.icns. Modern macOS may prefer the
 #   asset catalog over a loose .icns even when CFBundleIconFile points
 #   elsewhere. Deleting both removes the ambiguity entirely; the only
-#   icon in the bundle is then VibeCode.icns. See
+#   icon in the bundle is then JustVibes.icns. See
 #   launcher_improvement_plan.md §1.5.3 finding 1.
 #
 # Usage:  launcher/build.sh <output-dir>
 #
-# The output dir will contain "Vibe Code.app". Any pre-existing bundle of
+# The output dir will contain "Just Vibes.app". Any pre-existing bundle of
 # that name is replaced atomically.
 
 set -euo pipefail
@@ -61,7 +61,7 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APPLESCRIPT_SRC="$HERE/launch.applescript"
 HELPER_SH="$HERE/launch-helper.sh"
 INFO_PLIST="$HERE/Info.plist"
-ICNS="$HERE/icon/VibeCode.icns"
+ICNS="$HERE/icon/JustVibes.icns"
 
 for f in "$APPLESCRIPT_SRC" "$HELPER_SH" "$INFO_PLIST" "$ICNS"; do
   if [[ ! -f "$f" ]]; then
@@ -88,7 +88,7 @@ mkdir -p "$dest_dir"
 staging="$(mktemp -d)"
 trap 'rm -rf "$staging"' EXIT
 
-bundle="$staging/Vibe Code.app"
+bundle="$staging/Just Vibes.app"
 
 # 1. osacompile generates the bundle skeleton (Contents/MacOS/applet,
 #    Contents/Resources/Scripts/main.scpt, Contents/Resources/applet.icns,
@@ -128,7 +128,7 @@ plutil -lint "$bundle/Contents/Info.plist" >/dev/null
 
 # 3. Resource swap. Piggy-bank icon replaces the default applet icon.
 #    Drop the helper script into Resources/ alongside Scripts/main.scpt.
-cp "$ICNS" "$bundle/Contents/Resources/VibeCode.icns"
+cp "$ICNS" "$bundle/Contents/Resources/JustVibes.icns"
 cp "$HELPER_SH" "$bundle/Contents/Resources/launch-helper.sh"
 chmod 755 "$bundle/Contents/Resources/launch-helper.sh"
 
@@ -156,7 +156,7 @@ rm -f "$_codesign_log"
 # 6. Atomic-ish swap. macOS doesn't have rename-replace for directories,
 #    so we delete + move; the window is small and the alternative
 #    (in-place edit) risks leaving stale files behind.
-final="$dest_dir/Vibe Code.app"
+final="$dest_dir/Just Vibes.app"
 if [[ -d "$final" ]]; then
   rm -rf "$final"
 fi

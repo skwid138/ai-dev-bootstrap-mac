@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Re-renders launcher/icon/vibecode.svg into launcher/icon/VibeCode.icns.
+# Re-renders launcher/icon/justvibes.svg into launcher/icon/JustVibes.icns.
 #
 # Run this whenever the SVG changes; commit both the SVG and the resulting
 # .icns. Users running bootstrap.sh do NOT execute this script — they get the
@@ -12,9 +12,9 @@
 set -euo pipefail
 
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-SVG="$HERE/icon/vibecode.svg"
-ICONSET_DIR="$HERE/icon/VibeCode.iconset"
-ICNS_OUT="$HERE/icon/VibeCode.icns"
+SVG="$HERE/icon/justvibes.svg"
+ICONSET_DIR="$HERE/icon/JustVibes.iconset"
+ICNS_OUT="$HERE/icon/JustVibes.icns"
 
 if [[ ! -f "$SVG" ]]; then
   echo "error: $SVG not found" >&2

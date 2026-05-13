@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Vibe Code.app curated Info.plist (Branch F — AppleScript-applet host).
+  Just Vibes.app curated Info.plist (Branch F — AppleScript-applet host).
 
-  This plist is written into Vibe Code.app/Contents/Info.plist by
+  This plist is written into Just Vibes.app/Contents/Info.plist by
   launcher/build.sh AFTER osacompile generates the bundle skeleton. The
   osacompile-generated plist would otherwise show the bundle as "applet"
   in Finder/Dock/Cmd-Tab; we override every relevant identity key here.
@@ -17,13 +17,13 @@
       The Activity Monitor process name is driven by CFBundleName, not
       this filename, so renaming buys nothing and breaks everything.
 
-    CFBundleIdentifier=dev.aibootstrap.vibecode
+    CFBundleIdentifier=dev.aibootstrap.justvibes
       Reverse-DNS identifier distinct from Ghostty's
       `com.mitchellh.ghostty`. Used by LaunchServices to track the
       bundle as a separate app (separate Dock tile, separate
       preferences, separate TCC entry).
 
-    CFBundleIconFile=VibeCode  AND  CFBundleIconName=VibeCode
+    CFBundleIconFile=JustVibes  AND  CFBundleIconName=JustVibes
       BOTH keys must be set. Modern macOS asset-catalog resolution
       can prefer CFBundleIconName; if only CFBundleIconFile is set,
       the Dock may fall back to the default `applet` icon stored in
@@ -60,11 +60,11 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>
-  <string>Vibe Code</string>
+  <string>Just Vibes</string>
   <key>CFBundleDisplayName</key>
-  <string>Vibe Code</string>
+  <string>Just Vibes</string>
   <key>CFBundleIdentifier</key>
-  <string>dev.aibootstrap.vibecode</string>
+  <string>dev.aibootstrap.justvibes</string>
   <key>CFBundleVersion</key>
   <string>1.0</string>
   <key>CFBundleShortVersionString</key>
@@ -72,9 +72,9 @@
   <key>CFBundleExecutable</key>
   <string>applet</string>
   <key>CFBundleIconFile</key>
-  <string>VibeCode</string>
+  <string>JustVibes</string>
   <key>CFBundleIconName</key>
-  <string>VibeCode</string>
+  <string>JustVibes</string>
   <key>CFBundlePackageType</key>
   <string>APPL</string>
   <key>CFBundleSignature</key>

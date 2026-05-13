@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
   <!--
-    Vibe Code app icon.
+    Just Vibes app icon.
     Pastel-pink Lucide piggy-bank (ISC) on a teal/cyan macOS-style rounded-rect.
     Render to .icns via launcher/build-icon.sh (sips + iconutil, both built into macOS).
   -->

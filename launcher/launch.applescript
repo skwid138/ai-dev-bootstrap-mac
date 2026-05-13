@@ -1,7 +1,7 @@
--- Vibe Code launcher — AppleScript host for Vibe Code.app (Branch F).
+-- Just Vibes launcher — AppleScript host for Just Vibes.app (Branch F).
 --
 -- This script is compiled by `osacompile` (see launcher/build.sh) into
--- Vibe Code.app/Contents/MacOS/applet — the standard AppleScript runtime
+-- Just Vibes.app/Contents/MacOS/applet — the standard AppleScript runtime
 -- entry point produced by `osacompile -o`. The compiled bundle's
 -- CFBundleExecutable is `applet` (Mach-O); this `.applescript` is the
 -- compiled-into-Resources/Scripts/main.scpt source.
@@ -10,7 +10,7 @@
 --   The previous launcher (launcher/launch.sh, now launcher/launch-helper.sh)
 --   was the bundle's CFBundleExecutable directly. Bash → exec'd /usr/bin/open
 --   → Ghostty took over the Dock tile / Cmd+Tab entry / Activity Monitor
---   process name. Vibe Code's branded identity (piggy-bank icon, "Vibe Code"
+--   process name. Just Vibes' branded identity (piggy-bank icon, "Just Vibes"
 --   process name) was never visible because nothing persistent ever ran
 --   under the bundle's identity.
 --
@@ -18,7 +18,7 @@
 --   stays alive for the lifetime of the script. With `on idle` returning a
 --   non-zero delay, the runtime owns a Dock tile / Cmd+Tab entry /
 --   Activity Monitor entry — all driven by the bundle's CFBundleName
---   (set to "Vibe Code" by build.sh). The user sees Vibe Code's piggy-bank
+--   (set to "Just Vibes" by build.sh). The user sees Just Vibes' piggy-bank
 --   identity in the Dock; the spawned Ghostty terminal window keeps
 --   Ghostty's identity (structural per launcher_improvement_plan.md §2 —
 --   we don't try to rebrand Ghostty's own window).
@@ -56,14 +56,14 @@
 --
 -- Stay-alive behavior (Option A from §8.3, ratified at Branch F ship):
 --   We use `on idle ... return 600` so the runtime stays alive owning the
---   Dock tile until the user explicitly quits Vibe Code (Cmd+Q from the
+--   Dock tile until the user explicitly quits Just Vibes (Cmd+Q from the
 --   Dock context menu, or via the Cmd+Tab → Cmd+Q path). The user must
 --   separately quit Ghostty when they're done with the terminal — this is
 --   the documented Branch F trade-off ("two things to quit"). Option B
 --   (watch the spawned Ghostty PID and exit when it dies) was deferred:
 --   Ghostty's quit semantics are window-scoped, not process-scoped, and a
 --   PID-watcher would need careful handling of the user closing only the
---   Vibe Code window vs. quitting all of Ghostty.
+--   Just Vibes window vs. quitting all of Ghostty.
 --
 -- Logic delegation:
 --   The AppleScript is intentionally tiny. All decision logic (probe
@@ -101,7 +101,7 @@ on runHelper()
         -- errNum 1 = generic shell-error (helper exited non-zero, e.g.
         -- Ghostty or opencode missing — the helper already showed its
         -- own alert in that case, but we still want to log).
-        do shell script "/usr/bin/logger -t vibe-code " & quoted form of ¬
+        do shell script "/usr/bin/logger -t just-vibes " & quoted form of ¬
             ("launch-helper failed (errNum=" & errNum & "): " & errMsg)
     end try
 end runHelper
@@ -114,7 +114,7 @@ end run
 
 -- ── Branch F.1 (§8.7): Cmd-Tab focus handler ────────────────────────────
 --
--- AppleScript fires `on reopen` when the user clicks the Vibe Code Dock
+-- AppleScript fires `on reopen` when the user clicks the Just Vibes Dock
 -- tile (or Cmd-Tabs to its card) while the applet is already running.
 -- Because the applet has no UI window, the default behavior is "nothing
 -- visibly happens" — confusing UX. Instead, bring the spawned Ghostty
@@ -133,7 +133,7 @@ end reopen
 -- signals the caller to fall through to `runHelper()`.
 on readGhostyPid()
     try
-        set pidText to do shell script "cat \"${TMPDIR:-/tmp}/vibe-code/ghostty.pid\""
+        set pidText to do shell script "cat \"${TMPDIR:-/tmp}/just-vibes/ghostty.pid\""
         return (pidText as integer)
     on error
         return 0
@@ -173,13 +173,13 @@ on refocusOrRelaunch()
         return
     end if
     -- PID was stale. Clear the file and relaunch.
-    do shell script "rm -f \"${TMPDIR:-/tmp}/vibe-code/ghostty.pid\""
+    do shell script "rm -f \"${TMPDIR:-/tmp}/just-vibes/ghostty.pid\""
     my runHelper()
 end refocusOrRelaunch
 
 -- Periodic idle handler. Returning N tells the AppleScript runtime to
 -- call us again after N seconds, keeping the process alive (and the
--- Dock tile visible) until the user quits Vibe Code. We do nothing
+-- Dock tile visible) until the user quits Just Vibes. We do nothing
 -- here — just stay alive.
 on idle
     return 600
