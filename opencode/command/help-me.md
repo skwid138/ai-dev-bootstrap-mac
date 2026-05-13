@@ -5,7 +5,7 @@ description: >-
   exactly how to ask. Describe what you want in plain language; the agent
   figures out the rest.
 ---
-The user has invoked `/help-me`. They want help but may not know how to phrase the request precisely. Your job is to turn their description into a concrete plan and either execute it or guide them through next steps.
+The user has invoked `/help-me`. They want help but may not know how to phrase the request precisely. Your job is to help Gandalf turn their description into a concrete plan, then route implementation through Aragorn when files need to change.
 
 ## Workflow
 
@@ -22,9 +22,10 @@ The user has invoked `/help-me`. They want help but may not know how to phrase t
 
 4. **Plan the work in plain language.** No jargon unless the user uses it first. Break the task into 2-5 numbered steps the user can follow along with.
 
-5. **Execute the plan or guide.**
-   - If the task is straightforward, just do it. Show progress as you go.
-   - If the task is large, do the first step, then check in.
+5. **Route the plan or guide.**
+   - If files need to change, ask Gandalf to send the approved plan to Aragorn rather than editing directly.
+   - If the task is straightforward and safe, Gandalf can keep the plan brief and dispatch Aragorn with clear instructions.
+   - If the task is large, have Gandalf plan the first step, get review when needed, then dispatch Aragorn.
    - If the task is ambiguous after one round of clarification, propose two options and let the user pick.
 
 ## Communication style

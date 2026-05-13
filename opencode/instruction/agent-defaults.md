@@ -48,15 +48,15 @@ Use it for broad design questions such as tightly coupled modules across files, 
 
 ## Post-implementation audit
 
-After Aragorn or Build completes non-trivial work, the user should Tab back to Plan. The Plan agent should dispatch Treebeard for a post-implementation audit before calling the work done.
+After Aragorn completes non-trivial work, Gandalf should dispatch Saruman for a post-implementation audit before calling the work done.
 
-Treebeard checks the implementation against the approved plan and returns one verdict:
+Saruman checks the implementation against the approved plan and returns one verdict:
 
 - **APPROVE** — the work matches the plan, or only minor observations remain.
 - **REVISE** — specific fixes are needed before calling the work complete.
 - **REJECT** — the implementation went in the wrong direction and needs re-planning.
 
-The Plan agent should explain Treebeard's findings in plain language and route fixes back to Build when needed.
+Gandalf should explain Saruman's findings in plain language and route fixes back to Aragorn when needed.
 
 ## Long-running command discipline
 

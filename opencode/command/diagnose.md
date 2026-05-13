@@ -6,4 +6,4 @@ description: >-
 ---
 Use the `diagnose` skill to investigate the user's reported problem and produce a diagnosis package.
 
-Do not apply the production fix in this command. If the user wants the fix implemented after diagnosis, hand the package to Build or Aragorn.
+Do not apply the production fix in this command. If the user wants the fix implemented after diagnosis, hand the package to Aragorn.

@@ -11,7 +11,7 @@ description: >-
 
 Surface architectural friction and propose **deepening opportunities** — changes that make code simpler to use from the outside while hiding more behavior inside a well-shaped module.
 
-**This skill is read-only investigation.** Explore, propose candidates, optionally grill the chosen candidate, and hand off a proposal package. Do not execute the refactor. Implementation goes to the user, Build, or Aragorn.
+**This skill is read-only investigation.** Explore, propose candidates, optionally grill the chosen candidate, and hand off a proposal package. Do not execute the refactor. Implementation goes to the user or Aragorn.
 
 ## When to use this skill
 
@@ -101,7 +101,7 @@ Produce a deepening package:
 - **Test strategy** — what tests move, disappear, or get added at the new interface.
 - **Risks** — likely failure modes and verification steps.
 
-Hand the package to the user, Build, or Aragorn. Do not execute the refactor in this skill.
+Hand the package to the user or Aragorn. Do not execute the refactor in this skill.
 
 ## Behavioral rules
 

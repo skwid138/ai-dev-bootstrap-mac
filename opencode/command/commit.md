@@ -5,9 +5,9 @@ description: >-
   message, and commits. Never pushes to a remote without confirmation.
   Never runs destructive operations.
 ---
-Use the `git-flow` skill to record the user's current changes as one or more atomic git commits.
+Ask Aragorn to record the user's current changes as one or more atomic git commits using the global git workflow rules from AGENTS.md. Do not perform git write operations in the current agent; delegate the work to Aragorn and have Aragorn report the result.
 
-## Default behavior
+## Default behavior for Aragorn
 
 1. Check repo state. If the directory is not a git repository, ask the user if they want to initialize one. On yes, run `git init`, stage everything, and commit with `chore: initial commit`.
 
@@ -35,10 +35,10 @@ Use the `git-flow` skill to record the user's current changes as one or more ato
 
 ## Optional argument
 
-If the user passes a message after `/commit`, treat it as a *hint* about what they consider the unit of work — not a verbatim commit message. Use it to inform your Conventional Commits draft. The agent always controls the final formatting.
+If the user passes a message after `/commit`, treat it as a *hint* about what they consider the unit of work — not a verbatim commit message. Use it to inform Aragorn's Conventional Commits draft. Aragorn always controls the final formatting.
 
-Example: `/commit add login button` → agent might commit as `feat(auth): add login button`.
+Example: `/commit add login button` → Aragorn might commit as `feat(auth): add login button`.
 
 ## When to push back
 
-If the changes you see are clearly multiple unrelated things (e.g., a bug fix in one file plus a refactor in another plus a docs update), don't squash them into one commit just because it's faster. Propose the split, get approval, then commit them separately. The user's history is more valuable than the saved keystrokes.
+If the changes Aragorn sees are clearly multiple unrelated things (e.g., a bug fix in one file plus a refactor in another plus a docs update), don't squash them into one commit just because it's faster. Aragorn should propose the split, get approval, then commit them separately. The user's history is more valuable than the saved keystrokes.

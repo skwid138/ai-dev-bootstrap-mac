@@ -41,7 +41,7 @@ promise and what runtime data actually delivers.
 - Any request to find bugs that tests aren't catching
 
 Do **not** use this skill for:
-- Reviewing PR changes (use `pr-review`)
+- Reviewing code changes generally (use the normal Gandalf and Saruman review flow)
 - Finding bugs reported in GitHub issues (use standard investigation)
 - Performance analysis (use profiling tools)
 - Security audits focused on auth/injection (this skill finds crash bugs, not
@@ -197,7 +197,7 @@ For **Quick Scan** and **Boundary Audit**: delegate trace work to a single
 **legolas** agent with the boundary map as input.
 
 For **Deep Trace**: delegate to **legolas** for evidence gathering, then
-**treebeard** for synthesis and deduplication.
+**saruman** for synthesis and deduplication.
 
 ---
 

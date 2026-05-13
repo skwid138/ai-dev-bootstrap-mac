@@ -11,7 +11,7 @@ description: >-
 
 A disciplined way to investigate hard bugs without jumping straight to edits.
 
-**This skill is read-only investigation.** Build a feedback loop, reproduce the bug, generate hypotheses, use existing read-only probes where available, and design any code-changing probes as recommendations. Do not write files, apply temporary instrumentation, apply the fix, restart services, change config, or mutate production state. Hand proposed instrumentation and implementation to the user, Build, or Aragorn.
+**This skill is read-only investigation.** Build a feedback loop, reproduce the bug, generate hypotheses, use existing read-only probes where available, and design any code-changing probes as recommendations. Do not write files, apply temporary instrumentation, apply the fix, restart services, change config, or mutate production state. Hand proposed instrumentation and implementation to the user or Aragorn.
 
 ## Plain-language glossary
 
@@ -100,7 +100,7 @@ Produce a diagnosis package containing:
 - **Risks** — what the fix might break and what to verify.
 - **Follow-ups** — missing coverage, hard-to-test call paths, or architecture concerns.
 
-Hand the package to the user, Build, or Aragorn for implementation.
+Hand the package to the user or Aragorn for implementation.
 
 ## Phase 6 — Post-mortem
 
