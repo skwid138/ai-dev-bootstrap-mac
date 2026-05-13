@@ -1,8 +1,8 @@
 #!/usr/bin/env bats
-# AppleScript-host tests for the Vibe Code launcher (Branch F.1, §8.7).
+# AppleScript-host tests for the Just Vibes launcher (Branch F.1, §8.7).
 #
 # These tests cover the `on reopen` focus handler added in Branch F.1.
-# The handler's job is: when the user Cmd-Tabs to "Vibe Code" while the
+# The handler's job is: when the user Cmd-Tabs to "Just Vibes" while the
 # applet is already running, bring the spawned Ghostty window forward
 # instead of doing nothing visible.
 #
@@ -67,7 +67,7 @@ _stripped() {
 
 @test "launch.applescript: declares an on reopen handler" {
   # The whole point of Branch F.1 (§8.7). Without `on reopen`,
-  # Cmd-Tabbing to Vibe Code while it's running does nothing visible.
+  # Cmd-Tabbing to Just Vibes while it's running does nothing visible.
   _stripped | grep -qE '^[[:space:]]*on[[:space:]]+reopen[[:space:]]*$'
 }
 
@@ -146,10 +146,10 @@ _stripped() {
   # (launch-helper.sh) must agree on the path. If a refactor moves
   # one without the other, the focus path silently never finds a PID
   # and we always fall back to relaunch. Assert both reference the
-  # same `${TMPDIR:-/tmp}/vibe-code/ghostty.pid` shape.
-  _stripped | grep -qE '\$\{TMPDIR:-/tmp\}/vibe-code/ghostty\.pid'
-  grep -qE '\$\{TMPDIR:-/tmp\}/vibe-code"' "$BOOTSTRAP_DIR/launcher/launch-helper.sh" \
-    || grep -qE '\$\{TMPDIR:-/tmp\}/vibe-code/ghostty\.pid' "$BOOTSTRAP_DIR/launcher/launch-helper.sh"
+  # same `${TMPDIR:-/tmp}/just-vibes/ghostty.pid` shape.
+  _stripped | grep -qE '\$\{TMPDIR:-/tmp\}/just-vibes/ghostty\.pid'
+  grep -qE '\$\{TMPDIR:-/tmp\}/just-vibes"' "$BOOTSTRAP_DIR/launcher/launch-helper.sh" \
+    || grep -qE '\$\{TMPDIR:-/tmp\}/just-vibes/ghostty\.pid' "$BOOTSTRAP_DIR/launcher/launch-helper.sh"
 }
 
 # ── Dynamic: compile + fire reopen against a missing pidfile ───────────────
@@ -181,7 +181,7 @@ _stripped() {
 
   # Replace the bundle id with a unique-per-test value. Use plutil
   # (always available on macOS) to edit Info.plist in place.
-  test_id="dev.aibootstrap.vibecode.test.$$.$RANDOM"
+  test_id="dev.aibootstrap.justvibes.test.$$.$RANDOM"
   plutil -replace CFBundleIdentifier -string "$test_id" "$bundle/Contents/Info.plist"
 
   # Drop a logging helper script into the bundle. The AppleScript's
@@ -203,7 +203,7 @@ EOF
 
   # Override TMPDIR so readGhostyPid looks at our sandbox, not the
   # host's real temp dir. Ensure the pidfile is genuinely absent.
-  pid_dir="$SANDBOX/tmp/vibe-code"
+  pid_dir="$SANDBOX/tmp/just-vibes"
   rm -rf "$pid_dir"
 
   # Register the bundle with LaunchServices so `tell application id`
@@ -220,7 +220,7 @@ EOF
   #
   # We use `tell application id "<test_id>" to reopen` rather than the
   # bundle name because the unique id avoids LaunchServices ambiguity
-  # if a real Vibe Code is installed on the test host.
+  # if a real Just Vibes is installed on the test host.
   TMPDIR="$SANDBOX/tmp" open -g -n "$bundle" >/dev/null 2>&1 || true
   # Wait for `on run` to complete and write the first helper line.
   for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do

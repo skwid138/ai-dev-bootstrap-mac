@@ -1,5 +1,5 @@
 #!/usr/bin/env bats
-# Helper- and bundle-level tests for the Vibe Code launcher.
+# Helper- and bundle-level tests for the Just Vibes launcher.
 #
 # Three layers covered here:
 #   1. lib/launcher.sh                 — install / uninstall helpers (file IO).
@@ -17,7 +17,7 @@
 #   the AppleScript wrapper.
 #
 # Real `open` and `osascript` are never invoked. We override the binary paths
-# via VIBE_CODE_OPEN_BIN / VIBE_CODE_OSASCRIPT_BIN, drop tiny shell mocks at
+# via JUST_VIBES_OPEN_BIN / JUST_VIBES_OSASCRIPT_BIN, drop tiny shell mocks at
 # those paths, and grep their log to assert exact argv. This is the same
 # mocking pattern used for brew/gh/opencode in the opencode integration tests.
 
@@ -83,7 +83,7 @@ EOF
 }
 
 # Drop a fake opencode binary at $SANDBOX/opencode and set
-# VIBE_CODE_OPENCODE_PATHS to find it. Simulates a normal user setup
+# JUST_VIBES_OPENCODE_PATHS to find it. Simulates a normal user setup
 # where opencode is installed on the brew prefix.
 _mock_opencode() {
   cat >"$SANDBOX/opencode" <<'EOF'
@@ -115,19 +115,19 @@ EOF
 
 # Run launch-helper.sh with overrides pointed at the mocks. Any extra args are
 # treated as VAR=VALUE env-var overrides, layered on top of the defaults.
-# Always points VIBE_CODE_OPENCODE_PATHS at the mock so opencode resolves
+# Always points JUST_VIBES_OPENCODE_PATHS at the mock so opencode resolves
 # without polluting $PATH; tests that want to test the not-found path can
-# override by passing VIBE_CODE_OPENCODE_PATHS=/nonexistent explicitly.
-# VIBE_CODE_GHOSTTY_SEARCH_PATHS points at $SANDBOX where _mock_ghostty
+# override by passing JUST_VIBES_OPENCODE_PATHS=/nonexistent explicitly.
+# JUST_VIBES_GHOSTTY_SEARCH_PATHS points at $SANDBOX where _mock_ghostty
 # drops a fake bundle (or doesn't, for the missing case).
 _run_launch() {
   env \
-    "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
-    "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
-    "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/opencode" \
-    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
+    "JUST_VIBES_OPEN_BIN=$SANDBOX/open" \
+    "JUST_VIBES_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "JUST_VIBES_OPENCODE_PATHS=$SANDBOX/opencode" \
+    "JUST_VIBES_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
-    "VIBE_CODE_TRACK_GHOSTTY_PID=${VIBE_CODE_TRACK_GHOSTTY_PID:-0}" \
+    "JUST_VIBES_TRACK_GHOSTTY_PID=${JUST_VIBES_TRACK_GHOSTTY_PID:-0}" \
     "TMPDIR=$SANDBOX/tmp" \
     "PATH=$SANDBOX:/usr/bin:/bin" \
     "$@" \
@@ -143,44 +143,44 @@ _unmock_ghostty() {
 
 # ── lib/launcher.sh ─────────────────────────────────────────────────────────
 
-@test "launcher_install: builds and places Vibe Code.app in dest dir" {
+@test "launcher_install: builds and places Just Vibes.app in dest dir" {
   dest="$SANDBOX/Applications"
   run launcher_install "${BOOTSTRAP_DIR}/launcher/build.sh" "$dest"
   [ "$status" -eq 0 ]
   [ "$output" = "installed" ]
-  [ -d "$dest/Vibe Code.app" ]
-  [ -f "$dest/Vibe Code.app/Contents/Info.plist" ]
+  [ -d "$dest/Just Vibes.app" ]
+  [ -f "$dest/Just Vibes.app/Contents/Info.plist" ]
   # Branch F: bundle executable is the osacompile-built `applet` Mach-O
   # (the AppleScript runtime stub). The bash logic is now a Resources/
   # helper invoked by the AppleScript via `do shell script`.
-  [ -x "$dest/Vibe Code.app/Contents/MacOS/applet" ]
-  [ -f "$dest/Vibe Code.app/Contents/Resources/Scripts/main.scpt" ]
-  [ -x "$dest/Vibe Code.app/Contents/Resources/launch-helper.sh" ]
-  [ -f "$dest/Vibe Code.app/Contents/Resources/VibeCode.icns" ]
+  [ -x "$dest/Just Vibes.app/Contents/MacOS/applet" ]
+  [ -f "$dest/Just Vibes.app/Contents/Resources/Scripts/main.scpt" ]
+  [ -x "$dest/Just Vibes.app/Contents/Resources/launch-helper.sh" ]
+  [ -f "$dest/Just Vibes.app/Contents/Resources/JustVibes.icns" ]
   # Default-icon ambiguity (osacompile's applet.icns + Assets.car) must
   # be removed by build.sh so macOS can't fall back to the default
   # AppleScript-applet icon. See launcher_improvement_plan.md §1.5.3.
-  [ ! -f "$dest/Vibe Code.app/Contents/Resources/applet.icns" ]
-  [ ! -f "$dest/Vibe Code.app/Contents/Resources/Assets.car" ]
+  [ ! -f "$dest/Just Vibes.app/Contents/Resources/applet.icns" ]
+  [ ! -f "$dest/Just Vibes.app/Contents/Resources/Assets.car" ]
 }
 
 @test "launcher_install: creates dest dir if missing" {
   dest="$SANDBOX/never/existed/Applications"
   run launcher_install "${BOOTSTRAP_DIR}/launcher/build.sh" "$dest"
   [ "$status" -eq 0 ]
-  [ -d "$dest/Vibe Code.app" ]
+  [ -d "$dest/Just Vibes.app" ]
 }
 
 @test "launcher_install: replaces an existing bundle (always rebuild)" {
   dest="$SANDBOX/Applications"
-  mkdir -p "$dest/Vibe Code.app"
-  echo "stale-marker" >"$dest/Vibe Code.app/STALE"
+  mkdir -p "$dest/Just Vibes.app"
+  echo "stale-marker" >"$dest/Just Vibes.app/STALE"
 
   run launcher_install "${BOOTSTRAP_DIR}/launcher/build.sh" "$dest"
   [ "$status" -eq 0 ]
-  [ ! -f "$dest/Vibe Code.app/STALE" ]
+  [ ! -f "$dest/Just Vibes.app/STALE" ]
   # Branch F: applet is the AppleScript runtime executable.
-  [ -x "$dest/Vibe Code.app/Contents/MacOS/applet" ]
+  [ -x "$dest/Just Vibes.app/Contents/MacOS/applet" ]
 }
 
 @test "launcher_install: errors when build script missing" {
@@ -191,12 +191,12 @@ _unmock_ghostty() {
 
 @test "launcher_uninstall: removes an installed bundle" {
   dest="$SANDBOX/Applications"
-  mkdir -p "$dest/Vibe Code.app/Contents"
+  mkdir -p "$dest/Just Vibes.app/Contents"
 
   run launcher_uninstall "$dest"
   [ "$status" -eq 0 ]
   [ "$output" = "removed" ]
-  [ ! -d "$dest/Vibe Code.app" ]
+  [ ! -d "$dest/Just Vibes.app" ]
 }
 
 @test "launcher_uninstall: reports absent when no bundle present" {
@@ -209,13 +209,13 @@ _unmock_ghostty() {
 
 @test "build.sh: produces a plutil-valid Info.plist" {
   "${BOOTSTRAP_DIR}/launcher/build.sh" "$SANDBOX" >/dev/null
-  run plutil -lint "$SANDBOX/Vibe Code.app/Contents/Info.plist"
+  run plutil -lint "$SANDBOX/Just Vibes.app/Contents/Info.plist"
   [ "$status" -eq 0 ]
 }
 
 @test "build.sh: bundle declares correct CFBundleExecutable + CFBundleIconFile + CFBundleIdentifier" {
   "${BOOTSTRAP_DIR}/launcher/build.sh" "$SANDBOX" >/dev/null
-  plist="$SANDBOX/Vibe Code.app/Contents/Info.plist"
+  plist="$SANDBOX/Just Vibes.app/Contents/Info.plist"
 
   # Branch F: CFBundleExecutable is `applet` (the osacompile AppleScript
   # runtime stub). DO NOT change this — renaming the Mach-O breaks the
@@ -223,34 +223,34 @@ _unmock_ghostty() {
   run /usr/libexec/PlistBuddy -c "Print :CFBundleExecutable" "$plist"
   [ "$output" = "applet" ]
 
-  # Both icon keys must point at VibeCode (modern macOS asset-catalog
+  # Both icon keys must point at JustVibes (modern macOS asset-catalog
   # resolution can prefer CFBundleIconName). See §1.5.3 finding 1.
   run /usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$plist"
-  [ "$output" = "VibeCode" ]
+  [ "$output" = "JustVibes" ]
   run /usr/libexec/PlistBuddy -c "Print :CFBundleIconName" "$plist"
-  [ "$output" = "VibeCode" ]
+  [ "$output" = "JustVibes" ]
 
   # Bundle identity drives Dock tile / Cmd-Tab / Activity Monitor name.
   # CFBundleName is what shows in the Dock and Activity Monitor's "Process
   # Name" column. CFBundleIdentifier must be distinct from Ghostty's
-  # `com.mitchellh.ghostty` so LaunchServices treats Vibe Code as its
+  # `com.mitchellh.ghostty` so LaunchServices treats Just Vibes as its
   # own app.
   run /usr/libexec/PlistBuddy -c "Print :CFBundleName" "$plist"
-  [ "$output" = "Vibe Code" ]
+  [ "$output" = "Just Vibes" ]
   run /usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$plist"
-  [ "$output" = "dev.aibootstrap.vibecode" ]
+  [ "$output" = "dev.aibootstrap.justvibes" ]
 }
 
-@test "build.sh: bundle is ad-hoc code-signed with Vibe Code identifier" {
+@test "build.sh: bundle is ad-hoc code-signed with Just Vibes identifier" {
   # osacompile signs ad-hoc; build.sh re-signs after plist + resource
   # edits to refresh the seal. Without re-signing, macOS Gatekeeper
   # refuses to launch ("damaged and can't be opened"). The signed
   # identifier should match CFBundleIdentifier.
   "${BOOTSTRAP_DIR}/launcher/build.sh" "$SANDBOX" >/dev/null
-  run codesign -dv "$SANDBOX/Vibe Code.app"
+  run codesign -dv "$SANDBOX/Just Vibes.app"
   [ "$status" -eq 0 ]
   # codesign -dv writes to stderr; bats captures it via $output.
-  [[ "$output" == *"Identifier=dev.aibootstrap.vibecode"* ]]
+  [[ "$output" == *"Identifier=dev.aibootstrap.justvibes"* ]]
   [[ "$output" == *"Signature=adhoc"* ]]
 }
 
@@ -301,13 +301,13 @@ _unmock_ghostty() {
   # `-Fa` WITHOUT `-n`. With `-n` from a .app-bundle context cold-state,
   # an extra bare ghostty process spawns alongside the flagged one (the
   # ghost). See launcher_improvement_plan.md §1.5.4.2.
-  grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
+  grep -q "open -Fa Ghostty.app --args --title=Just Vibes --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
   # Belt-and-suspenders: explicitly assert the legacy -e form is not used.
   saved="$(cat "$MOCK_LOG")"
   [[ "$saved" != *" -e $SANDBOX/opencode"* ]]
   # rev-8 / Phase 6.5 regression gate: the bare `-na` (without `F`) form
   # must NOT appear — it would re-introduce macOS save-state restoration
-  # on Vibe Code launches. See zsh_init_plan.md §3.10.
+  # on Just Vibes launches. See zsh_init_plan.md §3.10.
   [[ "$saved" != *"open -na "* ]]
   # Phase 6.6 regression gate: cold-state must NOT include `-n`.
   [[ "$saved" != *"open -nFa"* ]]
@@ -327,20 +327,20 @@ _unmock_ghostty() {
   # Without `-n`, `open -a` activates the running Ghostty and silently
   # discards `--args` — no new window. See launcher_improvement_plan.md
   # §1.5.4.1 hypothesis 3.
-  grep -q "open -n -Fa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
+  grep -q "open -n -Fa Ghostty.app --args --title=Just Vibes --working-directory=$SANDBOX/workspace --command=zsh -l -i -c $SANDBOX/opencode" "$MOCK_LOG"
   saved="$(cat "$MOCK_LOG")"
   # Detection occurred via osascript "running of application".
   grep -q "running of application" "$MOCK_LOG"
 }
 
-@test "launch-helper.sh: VIBE_CODE_LAUNCH_OPENCODE=0 omits the --command opencode arg" {
+@test "launch-helper.sh: JUST_VIBES_LAUNCH_OPENCODE=0 omits the --command opencode arg" {
   _mock_open
   _mock_osascript present
   _mock_opencode
   mkdir -p "$SANDBOX/workspace"
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
-  run _run_launch VIBE_CODE_LAUNCH_OPENCODE=0
+  run _run_launch JUST_VIBES_LAUNCH_OPENCODE=0
   [ "$status" -eq 0 ]
   # Neither the opencode binary path nor the --command= arg should appear.
   saved="$(cat "$MOCK_LOG")"
@@ -349,7 +349,7 @@ _unmock_ghostty() {
   # rev-8 / Phase 6.5: even with opencode disabled, `-Fa` (cold-state) and
   # the title arg must still be present. Phase 6.6: cold-state default,
   # so no `-n`.
-  grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$SANDBOX/workspace" "$MOCK_LOG"
+  grep -q "open -Fa Ghostty.app --args --title=Just Vibes --working-directory=$SANDBOX/workspace" "$MOCK_LOG"
   [[ "$saved" != *"open -na "* ]]
   [[ "$saved" != *"open -nFa"* ]]
 }
@@ -363,7 +363,7 @@ _unmock_ghostty() {
   run _run_launch
   [ "$status" -eq 0 ]
   # Cold-state default — no `-n`.
-  grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
+  grep -q "open -Fa Ghostty.app --args --title=Just Vibes --working-directory=$HOME" "$MOCK_LOG"
 }
 
 @test "launch-helper.sh: invalid workspace path in state falls back to \$HOME" {
@@ -375,7 +375,7 @@ _unmock_ghostty() {
   run _run_launch
   [ "$status" -eq 0 ]
   # Cold-state default — no `-n`.
-  grep -q "open -Fa Ghostty.app --args --title=Vibe Code --working-directory=$HOME" "$MOCK_LOG"
+  grep -q "open -Fa Ghostty.app --args --title=Just Vibes --working-directory=$HOME" "$MOCK_LOG"
 }
 
 @test "launch-helper.sh: missing ghostty shows alert and exits 1 without opening" {
@@ -396,7 +396,7 @@ _unmock_ghostty() {
   grep -q "display alert" "$MOCK_LOG"
 }
 
-@test "launch-helper.sh: respects VIBE_CODE_GHOSTTY_APP override (e.g. for forks)" {
+@test "launch-helper.sh: respects JUST_VIBES_GHOSTTY_APP override (e.g. for forks)" {
   _mock_open
   _mock_osascript present
   _mock_opencode
@@ -405,10 +405,10 @@ _unmock_ghostty() {
   mkdir -p "$SANDBOX/Wezterm.app"
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
-  run _run_launch VIBE_CODE_GHOSTTY_APP=Wezterm.app
+  run _run_launch JUST_VIBES_GHOSTTY_APP=Wezterm.app
   [ "$status" -eq 0 ]
   # Cold-state default — no `-n`.
-  grep -q "open -Fa Wezterm.app --args --title=Vibe Code" "$MOCK_LOG"
+  grep -q "open -Fa Wezterm.app --args --title=Just Vibes" "$MOCK_LOG"
 }
 
 # ── Branch F.1 (§8.7): ghostty PID capture for `on reopen` focus ───────────
@@ -421,18 +421,18 @@ _unmock_ghostty() {
   mkdir -p "$SANDBOX/workspace"
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
-  run _run_launch VIBE_CODE_TRACK_GHOSTTY_PID=1
+  run _run_launch JUST_VIBES_TRACK_GHOSTTY_PID=1
   [ "$status" -eq 0 ]
-  # PID file lives under $TMPDIR/vibe-code/ghostty.pid; _run_launch sets
+  # PID file lives under $TMPDIR/just-vibes/ghostty.pid; _run_launch sets
   # TMPDIR=$SANDBOX/tmp.
-  pid_file="$SANDBOX/tmp/vibe-code/ghostty.pid"
+  pid_file="$SANDBOX/tmp/just-vibes/ghostty.pid"
   [ -f "$pid_file" ]
   [ "$(cat "$pid_file")" = "12345" ]
   # pgrep argv must include both the canonical Mach-O path and the
-  # --title=Vibe Code key. Belt-and-suspenders: a future refactor that
+  # --title=Just Vibes key. Belt-and-suspenders: a future refactor that
   # narrows the pattern in a way that picks up unrelated ghostty
   # processes will trip this gate.
-  grep -q 'pgrep -nf Ghostty.app/Contents/MacOS/ghostty .*--title=Vibe Code' "$MOCK_LOG"
+  grep -q 'pgrep -nf Ghostty.app/Contents/MacOS/ghostty .*--title=Just Vibes' "$MOCK_LOG"
 }
 
 @test "launch-helper.sh: skips PID write when pgrep returns nothing within deadline" {
@@ -443,10 +443,10 @@ _unmock_ghostty() {
   mkdir -p "$SANDBOX/workspace"
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
-  run _run_launch VIBE_CODE_TRACK_GHOSTTY_PID=1
+  run _run_launch JUST_VIBES_TRACK_GHOSTTY_PID=1
   [ "$status" -eq 0 ]
   # No pid file should exist (PID capture is best-effort).
-  [ ! -e "$SANDBOX/tmp/vibe-code/ghostty.pid" ]
+  [ ! -e "$SANDBOX/tmp/just-vibes/ghostty.pid" ]
   # Helper still polls — verify pgrep was actually invoked.
   grep -q 'pgrep -nf' "$MOCK_LOG"
 }
@@ -463,12 +463,12 @@ _unmock_ghostty() {
 
   start_ms=$(perl -MTime::HiRes=time -e 'printf "%d\n", time()*1000')
   run env PGREP_SLEEP_MS=100 _run_launch_inner=1 \
-    "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
-    "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
-    "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/opencode" \
-    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
+    "JUST_VIBES_OPEN_BIN=$SANDBOX/open" \
+    "JUST_VIBES_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "JUST_VIBES_OPENCODE_PATHS=$SANDBOX/opencode" \
+    "JUST_VIBES_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
-    "VIBE_CODE_TRACK_GHOSTTY_PID=1" \
+    "JUST_VIBES_TRACK_GHOSTTY_PID=1" \
     "TMPDIR=$SANDBOX/tmp" \
     "PATH=$SANDBOX:/usr/bin:/bin" \
     bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
@@ -492,10 +492,10 @@ _unmock_ghostty() {
   # No _mock_opencode — opencode is genuinely absent.
 
   run env \
-    "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
-    "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
-    "VIBE_CODE_OPENCODE_PATHS=/nonexistent/opencode" \
-    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
+    "JUST_VIBES_OPEN_BIN=$SANDBOX/open" \
+    "JUST_VIBES_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "JUST_VIBES_OPENCODE_PATHS=/nonexistent/opencode" \
+    "JUST_VIBES_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     "PATH=/usr/bin:/bin" \
     bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
@@ -525,10 +525,10 @@ EOF
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
   run env \
-    "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
-    "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
-    "VIBE_CODE_OPENCODE_PATHS=$SANDBOX/a/opencode:$SANDBOX/b/opencode" \
-    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
+    "JUST_VIBES_OPEN_BIN=$SANDBOX/open" \
+    "JUST_VIBES_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "JUST_VIBES_OPENCODE_PATHS=$SANDBOX/a/opencode:$SANDBOX/b/opencode" \
+    "JUST_VIBES_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
   [ "$status" -eq 0 ]
@@ -550,10 +550,10 @@ EOF
   echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
 
   run env \
-    "VIBE_CODE_OPEN_BIN=$SANDBOX/open" \
-    "VIBE_CODE_OSASCRIPT_BIN=$SANDBOX/osascript" \
-    "VIBE_CODE_OPENCODE_PATHS=/nonexistent" \
-    "VIBE_CODE_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
+    "JUST_VIBES_OPEN_BIN=$SANDBOX/open" \
+    "JUST_VIBES_OSASCRIPT_BIN=$SANDBOX/osascript" \
+    "JUST_VIBES_OPENCODE_PATHS=/nonexistent" \
+    "JUST_VIBES_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
     "PATH=$SANDBOX/custom:/usr/bin:/bin" \
     bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
@@ -563,12 +563,12 @@ EOF
 
 # ── launcher_resolve_dest ──────────────────────────────────────────────────
 
-@test "launcher_resolve_dest: honors VIBE_CODE_DEST_DIR_OVERRIDE for tests" {
+@test "launcher_resolve_dest: honors JUST_VIBES_DEST_DIR_OVERRIDE for tests" {
   # `env` can't run a shell function — set the var in this shell, then
   # call the function directly, then unset.
-  export VIBE_CODE_DEST_DIR_OVERRIDE="$SANDBOX/custom"
+  export JUST_VIBES_DEST_DIR_OVERRIDE="$SANDBOX/custom"
   run launcher_resolve_dest
-  unset VIBE_CODE_DEST_DIR_OVERRIDE
+  unset JUST_VIBES_DEST_DIR_OVERRIDE
   [ "$status" -eq 0 ]
   [ "$output" = "$SANDBOX/custom" ]
 }
