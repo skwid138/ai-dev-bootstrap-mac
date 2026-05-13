@@ -30,13 +30,47 @@ teardown() {
   teardown_test_env
 }
 
+line_number_for_literal() {
+  local file="$1"
+  local literal="$2"
+  awk -v literal="$literal" 'index($0, literal) { line = NR } END { if (line) print line }' "$file"
+}
+
+frontmatter_bash_block() {
+  local file="$1"
+  awk '
+    NR == 1 && $0 == "---" { in_frontmatter = 1; next }
+    in_frontmatter && $0 == "---" { exit }
+    in_frontmatter && $0 == "  bash:" { in_bash = 1; print; next }
+    in_bash {
+      if ($0 ~ /^  [^ ].*:/) { exit }
+      print
+    }
+  ' "$file"
+}
+
+assert_literal_exists_after() {
+  local file="$1"
+  local literal="$2"
+  local anchor="$3"
+  local literal_line
+  local anchor_line
+
+  literal_line="$(line_number_for_literal "$file" "$literal")"
+  anchor_line="$(line_number_for_literal "$file" "$anchor")"
+
+  [ -n "$anchor_line" ]
+  [ -n "$literal_line" ]
+  [ "$literal_line" -gt "$anchor_line" ]
+}
+
 # ── Agents ───────────────────────────────────────────────────────────────────
 
-@test "opencode/agent: all 4 curated agents exist" {
+@test "opencode/agent: all 5 curated agents exist" {
   agents=("${OPENCODE_DIR}"/agent/*.md)
-  [ "${#agents[@]}" -eq 4 ]
+  [ "${#agents[@]}" -eq 5 ]
 
-  for agent in radagast aragorn treebeard legolas; do
+  for agent in gandalf saruman radagast aragorn legolas; do
     [ -f "${OPENCODE_DIR}/agent/${agent}.md" ]
   done
 }
@@ -60,7 +94,7 @@ teardown() {
 }
 
 @test "opencode/agent: leaf agents deny recursive task delegation" {
-  for agent in treebeard legolas radagast; do
+  for agent in saruman legolas radagast; do
     run grep -Eq '^  task: deny$' "${OPENCODE_DIR}/agent/${agent}.md"
     [ "$status" -eq 0 ]
   done
@@ -75,13 +109,52 @@ teardown() {
   done
 }
 
+@test "opencode/agent: gandalf cannot edit and aragorn can edit" {
+  run grep -Eq '^  edit: deny$' "${OPENCODE_DIR}/agent/gandalf.md"
+  [ "$status" -eq 0 ]
+
+  run grep -Eq '^  edit: allow$' "${OPENCODE_DIR}/agent/aragorn.md"
+  [ "$status" -eq 0 ]
+}
+
+@test "opencode/agent: read-only agents have no bash catch-all ask override" {
+  for agent in legolas radagast saruman gandalf; do
+    run frontmatter_bash_block "${OPENCODE_DIR}/agent/${agent}.md"
+    [ "$status" -eq 0 ]
+    [[ "$output" != *'"*": ask'* ]]
+  done
+}
+
+@test "opencode/agent: gandalf has no bash permission overrides" {
+  run frontmatter_bash_block "${OPENCODE_DIR}/agent/gandalf.md"
+  [ "$status" -eq 0 ]
+  [ "$output" = "" ]
+}
+
+@test "opencode/agent: aragorn dangerous command denies override catch-all allow" {
+  local aragorn_file="${OPENCODE_DIR}/agent/aragorn.md"
+  local catch_all='"*": allow'
+
+  for literal in \
+    '"git reset --hard*": deny' \
+    '"git clean*": deny' \
+    '"git push --force*": deny' \
+    '"git push * --force*": deny' \
+    '"git push -f*": deny' \
+    '"git push * -f*": deny' \
+    '"rm -rf *": deny' \
+    '"sudo *": deny'; do
+    assert_literal_exists_after "$aragorn_file" "$literal" "$catch_all"
+  done
+}
+
 # ── Skills ───────────────────────────────────────────────────────────────────
 
-@test "opencode/skill: all 7 curated skills have SKILL.md" {
+@test "opencode/skill: all 6 curated skills have SKILL.md" {
   skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
-  [ "${#skills[@]}" -eq 7 ]
+  [ "${#skills[@]}" -eq 6 ]
 
-  for skill in tdd bug-hunter git-flow diagnose grill-me prototype improve-codebase-architecture; do
+  for skill in tdd bug-hunter diagnose grill-me prototype improve-codebase-architecture; do
     [ -f "${OPENCODE_DIR}/skill/${skill}/SKILL.md" ]
   done
 }
@@ -105,13 +178,12 @@ teardown() {
 
 # ── Instructions ─────────────────────────────────────────────────────────────
 
-@test "opencode/instruction: all 3 curated instructions exist" {
+@test "opencode/instruction: all 2 curated instructions exist" {
   instructions=("${OPENCODE_DIR}"/instruction/*.md)
-  [ "${#instructions[@]}" -eq 3 ]
+  [ "${#instructions[@]}" -eq 2 ]
 
   [ -f "${OPENCODE_DIR}/instruction/repo-context.md" ]
   [ -f "${OPENCODE_DIR}/instruction/agent-defaults.md" ]
-  [ -f "${OPENCODE_DIR}/instruction/plan-workflow.md" ]
 }
 
 # ── Top-level files ──────────────────────────────────────────────────────────
@@ -143,6 +215,50 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
+@test "opencode.json.template: global dangerous command deny rules override broad asks" {
+  local template_file="${OPENCODE_DIR}/opencode.json.template"
+  local catch_all='"*": "ask"'
+  local git_push_ask='"git push*": "ask"'
+
+  for rule in \
+    'git reset --hard*' \
+    'git clean*' \
+    'rm *' \
+    'chmod *' \
+    'chown *' \
+    'sudo *' \
+    'git push --force*' \
+    'git push * --force*' \
+    'git push -f*' \
+    'git push * -f*'; do
+    run jq -r --arg rule "$rule" '.permission.bash[$rule]' "$template_file"
+    [ "$status" -eq 0 ]
+    [ "$output" = "deny" ]
+
+    assert_literal_exists_after "$template_file" "\"${rule}\": \"deny\"" "$catch_all"
+  done
+
+  for literal in \
+    '"git push --force*": "deny"' \
+    '"git push * --force*": "deny"' \
+    '"git push -f*": "deny"' \
+    '"git push * -f*": "deny"'; do
+    assert_literal_exists_after "$template_file" "$literal" "$git_push_ask"
+  done
+}
+
+@test "opencode.json.template: default agent is gandalf" {
+  run grep -Eq '^  "default_agent": "gandalf",?$' "${OPENCODE_DIR}/opencode.json.template"
+  [ "$status" -eq 0 ]
+}
+
+@test "opencode.json.template: built-in plan, build, and general agents are hidden" {
+  for agent in plan build general; do
+    run bash -c "grep -A4 '\"${agent}\": {' '${OPENCODE_DIR}/opencode.json.template' | grep -Eq '\"hidden\": true'"
+    [ "$status" -eq 0 ]
+  done
+}
+
 @test "opencode.json.template: every referenced instruction file exists" {
   # Defends against typos in the instructions array vs. on-disk filenames.
   while IFS= read -r rel; do
@@ -156,25 +272,25 @@ teardown() {
   [ "$output" = "chrome-devtools,context7,exa" ]
 }
 
-@test "opencode.json.template: declares the DCP plugin" {
+@test "opencode.json.template: declares exact DCP plugin version" {
   run jq -r '.plugin | length' "${OPENCODE_DIR}/opencode.json.template"
   [ "$status" -eq 0 ]
   [ "$output" = "1" ]
   run jq -r '.plugin[0]' "${OPENCODE_DIR}/opencode.json.template"
-  [[ "$output" == @tarquinen/opencode-dcp@* ]]
+  [ "$output" = "@tarquinen/opencode-dcp@3.1.11" ]
 }
 
 # ── Cross-pollination guardrails ─────────────────────────────────────────────
 
-@test "opencode/: personal agent names are absent from active assets" {
-  run grep -RiiE \
-    -e '(^|[^a-z0-9_-])gandalf([^a-z0-9_-]|$)' \
-    -e '(^|[^a-z0-9_-])saruman([^a-z0-9_-]|$)' \
-    "${OPENCODE_DIR}/agent" \
-    "${OPENCODE_DIR}/skill" \
-    "${OPENCODE_DIR}/command" \
-    "${OPENCODE_DIR}/instruction"
-  [ "$status" -eq 1 ]
+@test "opencode/: gandalf and saruman are active curated agents" {
+  [ -f "${OPENCODE_DIR}/agent/gandalf.md" ]
+  [ -f "${OPENCODE_DIR}/agent/saruman.md" ]
+
+  run grep -RiiE '(^|[^a-z0-9_-])gandalf([^a-z0-9_-]|$)' "${OPENCODE_DIR}/agent"
+  [ "$status" -eq 0 ]
+
+  run grep -RiiE '(^|[^a-z0-9_-])saruman([^a-z0-9_-]|$)' "${OPENCODE_DIR}/agent"
+  [ "$status" -eq 0 ]
 }
 
 @test "opencode/: skills and instructions do not reference external glossary docs" {
