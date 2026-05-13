@@ -1,10 +1,10 @@
 # Third-party assets
 
-## Vibe Code app icon
+## Just Vibes app icon
 
-The Vibe Code launcher icon is a composite that includes the `piggy-bank`
+The Just Vibes launcher icon is a composite that includes the `piggy-bank`
 glyph from [Lucide](https://lucide.dev) (path data in
-`launcher/icon/vibecode.svg`). Lucide is distributed under the ISC License,
+`launcher/icon/justvibes.svg`). Lucide is distributed under the ISC License,
 which is functionally equivalent to MIT — copying, modification, and
 redistribution are permitted with attribution.
 

@@ -122,25 +122,25 @@ You can approve, push back, or change direction at any step. Destructive command
 
 If you want the deep technical details of how this is wired up, see [`opencode/README.md`](opencode/README.md) inside this repo.
 
-## 🐷 Vibe Code Launcher
+## 🐷 Just Vibes Launcher
 
-If you install the **Recommended** tier (or higher), the bootstrap drops a one‑click app called **Vibe Code** into your `~/Applications` folder.
+If you install the **Recommended** tier (or higher), the bootstrap drops a one‑click app called **Just Vibes** into your `~/Applications` folder.
 
 Open it from Spotlight, Launchpad, or Finder — drag it to your Dock for one‑click access. It opens Ghostty in your saved workspace folder and starts OpenCode automatically. No commands to remember.
 
-> **Fresh every time.** Vibe Code always opens a single window with a single tab running OpenCode, regardless of what Ghostty had open last time. macOS would normally restore your previous Ghostty windows on launch; Vibe Code suppresses that just for itself so the experience stays predictable. One side effect: if you open extra tabs inside a Vibe Code window and then quit Ghostty (`Cmd+Q`), those extra tabs won't come back the next time you click Vibe Code. Manual Spotlight/Dock launches of Ghostty are unaffected — they restore normally.
+> **Fresh every time.** Just Vibes always opens a single window with a single tab running OpenCode, regardless of what Ghostty had open last time. macOS would normally restore your previous Ghostty windows on launch; Just Vibes suppresses that just for itself so the experience stays predictable. One side effect: if you open extra tabs inside a Just Vibes window and then quit Ghostty (`Cmd+Q`), those extra tabs won't come back the next time you click Just Vibes. Manual Spotlight/Dock launches of Ghostty are unaffected — they restore normally.
 
-> **Branded identity, two things to quit.** Vibe Code shows up as **Vibe Code** (with a piggy-bank icon) in your Dock, Cmd-Tab switcher, and Activity Monitor — distinct from Ghostty. The launcher and the terminal are two separate processes by design: this is what lets the launcher have its own identity. The trade-off is that quitting Vibe Code (`Cmd+Q` from its Cmd-Tab card or right-click → Quit on the Dock tile) does **not** quit the Ghostty window it spawned, and vice versa. Quit them separately.
+> **Branded identity, two things to quit.** Just Vibes shows up as **Just Vibes** (with a piggy-bank icon) in your Dock, Cmd-Tab switcher, and Activity Monitor — distinct from Ghostty. The launcher and the terminal are two separate processes by design: this is what lets the launcher have its own identity. The trade-off is that quitting Just Vibes (`Cmd+Q` from its Cmd-Tab card or right-click → Quit on the Dock tile) does **not** quit the Ghostty window it spawned, and vice versa. Quit them separately.
 
-> **Cmd-Tab focuses the terminal.** When Vibe Code is already running, Cmd-Tabbing to its card (or clicking its Dock tile) brings the most recently spawned Ghostty terminal window forward — no need to Cmd-Tab past Vibe Code to find Ghostty's card. The first time this happens after install, macOS may show a one-time **Accessibility** prompt asking to allow Vibe Code to control "System Events"; click **Allow**. Saying no is fine — Cmd-Tabbing to Vibe Code will just launch a fresh terminal instead of focusing the existing one.
+> **Cmd-Tab focuses the terminal.** When Just Vibes is already running, Cmd-Tabbing to its card (or clicking its Dock tile) brings the most recently spawned Ghostty terminal window forward — no need to Cmd-Tab past Just Vibes to find Ghostty's card. The first time this happens after install, macOS may show a one-time **Accessibility** prompt asking to allow Just Vibes to control "System Events"; click **Allow**. Saying no is fine — Cmd-Tabbing to Just Vibes will just launch a fresh terminal instead of focusing the existing one.
 >
 > Want to disable PID tracking entirely (and always get a fresh terminal on Cmd-Tab)? Set this in your shell:
 >
 > ```bash
-> export VIBE_CODE_TRACK_GHOSTTY_PID=0
+> export JUST_VIBES_TRACK_GHOSTTY_PID=0
 > ```
 
-> Want a plain shell instead? Open **Terminal** or **Ghostty** directly. Vibe Code is purely a convenience launcher; it doesn't change anything else on your system.
+> Want a plain shell instead? Open **Terminal** or **Ghostty** directly. Just Vibes is purely a convenience launcher; it doesn't change anything else on your system.
 
 ## 🐚 Shell Configuration
 
@@ -224,7 +224,7 @@ ai-dev-bootstrap-mac/
 
 ## 🎨 Credits
 
-- Vibe Code app icon: [Lucide](https://lucide.dev) `piggy-bank` (ISC License). See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+- Just Vibes app icon: [Lucide](https://lucide.dev) `piggy-bank` (ISC License). See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
 
 ## 📄 License
 

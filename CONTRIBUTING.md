@@ -1,6 +1,6 @@
 # Contributing
 
-Welcome. This project sets up Macs for non-techy users to vibe-code with OpenCode. Bugs hit those users harder than they'd hit a developer, so we hold the bar high on shell quality.
+Welcome. This project sets up Macs for non-techy users to vibe with OpenCode. Bugs hit those users harder than they'd hit a developer, so we hold the bar high on shell quality.
 
 ## Local development
 
