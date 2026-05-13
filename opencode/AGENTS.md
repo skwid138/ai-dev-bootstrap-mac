@@ -6,6 +6,17 @@ The rules below exist to give the user a clean, reversible record of the work th
 
 ---
 
+## Agent roster
+
+| Agent | Role |
+|---|---|
+| Treebeard | Planning, plan review, and post-implementation audit |
+| Legolas | Codebase exploration and file discovery |
+| Radagast | External docs and OSS research |
+| Aragorn | Autonomous deep implementation |
+
+---
+
 ## Workflow spine
 
 > **intake → triage → [non-trivial: plan → audit → revise] → approve → build → verify → explain**
