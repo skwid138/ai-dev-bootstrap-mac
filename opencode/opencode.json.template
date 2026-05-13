@@ -1,62 +1,76 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "",
-  "default_agent": "plan",
+  "default_agent": "gandalf",
   "share": "disabled",
   "instructions": [
     "instruction/repo-context.md",
-    "instruction/agent-defaults.md",
-    "instruction/plan-workflow.md"
+    "instruction/agent-defaults.md"
   ],
   "plugin": [
-    "@tarquinen/opencode-dcp@3.1.9"
+    "@tarquinen/opencode-dcp@3.1.11"
   ],
   "permission": {
     "edit": { "*": "ask" },
+    "write": { "*": "ask" },
     "bash": {
       "*": "ask",
-      "ls *": "allow",
+      "bats *": "allow",
       "cat *": "allow",
-      "rg *": "allow",
-      "fd *": "allow",
-      "git status*": "allow",
+      "diff *": "allow",
+      "dirname *": "allow",
+      "echo *": "allow",
+      "file *": "allow",
+      "find *": "allow",
+      "git blame*": "allow",
+      "git branch*": "allow",
       "git diff*": "allow",
+      "git grep*": "allow",
       "git log*": "allow",
+      "git ls-files*": "allow",
+      "git remote*": "allow",
+      "git rev-parse*": "allow",
       "git show*": "allow",
+      "git status*": "allow",
+      "grep *": "allow",
+      "head *": "allow",
+      "jq *": "allow",
+      "ls *": "allow",
+      "printenv*": "allow",
+      "printf *": "allow",
+      "pwd": "allow",
+      "readlink *": "allow",
+      "rg *": "allow",
+      "sort": "allow",
+      "sort *": "allow",
+      "tail *": "allow",
+      "wc *": "allow",
+      "which *": "allow",
+      "fd *": "allow",
       "git push*": "ask",
       "git push --force*": "deny",
+      "git push * --force*": "deny",
+      "git push -f*": "deny",
+      "git push * -f*": "deny",
       "git reset --hard*": "deny",
-      "rm -rf *": "deny",
+      "git clean*": "deny",
+      "rm *": "deny",
+      "chmod *": "deny",
+      "chown *": "deny",
       "sudo *": "deny"
     }
   },
   "agent": {
     "plan": {
-      "permission": {
-        "bash": {
-          "*": "ask",
-          "ls *": "allow",
-          "cat *": "allow",
-          "rg *": "allow",
-          "fd *": "allow",
-          "git status*": "allow",
-          "git diff*": "allow",
-          "git log*": "allow",
-          "git show*": "allow"
-        }
-      }
+      "mode": "subagent",
+      "hidden": true
     },
     "build": {
-      "permission": {
-        "bash": {
-          "*": "allow",
-          "git push*": "ask",
-          "git push --force*": "deny",
-          "git reset --hard*": "deny",
-          "rm -rf *": "deny",
-          "sudo *": "deny"
-        }
-      }
+      "mode": "subagent",
+      "hidden": true
+    },
+    "general": {
+      "hidden": true
     }
   },
   "mcp": {
