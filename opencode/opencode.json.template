@@ -5,6 +5,7 @@
   "share": "disabled",
   "instructions": [
     "instruction/repo-context.md",
+    "instruction/agent-defaults.md",
     "instruction/plan-workflow.md"
   ],
   "plugin": [
