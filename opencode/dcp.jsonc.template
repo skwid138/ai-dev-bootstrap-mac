@@ -12,11 +12,11 @@
 //   sibling file so its schema can evolve independently of opencode core.
 //
 // What this config does:
-//   `compress.maxContextLimit: "65%"` tells dcp to fire its auto-compress
-//   nudge when the conversation reaches 65% of the model's context window.
-//   The default (100000 absolute tokens) misbehaves on small-context
-//   models and doesn't track model-specific limits. The percent form
-//   resolves at runtime once dcp has cached the model's context limit.
+//   Enables dcp's automatic mode: slash commands stay available, automatic
+//   deduplication / error purging run as a safety net, and range compression
+//   nudges the agent once the conversation reaches 65% of the model's context
+//   window. All context limits are percentages so the same template works
+//   across providers with different window sizes.
 //
 // Tuning notes:
 //   - Lower the percent (e.g. "55%") if you find auto-notes triggers too
@@ -28,9 +28,73 @@
 //
 // Schema reference:
 //   https://github.com/Opencode-DCP/opencode-dynamic-context-pruning
-//   (compress.maxContextLimit accepts: number | "<N>%" string)
+//   Verified against the plugin schema: compress.maxContextLimit and
+//   compress.minContextLimit both accept number | "<N>%" string.
 {
+  "$schema": "https:\/\/raw.githubusercontent.com\/Opencode-DCP\/opencode-dynamic-context-pruning\/master\/dcp.schema.json",
+  "enabled": true,
+  "debug": false,
+  "pruneNotification": "minimal",
+  "pruneNotificationType": "chat",
+  "commands": {
+    "enabled": true,
+    "protectedTools": [
+      "task",
+      "skill",
+      "todowrite",
+      "todoread"
+    ]
+  },
+  "manualMode": {
+    "enabled": false,
+    "automaticStrategies": true
+  },
+  "turnProtection": {
+    "enabled": false,
+    "turns": 4
+  },
+  "experimental": {
+    "allowSubAgents": false,
+    "customPrompts": false
+  },
+  "protectedFilePatterns": [],
   "compress": {
-    "maxContextLimit": "65%"
+    "mode": "range",
+    "permission": "allow",
+    "showCompression": true,
+    "summaryBuffer": true,
+    "maxContextLimit": "65%",
+    "minContextLimit": "35%",
+    "nudgeFrequency": 5,
+    "iterationNudgeThreshold": 15,
+    "nudgeForce": "soft",
+    "protectedTools": [
+      "task",
+      "skill",
+      "todowrite",
+      "todoread"
+    ],
+    "protectUserMessages": false
+  },
+  "strategies": {
+    "deduplication": {
+      "enabled": true,
+      "protectedTools": [
+        "task",
+        "skill",
+        "todowrite",
+        "todoread"
+      ]
+    },
+    "purgeErrors": {
+      "enabled": true,
+      "turns": 4,
+      "protectedTools": [
+        "task",
+        "skill",
+        "todowrite",
+        "todoread"
+      ]
+    }
   }
 }

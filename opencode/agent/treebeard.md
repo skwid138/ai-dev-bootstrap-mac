@@ -5,6 +5,7 @@ mode: subagent
 permission:
   write: deny
   edit: deny
+  task: deny
   bash:
     "*": ask
     "git diff*": allow

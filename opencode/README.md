@@ -23,7 +23,7 @@ opencode/
 │   ├── treebeard.md            # auditor
 │   ├── radagast.md             # external-research specialist
 │   ├── legolas.md              # codebase discovery specialist
-│   └── celebrimbor.md          # autonomous deep-implementation worker
+│   └── aragorn.md              # autonomous deep-implementation worker
 ├── command/                    # custom slash commands
 ├── skill/                      # on-demand skill definitions
 ├── plugins/                    # opencode plugin packages
@@ -68,7 +68,7 @@ Three reasons:
 2. **Explicit Yes/No approval gate via Tab handoff.** When a plan is approved, the user presses **Tab** to switch to the Build agent, which can mutate files (subject to `permission.edit: ask`). The mode switch is user-driven, deliberate, and visible. (See §4 for why we don't use opencode's `plan_exit` tool here.)
 3. **One-line config change.** Setting `plan` as the default agent in `opencode.json` is a single field. No fork, no vendoring, no patch.
 
-The custom agents (`treebeard`, `radagast`, `legolas`, `celebrimbor`) are **subagents** — they're invoked by the primary `plan` (or `build`) agent through the `task` tool. They're not user-selectable from the agent picker, which keeps the picker minimal: just `plan` and `build`.
+The custom agents (`treebeard`, `radagast`, `legolas`, `aragorn`) are **subagents** — they're invoked by the primary `plan` (or `build`) agent through the `task` tool. They're not user-selectable from the agent picker, which keeps the picker minimal: just `plan` and `build`.
 
 ---
 
@@ -105,9 +105,11 @@ The v1 design **does not use `plan_exit`**. Plan mode hands off to Build via the
 - `treebeard` — auditor. Strong default for every non-trivial plan (see §6).
 - `radagast` — external-research and OSS reference specialist. Source-cited reports against pinned commit SHAs.
 - `legolas` — codebase discovery specialist. Fast file/call-path lookup.
-- `celebrimbor` — autonomous deep-implementation worker for end-to-end execution. Used when the maintainer wants to delegate a well-specified task and walk away.
+- `aragorn` — autonomous deep-implementation worker for end-to-end execution. Used when the maintainer wants to delegate a well-specified task and walk away.
 
-**Why this shape:** the v0 design had a `gandalf` orchestrator primary that mostly delegated to other primaries. It added a layer with no value — opencode's built-in `plan` already orchestrates via `task`. We dropped `gandalf` and let `plan` orchestrate directly. (T1.4 of the redesign plan, commit `cadc799`.)
+**Why this shape:** the v0 design had an extra custom orchestrator primary that mostly delegated to other primaries. It added a layer with no value — opencode's built-in `plan` already orchestrates via `task`. We dropped the extra layer and let `plan` orchestrate directly. (T1.4 of the redesign plan, commit `cadc799`.)
+
+**Why keep Aragorn when OpenCode has built-in `general`:** `general` is broad and can run many kinds of multi-step work. Aragorn is narrower on purpose: it executes approved implementation plans, verifies the result, and reports clearly. Keeping that dedicated role makes delegated build work easier to audit.
 
 ---
 
@@ -127,7 +129,7 @@ The protocol exists because plan-quality bugs are silent: the user approves a pl
 
 When a skill needs non-trivial work — a compound git operation, a multi-step API call, anything that benefits from being deterministic — **prefer wrapping a shell script over baking the logic into the skill markdown**. Shell scripts are testable, deterministic, version-controllable, and easy to invoke from any context. The skill's job is to know **when** to invoke and **how** to interpret the output.
 
-Bundle scripts under the skill's directory (`skill/<name>/scripts/`) or in a project-level `scripts/` directory. See `~/code/scripts/agent/` (the maintainer's reference implementation) for examples.
+Bundle scripts under the skill's directory (`skill/<name>/scripts/`) or in a project-level `scripts/` directory. Keep scripts small, deterministic, and easy to run from any agent session.
 
 This pattern keeps skill markdown short, auditable, and editable by humans without re-reading 200 lines of embedded logic.
 
@@ -167,9 +169,9 @@ This pattern keeps skill markdown short, auditable, and editable by humans witho
 
 Earlier iterations of this directory included pieces that were dropped. They are documented here so a future reader doesn't reintroduce them by accident.
 
-### 9.1 The `gandalf` orchestrator agent
+### 9.1 The extra orchestrator agent
 
-A primary `gandalf` agent that orchestrated work by delegating to other agents. Removed in T1.4 of the redesign (commit `cadc799`). Built-in `plan` already orchestrates via `task` — `gandalf` was a layer with no behavior the built-in didn't already provide. The maintainer's personal `~/.config/opencode/agent/gandalf.md` (separate, not part of the bootstrap install) is retained for their own use.
+A primary custom agent once orchestrated work by delegating to other agents. Removed in T1.4 of the redesign (commit `cadc799`). Built-in `plan` already orchestrates via `task`, so the extra primary was a layer with no behavior the built-in didn't already provide.
 
 ### 9.2 The `orchestration` plugin
 
@@ -190,4 +192,4 @@ Custom slash commands that drove the orchestration plugin's runtime loop. Remove
 - Always-on rules: `AGENTS.md`.
 - Long-form planning workflow: `instruction/plan-workflow.md`.
 - Repo-specific context: `instruction/repo-context.md`.
-- The redesign plan that produced this directory's current shape: `~/code/ai-dev-bootstrap-mac/.project-plans/2026-05-04_opencode-config-redesign.md`.
+- The redesign plan that produced this directory's current shape: `.project-plans/2026-05-04_opencode-config-redesign.md` in this repository.
