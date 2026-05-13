@@ -33,7 +33,7 @@ fi
 
 # ── Launcher-only fast path ───────────────────────────────────────────
 # Skip preflight, Phase 0, tier selection, workspace prompt, and all
-# modules. Just rebuild ~/Applications/Vibe Code.app and exit. Useful
+# modules. Just rebuild ~/Applications/Just Vibes.app and exit. Useful
 # when:
 #   * The user accidentally deleted their launcher and wants it back.
 #   * A dev is iterating on launcher/launch.sh and wants a fast rebuild
@@ -47,7 +47,7 @@ fi
 if [ -n "${BOOTSTRAP_LAUNCHER_ONLY:-}" ]; then
   build_script="${BOOTSTRAP_DIR}/launcher/build.sh"
   dest_dir=$(launcher_resolve_dest)
-  app_path="$dest_dir/Vibe Code.app"
+  app_path="$dest_dir/Just Vibes.app"
 
   if [ -n "${BOOTSTRAP_DRY_RUN:-}" ]; then
     echo ""
@@ -65,7 +65,7 @@ if [ -n "${BOOTSTRAP_LAUNCHER_ONLY:-}" ]; then
 
   log_info "Launcher-only mode: rebuilding $app_path"
   if launcher_install "$build_script" "$dest_dir" >/dev/null; then
-    log_installed "Vibe Code.app rebuilt at $app_path"
+    log_installed "Just Vibes.app rebuilt at $app_path"
     # Friendly heads-up if we landed in ~/Applications instead of the
     # standard /Applications. This only happens on locked-down Macs;
     # the message tells the user where to find it without requiring

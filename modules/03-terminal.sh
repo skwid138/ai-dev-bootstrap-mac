@@ -32,7 +32,7 @@ case "$ghostty_result" in
   *) log_error "Ghostty config deployment returned unexpected: $ghostty_result" ;;
 esac
 
-# Build & install the one-click "Vibe Code" launcher. Prefers /Applications
+# Build & install the one-click "Just Vibes" launcher. Prefers /Applications
 # (where users actually look first) and falls back to ~/Applications on
 # corp-managed Macs / non-admin accounts where /Applications is read-only.
 # Always rebuilt on bootstrap re-run so users pick up any launch.sh fixes
@@ -45,7 +45,7 @@ launcher_result=$(launcher_install \
 
 case "$launcher_result" in
   installed)
-    log_installed "Vibe Code.app installed to $LAUNCHER_DEST"
+    log_installed "Just Vibes.app installed to $LAUNCHER_DEST"
     # Friendly heads-up if we landed in ~/Applications instead of the
     # standard /Applications. This only happens on locked-down Macs;
     # the message tells the user where to find it without requiring
@@ -56,5 +56,5 @@ case "$launcher_result" in
       log_info "and Finder will all find it there."
     fi
     ;;
-  *) log_error "Vibe Code launcher install returned unexpected: $launcher_result" ;;
+  *) log_error "Just Vibes launcher install returned unexpected: $launcher_result" ;;
 esac
