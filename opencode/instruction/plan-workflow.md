@@ -103,7 +103,7 @@ Every non-trivial plan is audited by `treebeard` before approval. Audit is a str
    )
    ```
 
-2. `treebeard` returns structured findings in the §3a audit format (or §3b re-audit format) with one verdict: **APPROVE**, **REVISE**, or **REJECT**.
+2. `treebeard` returns structured findings in the §3a Treebeard Audit format with one verdict: **APPROVE**, **REVISE**, or **REJECT**. For revisions, use the §3b re-audit guidance while keeping the same output contract.
 
 3. The Plan agent **always** presents findings to the user — including the zero-findings result. Use `question`:
 
@@ -119,33 +119,34 @@ Every non-trivial plan is audited by `treebeard` before approval. Audit is a str
 
 ### 3a. Audit feedback format
 
-Treebeard's response MUST follow this structure. The format is canonical; downstream tooling and plan notes can rely on it.
+Treebeard's agent prompt is canonical. This file mirrors that prompt so Plan knows how to read the audit, but changes to the output contract belong in `agent/treebeard.md` first.
 
-**Header:**
+```markdown
+# Treebeard Audit
 
-- Title: `# Audit — <plan slug> v<N>`
-- Date: ISO 8601 with timezone (use system-clock output verbatim; do not convert).
-- Auditor: `treebeard`
-- Plan version reviewed: `v<N>`
-- Verdict: one of `APPROVE` | `REVISE` | `REJECT`.
+**Mode:** Plan review | Post-implementation audit
+**Reviewing:** <plan or implementation summary>
+**Verdict:** APPROVE | REVISE | REJECT
 
-**Sections in this order:**
+## Summary
+<2-4 sentences in plain language.>
 
-1. `## Summary` — 2–4 sentences.
-2. `## Findings` — each finding has the structure below. **If there are no findings, the section MUST still appear, with the body `Findings: none.` Do not omit the section.**
-3. `## Strengths` — minimum 1 bullet, encouraged 2–4. Required even when verdict is `REJECT` — something motivated the plan even if the approach is wrong.
-4. `## Open questions for user` — required section. If none, write `Open questions: none.`
+## Findings
+Findings: none.
 
-**Finding structure:**
-
-```
+<!-- Or, for each finding: -->
 ### F<n>. <short title>
 - **Severity:** BLOCKER | SHOULD-FIX | NICE-TO-HAVE
-- **Where:** <section / task ID / line range>
-- **Issue:** <1–3 sentences>
-- **Evidence:** <quote, reference, or source path>
-- **Suggested remediation:** <concrete proposal>
+- **Where:** <plan section, file, or diff area>
+- **Issue:** <what is wrong>
+- **Evidence:** <quote, file path, command output, or missing input>
+- **Suggested remediation:** <specific fix>
+
+## Observations
+<Minor notes that do not affect the verdict, or `Observations: none.`>
 ```
+
+The `## Findings` section MUST appear. If there are no findings, its body is exactly `Findings: none.`
 
 **Severity definitions:**
 
@@ -157,7 +158,7 @@ Treebeard's response MUST follow this structure. The format is canonical; downst
 
 | Verdict | Condition |
 |---|---|
-| `APPROVE` | No findings, or only NICE-TO-HAVE observations that do not need action before proceeding. |
+| `APPROVE` | No findings, or only NICE-TO-HAVE findings / non-blocking observations that do not need action before proceeding. |
 | `REVISE` | Any BLOCKER or SHOULD-FIX that can be addressed while keeping the same overall approach. |
 | `REJECT` | Fundamental approach issue. Do not patch around it; rethink the plan. |
 
@@ -169,35 +170,16 @@ Plain-language meaning:
 
 ### 3b. Re-audit mode
 
-When auditing a revision against a prior audit (i.e., reviewing v<N+1> after v\<N> was audited), the format gains two sections:
+When auditing a revision against a prior audit (i.e., reviewing v<N+1> after v<N> was audited), Treebeard still uses the same §3a `# Treebeard Audit` output contract. Do not add bespoke verification sections outside the canonical format.
 
-#### `## v<N> Finding Verification`
+For re-audits:
 
-Lists each prior finding with a status and 1–3-sentence evidence citing where v<N+1> addresses it.
+- Use `**Reviewing:**` to identify the revised plan or implementation and the prior audit being checked.
+- Use `## Summary` to state whether the prior findings appear resolved.
+- Put only currently actionable issues in `## Findings`, whether they are unresolved prior findings, partial fixes, over-corrections, or newly introduced findings.
+- Use `## Observations` for resolved-prior-finding notes or other non-blocking context, or write `Observations: none.`
 
-**Status values:**
-
-- `FIXED` — finding fully resolved.
-- `PARTIAL` — partially addressed; residual issue remains (describe it).
-- `NOT-FIXED` — unchanged, or change does not address the finding.
-- `OVER-CORRECTED` — fix went too far and introduced a new issue. **Do not duplicate the introduced issue under New Findings; record it inline here with a severity tag, e.g., `OVER-CORRECTED (introduced SHOULD-FIX: <issue>)`.** The verdict-budget treats `OVER-CORRECTED` as one SHOULD-FIX-equivalent.
-
-**Optimization:** if the prior audit had zero findings, the `## v<N> Finding Verification` section may be omitted entirely.
-
-#### `## New Findings (introduced by v<N+1> revisions)`
-
-Uses the same finding structure as §3a, with IDs `NF1, NF2, …`. **If none, write `New Findings: none.`** (consistent with §3a's `Findings: none.` idiom — both first-pass and re-audit empty-section render the same way).
-
-#### Re-audit verdict-threshold counting
-
-When applying the §3a verdict thresholds in re-audit mode, the **remaining action count** is the sum of:
-
-- (a) New Findings at SHOULD-FIX severity, plus
-- (b) prior findings at status `PARTIAL`, `NOT-FIXED`, or `OVER-CORRECTED`.
-
-`FIXED` prior findings do not count. `OVER-CORRECTED` counts as one SHOULD-FIX-equivalent regardless of the introduced issue's tagged severity (the tag is informational; the budget impact is fixed).
-
-The re-audit applies the verdict rubric to the **current state** of the plan, not the delta — i.e., a clean v<N+1> can earn `APPROVE` even if the prior audit had blockers, as long as none remain and the new state is sound.
+The re-audit applies the verdict rubric to the **current state** of the plan, not the delta — i.e., a clean revision can earn `APPROVE` even if the prior audit had blockers, as long as none remain and the new state is sound.
 
 ---
 

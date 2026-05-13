@@ -1,10 +1,10 @@
 # Instrumentation
 
-Instrumentation means adding or using probes that show what the program is doing. Good probes produce signal without creating noise.
+Instrumentation means using existing probes or designing code-changing probes that show what the program is doing. In the `diagnose` skill, file-writing probes are handoff designs, not changes to apply directly. Good probes produce signal without creating noise.
 
-## Tag temporary debug logs
+## Tag proposed temporary debug logs
 
-Use a unique prefix per investigation, for example `[DEBUG-a4f2]`.
+When the diagnosis package recommends temporary debug logs, specify a unique prefix per investigation, for example `[DEBUG-a4f2]`.
 
 Why:
 
@@ -12,11 +12,11 @@ Why:
 - Real project logs are not accidentally removed.
 - Two investigations do not collide.
 
-Before handoff, search for the tag and remove every temporary probe that is not part of the final regression test.
+Before handoff, make the cleanup path explicit: the write-capable implementer should search for the tag and remove every temporary probe that is not part of the final regression test.
 
 ## One variable at a time
 
-Each probe should test one prediction from one hypothesis. A probe can be useful for more than one hypothesis, but it should be designed for a clear reason.
+Each probe or proposed probe should test one prediction from one hypothesis. A probe can be useful for more than one hypothesis, but it should be designed for a clear reason.
 
 Avoid "log the whole subsystem and see what looks odd." That produces too much output and makes the conclusion weak.
 
@@ -24,7 +24,7 @@ Avoid "log the whole subsystem and see what looks odd." That produces too much o
 
 1. **Debugger or REPL inspection** when the language and environment support it.
 2. **Existing observability** such as structured logs, traces, metrics, and test output.
-3. **Targeted temporary logs** at seams (connection points) that distinguish hypotheses.
+3. **Proposed targeted temporary logs** at seams (connection points) that distinguish hypotheses, handed off for a write-capable agent or the user to apply.
 
 ## Performance probes
 
@@ -49,17 +49,18 @@ Profilers and heap snapshots can be expensive. Explain, estimate, and ask before
 
 ## State mutation is out of bounds
 
-This skill does not restart services, reset databases, change config, or modify production state. If a probe needs one of those actions:
+This skill does not write files, restart services, reset databases, change config, or modify production state. If a probe needs one of those actions:
 
 1. Stop.
 2. Explain exactly what change is needed and why.
 3. Let the user decide whether to do it themselves, open a write-capable session, or skip that path.
 
-## Cleanup checklist
+## Probe-handoff checklist
 
 Before declaring the diagnosis complete:
 
-- [ ] Temporary `[DEBUG-...]` instrumentation removed.
-- [ ] Throwaway harnesses deleted or clearly marked as disposable scratch.
-- [ ] Captured fixtures either preserved as test fixtures or removed.
-- [ ] No probe-only changes left in the working tree.
+- [ ] No file-writing probe was applied by the read-only diagnosis session.
+- [ ] Proposed temporary `[DEBUG-...]` instrumentation has a unique tag.
+- [ ] Proposed throwaway harnesses are clearly marked as disposable scratch.
+- [ ] Proposed captured fixtures say whether they should become regression-test fixtures or be removed.
+- [ ] Cleanup instructions are included so no probe-only changes remain in the final working tree.

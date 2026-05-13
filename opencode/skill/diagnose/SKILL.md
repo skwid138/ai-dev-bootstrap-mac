@@ -2,8 +2,8 @@
 description: >-
   Disciplined read-only diagnosis loop for hard bugs and performance
   regressions. Reproduce the problem, narrow it down, test hypotheses,
-  instrument carefully, then propose a fix and regression test. Use when the
-  user says "diagnose this", "debug this", "figure out why X is broken",
+  design careful instrumentation, then propose a fix and regression test.
+  Use when the user says "diagnose this", "debug this", "figure out why X is broken",
   reports a crash or failing behavior, or describes a performance regression.
 ---
 
@@ -11,7 +11,7 @@ description: >-
 
 A disciplined way to investigate hard bugs without jumping straight to edits.
 
-**This skill is read-only investigation.** Build a feedback loop, reproduce the bug, generate hypotheses, add careful probes, and produce a diagnosis package with a recommended fix and regression-test design. Do not apply the fix, restart services, change config, or mutate production state. Hand implementation to the user, Build, or Aragorn.
+**This skill is read-only investigation.** Build a feedback loop, reproduce the bug, generate hypotheses, use existing read-only probes where available, and design any code-changing probes as recommendations. Do not write files, apply temporary instrumentation, apply the fix, restart services, change config, or mutate production state. Hand proposed instrumentation and implementation to the user, Build, or Aragorn.
 
 ## Plain-language glossary
 
@@ -66,25 +66,25 @@ Show the ranked list to the user when practical. They may know recent changes or
 
 ## Phase 4 — Instrument
 
-Each probe must map to a specific prediction from Phase 3. Change one variable at a time.
+Each probe design must map to a specific prediction from Phase 3. Change one variable at a time when a write-capable agent or the user applies it.
 
 Tool preference:
 
 1. Debugger or REPL inspection when available.
 2. Existing observability: structured logs, traces, metrics, or test output.
-3. Targeted temporary logs at the seams that distinguish hypotheses.
+3. Proposed targeted temporary logs at the seams that distinguish hypotheses, handed off for a write-capable agent or the user to apply.
 
 Never "log everything and search later." That creates noise, not evidence.
 
-If you add temporary logs in a disposable branch or scratch change, tag every line with a unique prefix such as `[DEBUG-a4f2]` and remove it before handoff. Do not leave probe changes mixed into the final recommendation.
+If a hypothesis needs temporary logs, disposable-branch changes, or scratch changes, do not apply them in this skill. Instead, include the exact proposed probe locations, a unique prefix such as `[DEBUG-a4f2]`, and cleanup instructions in the diagnosis package. Do not leave probe changes mixed into the final recommendation.
 
-For performance regressions, measure first: establish a baseline with a timing harness, profiler, query plan, or browser performance trace, then compare one change at a time.
+For performance regressions, measure first: establish a baseline with an existing timing harness, profiler, query plan, or browser performance trace, then compare one variable at a time. If a new harness or code change is needed, propose it for handoff instead of applying it.
 
 See [instrumentation.md](instrumentation.md) for probe patterns and cleanup checks.
 
 ## Phase 5 — Propose fix + regression test
 
-This skill does not apply fixes. It produces a fix proposal and a regression-test design.
+This skill does not apply fixes or code-changing probes. It produces a fix proposal, any remaining probe recommendations, and a regression-test design.
 
 The test design should exercise the real bug pattern at the right seam. If the only available seam is too shallow, say that clearly: the architecture is preventing the bug from being locked down.
 
@@ -93,7 +93,8 @@ Produce a diagnosis package containing:
 - **Symptom** — what the user reported, restated precisely.
 - **Repro** — the feedback loop and how to run it.
 - **Cause** — the surviving hypothesis, stated mechanically: what happens, where, and why.
-- **Evidence** — loop output, probe output, and ruled-out hypotheses.
+- **Evidence** — loop output, available probe output from read-only tools or user-applied probes, and ruled-out hypotheses.
+- **Recommended probes** — any proposed temporary instrumentation that still needs a write-capable handoff, with exact locations, expected signal, tags, and cleanup notes.
 - **Recommended fix** — specific code change at a specific seam, with rationale.
 - **Regression test** — what test should fail before the fix and pass after it.
 - **Risks** — what the fix might break and what to verify.
@@ -115,11 +116,11 @@ If the answer is architectural — no good seam, tangled call paths, behavior sp
 - Apply long-running command discipline before expensive commands.
 - Tie every probe to a hypothesis.
 - State uncertainty plainly.
-- Hand off the fix; do not apply it yourself.
+- Hand off proposed instrumentation and the fix; do not apply them yourself.
 
 ### Never
 
-- Never apply the production fix in this skill.
+- Never write files, including temporary instrumentation or the production fix, in this skill.
 - Never run expensive commands without proposing them first.
 - Never mutate production state, restart services, or change config as part of diagnosis.
 - Never proceed past a phase without satisfying its exit criteria or explaining why it is blocked.
@@ -130,8 +131,8 @@ If the answer is architectural — no good seam, tangled call paths, behavior sp
 [ ] Feedback loop built and verified
 [ ] Bug reproduced and matched to the user's symptom
 [ ] 3–5 falsifiable hypotheses ranked
-[ ] Each probe mapped to a prediction
-[ ] Temporary instrumentation tagged and cleaned up
+[ ] Each read-only probe or proposed probe design mapped to a prediction
+[ ] Proposed temporary instrumentation tagged and paired with cleanup instructions
 [ ] Diagnosis package complete
 [ ] Handoff target identified
 [ ] Post-mortem asked: what would have prevented this?
