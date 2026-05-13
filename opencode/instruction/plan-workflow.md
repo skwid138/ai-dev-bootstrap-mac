@@ -24,6 +24,8 @@
 12. [Plan resume protocol](#12-plan-resume-protocol)
 13. [Trivial-request bypass flow](#13-trivial-request-bypass-flow)
 14. [Build-mode entry heuristic](#14-build-mode-entry-heuristic)
+15. [Post-implementation audit](#15-post-implementation-audit)
+16. [Error recovery](#16-error-recovery)
 
 ---
 
@@ -73,8 +75,8 @@ Ordered steps:
 2. **Identify open questions.** Anything that requires a user-side decision goes into the plan's Open-questions section before drafting.
 3. **Draft the plan.** Use the template in §4. Save it to `.project-plans/YYYY-MM-DD_<slug>.md`. If durable scratch is needed, create the notes file at `<slug>-notes.md` and add `> **Notes file:** <slug>-notes.md` to the plan header.
 4. **Run the audit.** Per §3 — delegate to `treebeard` via the `task` tool with `subagent_type: "treebeard"`. Receive findings in the §3a format.
-5. **Show findings to the user always**, including the zero-findings case. Use `question` to ask: *"Auditor verdict: <X>. N findings. [details]. Revise plan to address?"*
-6. **Revise or record-and-proceed.** On accept-revisions: revise the plan, re-audit per §3b, repeat until verdict is clean. On reject-revisions: record in the plan's Decision log why the findings were rejected, then proceed.
+5. **Show findings to the user always**, including the zero-findings case. Use `question` to ask: *"Auditor verdict: <APPROVE|REVISE|REJECT>. N findings. [details]. Next step?"*
+6. **Handle the verdict.** On **APPROVE**, proceed to user approval. On **REVISE**, revise the plan, re-audit per §3b, and repeat until the verdict is APPROVE or the user chooses to proceed with a logged reason. On **REJECT**, stop and re-plan from a different approach.
 7. **Approve.** Once the plan is final, ask the user: *"Plan ready. Approve?"* via `question`.
 8. **End with the Plan→Build Tab-switch instruction.** Once approved, the Plan agent's final message MUST include this canonical phrasing:
 
@@ -101,21 +103,23 @@ Every non-trivial plan is audited by `treebeard` before approval. Audit is a str
    )
    ```
 
-2. `treebeard` returns structured findings in the §3a audit format (or §3b re-audit format).
+2. `treebeard` returns structured findings in the §3a audit format (or §3b re-audit format) with one verdict: **APPROVE**, **REVISE**, or **REJECT**.
 
 3. The Plan agent **always** presents findings to the user — including the zero-findings result. Use `question`:
 
-   > *"Auditor verdict: \<verdict>. N findings. [summary of severity counts and one-line top issue if any]. Revise plan to address?"*
+   > *"Auditor verdict: \<APPROVE|REVISE|REJECT>. N findings. [summary of severity counts and one-line top issue if any]. Next step?"*
 
-4. **On accept** — Plan agent revises, then re-audits (§3b applies for the second pass), repeating until the verdict is clean.
+4. **APPROVE** — Plan agent tells the user the plan is ready for approval. Minor observations may be mentioned, but they do not block the plan.
 
-5. **On reject** — Plan agent records the rejection in the plan's Decision log with reason, then proceeds.
+5. **REVISE** — Plan agent explains the findings in plain language, revises the plan if the user accepts, then re-audits (§3b applies for the second pass). If the user chooses to proceed without fixing, record the reason in the plan's Decision log.
 
-6. **Zero-findings case** — still display *"Auditor found 0 issues — plan looks clean."* and proceed to the approval step.
+6. **REJECT** — Plan agent stops this approach and re-plans. Do not ask Build to execute a rejected plan.
+
+7. **Zero-findings case** — still display *"Auditor found 0 issues — plan looks clean."* and proceed to the approval step.
 
 ### 3a. Audit feedback format
 
-Treebeard's response MUST follow this structure. The format is canonical; downstream tooling (re-audit verdict counting, plan-doc Decision-log linking) depends on it.
+Treebeard's response MUST follow this structure. The format is canonical; downstream tooling and plan notes can rely on it.
 
 **Header:**
 
@@ -123,13 +127,13 @@ Treebeard's response MUST follow this structure. The format is canonical; downst
 - Date: ISO 8601 with timezone (use system-clock output verbatim; do not convert).
 - Auditor: `treebeard`
 - Plan version reviewed: `v<N>`
-- Verdict: one of `approve` | `approve-with-fixes` | `revise` | `reject`.
+- Verdict: one of `APPROVE` | `REVISE` | `REJECT`.
 
 **Sections in this order:**
 
 1. `## Summary` — 2–4 sentences.
 2. `## Findings` — each finding has the structure below. **If there are no findings, the section MUST still appear, with the body `Findings: none.` Do not omit the section.**
-3. `## Strengths` — minimum 1 bullet, encouraged 2–4. Required even when verdict is `reject` — something motivated the plan even if the approach is wrong.
+3. `## Strengths` — minimum 1 bullet, encouraged 2–4. Required even when verdict is `REJECT` — something motivated the plan even if the approach is wrong.
 4. `## Open questions for user` — required section. If none, write `Open questions: none.`
 
 **Finding structure:**
@@ -149,14 +153,19 @@ Treebeard's response MUST follow this structure. The format is canonical; downst
 - **SHOULD-FIX** — avoidable risk, ambiguity, or rework. Plan would work but with cost.
 - **NICE-TO-HAVE** — polish, consistency, future-proofing. Defer-able without harm.
 
-**Verdict thresholds (concrete, computable):**
+**Verdict thresholds:**
 
 | Verdict | Condition |
 |---|---|
-| `approve` | Zero blockers AND zero unaddressed should-fixes (or all should-fixes accepted as deferred with reasoning recorded). |
-| `approve-with-fixes` | Zero blockers AND ≤5 should-fixes, where each should-fix has a concrete remediation the author can apply without further input. If the author would need to make architectural decisions to address findings, use `revise` instead. |
-| `revise` | ≥1 blocker, OR >5 should-fixes, OR any should-fix that requires architectural decision-making. |
-| `reject` | Fundamental approach issue. Don't revise — rethink. |
+| `APPROVE` | No findings, or only NICE-TO-HAVE observations that do not need action before proceeding. |
+| `REVISE` | Any BLOCKER or SHOULD-FIX that can be addressed while keeping the same overall approach. |
+| `REJECT` | Fundamental approach issue. Do not patch around it; rethink the plan. |
+
+Plain-language meaning:
+
+- **APPROVE** — safe to continue.
+- **REVISE** — fix these specific things first.
+- **REJECT** — stop and choose a different approach.
 
 ### 3b. Re-audit mode
 
@@ -181,14 +190,14 @@ Uses the same finding structure as §3a, with IDs `NF1, NF2, …`. **If none, wr
 
 #### Re-audit verdict-threshold counting
 
-When applying the §3a verdict thresholds in re-audit mode, the **should-fix count** is the sum of:
+When applying the §3a verdict thresholds in re-audit mode, the **remaining action count** is the sum of:
 
 - (a) New Findings at SHOULD-FIX severity, plus
 - (b) prior findings at status `PARTIAL`, `NOT-FIXED`, or `OVER-CORRECTED`.
 
 `FIXED` prior findings do not count. `OVER-CORRECTED` counts as one SHOULD-FIX-equivalent regardless of the introduced issue's tagged severity (the tag is informational; the budget impact is fixed).
 
-The re-audit applies the verdict rubric to the **current state** of the plan, not the delta — i.e., a clean v<N+1> can earn `approve` even if the prior audit had blockers, as long as none remain and the new state is sound.
+The re-audit applies the verdict rubric to the **current state** of the plan, not the delta — i.e., a clean v<N+1> can earn `APPROVE` even if the prior audit had blockers, as long as none remain and the new state is sound.
 
 ---
 
@@ -535,6 +544,65 @@ When the heuristic fires, Build's first response MUST be:
 
 This is **not a hard refusal**. If the user responds with any clear directive — *"just do it,"* *"yes I know, proceed,"* *"this is intentional"* — Build proceeds with the request normally. The point of the nudge is to catch accidental Build-mode entry, not to gate Build behind ceremony. Trust the user's override.
 
+### Build → Plan reminder after non-trivial work
+
+When Build finishes non-trivial work, it should remind the user:
+
+> *"This was non-trivial work. Press Tab to switch back to Plan mode so Treebeard can audit the implementation against the plan."*
+
+Keep the reminder short. The user decides when to switch.
+
+---
+
+## 15. Post-implementation audit
+
+After non-trivial Build or Aragorn work, the user Tabs back to Plan. The Plan agent then dispatches Treebeard to compare the implementation against the approved plan.
+
+### Procedure
+
+1. **Check repo state.** Run `git status` and gather the changed files. Use `git diff` for unstaged changes and `git diff --cached` for staged changes when present.
+2. **Collect inputs.** The Treebeard prompt should include:
+   - The approved plan path or inline plan.
+   - Changed files.
+   - The relevant diff.
+   - Tests, builds, or diagnostics already run, with results.
+   - Any known deviations from the plan.
+3. **Dispatch Treebeard via `task`.** Prompt it to use Mode D, post-implementation audit, from `agent/treebeard.md`.
+4. **Surface the verdict to the user in plain language.** Do not bury the findings.
+
+### Verdict handling
+
+- **APPROVE** — Plan confirms the work appears complete, explains what was built, and lists verification results.
+- **REVISE** — Plan explains the specific fixes needed and tells the user to press Tab back to Build to make them. After fixes, the user should Tab back to Plan for re-audit.
+- **REJECT** — Plan explains why the implementation is the wrong direction. The changes are still in the working tree. Recommend `git stash -u` as the safest recovery because it saves changes reversibly so nothing is lost. If the user wants a full clean slate, explain that `git checkout . && git clean -fd` removes all tracked and untracked changes and is not reversible; require explicit confirmation before running it.
+
+### Prompt skeleton
+
+```text
+Audit this implementation against the approved plan using Treebeard Mode D.
+
+Plan: <path or pasted plan>
+Changed files: <list>
+Diff: <diff or summary with where to fetch it>
+Verification run: <commands and results>
+Known deviations: <none or list>
+
+Return APPROVE, REVISE, or REJECT with findings in the Treebeard audit format.
+```
+
+---
+
+## 16. Error recovery
+
+When something goes wrong, slow down and preserve the user's work.
+
+1. **Check state first:** run `git status` before changing anything.
+2. **Prefer reversible recovery:** commit completed good work, or use `git stash -u` to save all current changes before trying a different path.
+3. **Undo with git when safe:** use targeted reversions when you know exactly what should be undone.
+4. **Ask for help when unsure:** one precise question is better than guessing and making recovery harder.
+5. **Do not force-push.** Never use `git push --force` or `git push --force-with-lease` unless the user explicitly requests it and confirms the risk.
+6. **Do not delete untracked work casually:** `git clean -fd` deletes new files. It requires explicit confirmation and should usually be avoided in favor of `git stash -u`.
+
 ---
 
 ## Cross-references
@@ -545,3 +613,4 @@ This is **not a hard refusal**. If the user responds with any clear directive �
 - Audit subagent: `treebeard` (defined in `~/.config/opencode/agent/treebeard.md`).
 - Research subagent: `radagast` (defined in `~/.config/opencode/agent/radagast.md`).
 - Discovery subagent: `legolas` (defined in `~/.config/opencode/agent/legolas.md`).
+- Implementation subagent: `aragorn` (defined in `~/.config/opencode/agent/aragorn.md`).
