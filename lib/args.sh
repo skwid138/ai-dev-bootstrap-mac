@@ -8,7 +8,7 @@
 #                     (--tier=recommended, workspace=~/code) with a loud
 #                     log line so the user knows what was assumed. Useful
 #                     for CI smoke tests and unattended re-runs.
-#   --launcher-only   Rebuild ~/Applications/Vibe Code.app and exit.
+#   --launcher-only   Rebuild ~/Applications/Just Vibes.app and exit.
 #                     Skips preflight, Phase 0, tier selection, workspace
 #                     prompt, and all installer modules. Useful for
 #                     recovering from an accidentally-deleted launcher,
@@ -16,7 +16,7 @@
 #                     manually testing the .app bundle without committing
 #                     to a full bootstrap run. Implies --non-interactive
 #                     (no prompts to ask). Composes with --dry-run
-#                     ("would rebuild ~/Applications/Vibe Code.app").
+#                     ("would rebuild ~/Applications/Just Vibes.app").
 #   --check-paths     Read-only staleness check on the baked Homebrew
 #                     prefix in ~/.config/ai-bootstrap/shell/env/paths.zsh.
 #                     Exits 0 (fresh) / 1 (stale) / 2 (error). Designed
@@ -54,7 +54,7 @@ Usage:
   ./bootstrap.sh                    Run the interactive installer
   ./bootstrap.sh --dry-run          Show the install plan and exit (safe)
   ./bootstrap.sh --non-interactive  Run with defaults, skip all prompts
-  ./bootstrap.sh --launcher-only    (Re)build ~/Applications/Vibe Code.app
+  ./bootstrap.sh --launcher-only    (Re)build ~/Applications/Just Vibes.app
                                     and exit. Useful if the launcher was
                                     deleted, or to test the .app bundle
                                     without a full bootstrap run.

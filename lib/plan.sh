@@ -129,7 +129,7 @@ plan_render() {
   # is selected. Check presence in selected_keys.
   if plan_has_key "ghostty" "${selected_keys[@]}"; then
     echo "    ~/.config/ghostty/config           (terminal config)"
-    echo "    ~/Applications/Vibe Code.app       (one-click opencode launcher)"
+    echo "    ~/Applications/Just Vibes.app      (one-click opencode launcher)"
   fi
   if plan_has_key "opencode" "${selected_keys[@]}"; then
     echo "    ~/.config/opencode/                (agents, skills, commands, MCPs, plugins)"

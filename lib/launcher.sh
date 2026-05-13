@@ -1,5 +1,5 @@
 #!/bin/bash
-# Vibe Code launcher install helpers.
+# Just Vibes launcher install helpers.
 #
 # Three responsibilities, factored out of modules/03-terminal.sh so each is
 # independently testable with bats:
@@ -28,7 +28,7 @@
 #     contains zero user-editable content. Rebuilding is always safe.
 
 # ── launcher_resolve_dest ───────────────────────────────────────────────────
-# Pick the install directory for Vibe Code.app. Prefers /Applications if
+# Pick the install directory for Just Vibes.app. Prefers /Applications if
 # writable (most users on standard Macs); falls back to ~/Applications
 # otherwise.
 #
@@ -36,12 +36,12 @@
 # Stdout: absolute path to install dir.
 # Returns: 0 always.
 #
-# Override via VIBE_CODE_DEST_DIR_OVERRIDE for tests (the resolution is
+# Override via JUST_VIBES_DEST_DIR_OVERRIDE for tests (the resolution is
 # what we want to test, but real $HOME/Applications and /Applications
 # can't be safely written to from CI/test sandboxes).
 launcher_resolve_dest() {
-  if [ -n "${VIBE_CODE_DEST_DIR_OVERRIDE:-}" ]; then
-    echo "$VIBE_CODE_DEST_DIR_OVERRIDE"
+  if [ -n "${JUST_VIBES_DEST_DIR_OVERRIDE:-}" ]; then
+    echo "$JUST_VIBES_DEST_DIR_OVERRIDE"
     return 0
   fi
 
@@ -96,7 +96,7 @@ launcher_install() {
 #   1  if rm fails
 launcher_uninstall() {
   local dest_dir="$1"
-  local bundle="$dest_dir/Vibe Code.app"
+  local bundle="$dest_dir/Just Vibes.app"
 
   if [ ! -d "$bundle" ]; then
     echo "absent"
