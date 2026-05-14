@@ -26,6 +26,7 @@ setup() {
 
   SANDBOX="$(mktemp -d)"
   export HOME="$SANDBOX"
+  export AI_BOOTSTRAP_WORKSPACE="$SANDBOX/workspace"
   export MOCK_LOG="$SANDBOX/mock.log"
   : >"$MOCK_LOG"
 
@@ -216,4 +217,29 @@ run_module() {
   # Damaged curated asset got restored.
   run ! grep -q "DAMAGED" "$bug_hunter"
   grep -q "bug-hunter" "$bug_hunter"
+}
+
+@test "module: scripts deployment decline removes dependency-update assets" {
+  export OPENCODE_TEST_MENU_SELECTION=skip
+  mkdir -p "$AI_BOOTSTRAP_WORKSPACE/scripts"
+
+  run_module
+  [ "$status" -eq 0 ]
+
+  [ ! -e "$HOME/.config/opencode/skill/dependency-update" ]
+  [ ! -e "$HOME/.config/opencode/command/update-opencode-deps.md" ]
+}
+
+@test "module: non-interactive mode deploys scripts when destination exists" {
+  export OPENCODE_TEST_MENU_SELECTION=skip
+  export BOOTSTRAP_NONINTERACTIVE=1
+  mkdir -p "$AI_BOOTSTRAP_WORKSPACE/scripts"
+
+  run_module
+  [ "$status" -eq 0 ]
+
+  [ -x "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh" ]
+  [ -f "$AI_BOOTSTRAP_WORKSPACE/scripts/lib/common.sh" ]
+  [ -f "$HOME/.config/opencode/skill/dependency-update/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/command/update-opencode-deps.md" ]
 }

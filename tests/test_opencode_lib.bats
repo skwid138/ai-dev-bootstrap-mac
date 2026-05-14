@@ -89,6 +89,72 @@ teardown() {
   [ "$status" -ne 0 ]
 }
 
+# ── opencode_deploy_scripts ──────────────────────────────────────────────────
+
+@test "opencode_deploy_scripts: copies agent and lib scripts" {
+  src="$SANDBOX/src-scripts"
+  dest="$SANDBOX/workspace/scripts"
+  mkdir -p "$src/agent" "$src/lib"
+  echo "agent script" >"$src/agent/check.sh"
+  echo "common lib" >"$src/lib/common.sh"
+
+  run opencode_deploy_scripts "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ -f "$dest/agent/check.sh" ]
+  [ -f "$dest/lib/common.sh" ]
+
+  run cat "$dest/agent/check.sh"
+  [ "$output" = "agent script" ]
+}
+
+@test "opencode_deploy_scripts: decline leaves existing scripts untouched" {
+  src="$SANDBOX/src-scripts"
+  dest="$SANDBOX/workspace/scripts"
+  mkdir -p "$src/agent" "$dest/agent"
+  echo "new" >"$src/agent/check.sh"
+  echo "old" >"$dest/agent/check.sh"
+
+  run bash -c "source '$BOOTSTRAP_DIR/lib/opencode.sh'; opencode_deploy_scripts '$src' '$dest' <<< n"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"Overwrite?"* ]]
+
+  run cat "$dest/agent/check.sh"
+  [ "$output" = "old" ]
+}
+
+@test "opencode_deploy_scripts: non-interactive mode overwrites without prompt" {
+  src="$SANDBOX/src-scripts"
+  dest="$SANDBOX/workspace/scripts"
+  mkdir -p "$src/agent" "$dest/agent"
+  echo "new" >"$src/agent/check.sh"
+  echo "old" >"$dest/agent/check.sh"
+
+  export BOOTSTRAP_NONINTERACTIVE=1
+  run opencode_deploy_scripts "$src" "$dest"
+  unset BOOTSTRAP_NONINTERACTIVE
+
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"Overwrite?"* ]]
+  run cat "$dest/agent/check.sh"
+  [ "$output" = "new" ]
+}
+
+@test "opencode_cleanup_scripts_assets: removes dependency update assets only" {
+  config_dir="$SANDBOX/opencode"
+  mkdir -p "$config_dir/skill/dependency-update" "$config_dir/skill/other" "$config_dir/command"
+  echo "dep" >"$config_dir/skill/dependency-update/SKILL.md"
+  echo "other" >"$config_dir/skill/other/SKILL.md"
+  echo "cmd" >"$config_dir/command/update-opencode-deps.md"
+  echo "keep" >"$config_dir/command/help-me.md"
+
+  run opencode_cleanup_scripts_assets "$config_dir"
+  [ "$status" -eq 0 ]
+  [ ! -e "$config_dir/skill/dependency-update" ]
+  [ ! -e "$config_dir/command/update-opencode-deps.md" ]
+  [ -f "$config_dir/skill/other/SKILL.md" ]
+  [ -f "$config_dir/command/help-me.md" ]
+}
+
 # ── opencode_deploy_agents_md ────────────────────────────────────────────────
 
 @test "opencode_deploy_agents_md: installs when destination missing" {

@@ -150,11 +150,11 @@ assert_literal_exists_after() {
 
 # ── Skills ───────────────────────────────────────────────────────────────────
 
-@test "opencode/skill: all 6 curated skills have SKILL.md" {
+@test "opencode/skill: all 7 curated skills have SKILL.md" {
   skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
-  [ "${#skills[@]}" -eq 6 ]
+  [ "${#skills[@]}" -eq 7 ]
 
-  for skill in tdd bug-hunter diagnose grill-me prototype improve-codebase-architecture; do
+  for skill in tdd bug-hunter dependency-update diagnose grill-me prototype improve-codebase-architecture; do
     [ -f "${OPENCODE_DIR}/skill/${skill}/SKILL.md" ]
   done
 }
@@ -167,11 +167,11 @@ assert_literal_exists_after() {
 
 # ── Commands ─────────────────────────────────────────────────────────────────
 
-@test "opencode/command: all 8 curated commands exist" {
+@test "opencode/command: all 9 curated commands exist" {
   commands=("${OPENCODE_DIR}"/command/*.md)
-  [ "${#commands[@]}" -eq 8 ]
+  [ "${#commands[@]}" -eq 9 ]
 
-  for cmd in help-me explain safer commit diagnose grill prototype architecture; do
+  for cmd in help-me explain safer commit diagnose grill prototype architecture update-opencode-deps; do
     [ -f "${OPENCODE_DIR}/command/${cmd}.md" ]
   done
 }
