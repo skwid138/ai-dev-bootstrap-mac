@@ -33,6 +33,8 @@ opencode/
 
 The `template` extension on `opencode.json.template` exists because the bootstrap renders it into the final `opencode.json` on the user's machine.
 
+The repo-level `scripts/` tree is deployed separately to `$AI_BOOTSTRAP_WORKSPACE/scripts/`. Commands or skills that need deterministic shell logic should call those deployed scripts rather than embedding long shell snippets in prompts.
+
 ---
 
 ## 2. Architecture: Gandalf as the primary agent
@@ -105,7 +107,29 @@ Prefer short, focused docs. Long always-on files become harder for both humans a
 
 Skills are for workflows that should load only when relevant: test-driven development, diagnosis, bug hunting, prototypes, architecture review, and plan grilling.
 
-When a skill needs deterministic multi-step work, prefer a small script bundled under that skill's directory. Scripts are easier to test and safer to reuse than long prose instructions.
+Current curated skills:
+
+- `bug-hunter`
+- `dependency-update`
+- `diagnose`
+- `grill-me`
+- `improve-codebase-architecture`
+- `prototype`
+- `tdd`
+
+When a skill needs deterministic multi-step work, prefer a small script bundled under the repo-level `scripts/` tree (or under that skill's directory when it is truly skill-local). Scripts are easier to test and safer to reuse than long prose instructions.
+
+Curated slash commands:
+
+- `/architecture`
+- `/commit`
+- `/diagnose`
+- `/explain`
+- `/grill`
+- `/help-me`
+- `/prototype`
+- `/safer`
+- `/update-opencode-deps`
 
 ---
 
