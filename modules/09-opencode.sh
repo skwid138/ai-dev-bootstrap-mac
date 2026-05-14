@@ -55,6 +55,16 @@ else
   log_error "Failed to deploy curated assets"
 fi
 
+if [ -z "${AI_BOOTSTRAP_WORKSPACE:-}" ]; then
+  opencode_cleanup_scripts_assets "$OPENCODE_CONFIG_DIR"
+  log_error "AI_BOOTSTRAP_WORKSPACE is not set; helper scripts were not deployed"
+elif opencode_deploy_scripts "$BOOTSTRAP_DIR/scripts" "$AI_BOOTSTRAP_WORKSPACE/scripts"; then
+  log_installed "Helper scripts deployed to $AI_BOOTSTRAP_WORKSPACE/scripts"
+else
+  opencode_cleanup_scripts_assets "$OPENCODE_CONFIG_DIR"
+  log_skip "Helper scripts not deployed; dependency-update assets removed"
+fi
+
 agents_md_result=$(opencode_deploy_agents_md \
   "${BOOTSTRAP_DIR}/opencode/AGENTS.md" \
   "$OPENCODE_CONFIG_DIR/AGENTS.md")

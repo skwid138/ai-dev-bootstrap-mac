@@ -52,6 +52,67 @@ opencode_deploy_assets() {
   done
 }
 
+# ── opencode_deploy_scripts ──────────────────────────────────────────────────
+# Copy bootstrap-managed helper scripts into the user's AI workspace so
+# OpenCode commands can execute them through a stable $AI_BOOTSTRAP_WORKSPACE
+# path.
+#
+# Args:
+#   $1: source scripts dir (typically "$BOOTSTRAP_DIR/scripts")
+#   $2: dest scripts dir   (typically "$AI_BOOTSTRAP_WORKSPACE/scripts")
+#
+# Returns:
+#   0 on success
+#   1 if the user declines an overwrite prompt or the source is invalid
+opencode_deploy_scripts() {
+  local src="$1"
+  local dest="$2"
+
+  if [ ! -d "$src" ]; then
+    echo "opencode_deploy_scripts: source dir not found: $src" >&2
+    return 1
+  fi
+
+  if [ -d "$dest" ] && [ "${BOOTSTRAP_NONINTERACTIVE:-}" != "1" ]; then
+    local reply
+    printf "Scripts directory already exists at %s. Overwrite? (y/n) " "$dest" >&2
+    if ! IFS= read -r reply; then
+      echo "opencode_deploy_scripts: overwrite declined" >&2
+      return 1
+    fi
+
+    case "$reply" in
+      [Yy] | [Yy][Ee][Ss]) ;;
+      *)
+        echo "opencode_deploy_scripts: overwrite declined" >&2
+        return 1
+        ;;
+    esac
+  fi
+
+  mkdir -p "$dest"
+  cp -R "$src/." "$dest/"
+}
+
+# ── opencode_cleanup_scripts_assets ──────────────────────────────────────────
+# Remove OpenCode assets that depend on scripts deployment. This prevents a
+# broken /update-opencode-deps command from being installed when the user
+# declines copying scripts into $AI_BOOTSTRAP_WORKSPACE.
+#
+# Args:
+#   $1: opencode config dir (typically "$HOME/.config/opencode")
+opencode_cleanup_scripts_assets() {
+  local config_dir="$1"
+
+  if [ -z "$config_dir" ]; then
+    echo "opencode_cleanup_scripts_assets: config dir is required" >&2
+    return 1
+  fi
+
+  rm -rf "$config_dir/skill/dependency-update"
+  rm -f "$config_dir/command/update-opencode-deps.md"
+}
+
 # ── opencode_deploy_agents_md ────────────────────────────────────────────────
 # Install ~/.config/opencode/AGENTS.md with overwrite protection.
 #
