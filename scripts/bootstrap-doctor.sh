@@ -216,6 +216,7 @@ declare -A TEST_OVERRIDES=(
   [state]="test_state_lib.bats"
   [ui]="test_ui.bats"
   [workspace]="test_workspace_lib.bats"
+  [summary]="test_summary_lib.bats"
 )
 
 expected_lib_test() {
