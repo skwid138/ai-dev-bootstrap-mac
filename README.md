@@ -210,15 +210,18 @@ brew install bats-core && bats tests/
 
 ```
 ai-dev-bootstrap-mac/
-├── bootstrap.sh
-├── lib/
-├── modules/
-├── config/
-├── dotfiles/
-├── ghostty/
-├── launcher/
-├── opencode/
-├── tests/
+├── bootstrap.sh          # Main entry point — the installer
+├── install.sh            # One-liner bootstrapper (curl target)
+├── lib/                  # Shared shell helpers
+├── modules/              # Install modules (one per tool/feature)
+├── config/               # Package definitions and tier mappings
+├── dotfiles/             # Modular zsh configuration files
+├── ghostty/              # Ghostty terminal config and themes
+├── launcher/             # Just Vibes app bundle and build scripts
+├── opencode/             # OpenCode AI config (agents, skills, commands)
+├── scripts/              # Helper scripts for OpenCode self-maintenance
+├── tests/                # Bats test suite
+├── CONTRIBUTING.md       # Development guide and quality gates
 └── README.md
 ```
 
