@@ -39,6 +39,28 @@ jobs:
           shellcheck -e SC1090 -e SC1091 -e SC2034 -e SC2155 -x \
             bootstrap.sh lib/*.sh modules/*.sh config/*.sh
 
+  doctor:
+    name: Bootstrap Doctor
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install jq
+        run: |
+          # bootstrap-doctor emits JSON internally via jq even for human output.
+          for attempt in 1 2 3; do
+            if sudo apt-get update \
+              && sudo apt-get install -y --fix-missing jq; then
+              exit 0
+            fi
+            echo "apt attempt $attempt failed; sleeping 5s" >&2
+            sleep 5
+          done
+          exit 1
+
+      - name: Run bootstrap doctor
+        run: ./scripts/bootstrap-doctor.sh
+
   zsh-syntax:
     name: zsh -n (.zsh files)
     runs-on: ubuntu-latest

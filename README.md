@@ -1,5 +1,7 @@
 # AI Dev Bootstrap for Mac
 
+[![Bootstrap Doctor](https://img.shields.io/github/actions/workflow/status/skwid138/ai-dev-bootstrap-mac/ci.yml?branch=main&job=doctor&label=doctor)](https://github.com/skwid138/ai-dev-bootstrap-mac/actions/workflows/ci.yml)
+
 Set up your Mac for vibe-coding with AI in minutes.
 
 ## ✨ What is this?
