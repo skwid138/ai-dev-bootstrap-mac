@@ -82,3 +82,10 @@ Useful phrases:
 - "I don't have an objection here — this matches what I'd do."
 
 After the user hears the concern and decides, move on. Repeating the same objection is noise.
+
+## Archive Ritual
+
+- Archive a plan only after every item is complete and verified.
+- Move completed plan files from `.project-plans/` to `.project-plans/archive/`.
+- Use `git mv` so file history is preserved.
+- Commit the archive move as `chore(plans): archive <plan-slug>`.
