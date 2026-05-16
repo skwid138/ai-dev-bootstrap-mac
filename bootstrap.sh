@@ -17,6 +17,7 @@ source "${BOOTSTRAP_DIR}/lib/brewfile.sh"
 source "${BOOTSTRAP_DIR}/lib/args.sh"
 source "${BOOTSTRAP_DIR}/lib/plan.sh"
 source "${BOOTSTRAP_DIR}/lib/launcher.sh"
+source "${BOOTSTRAP_DIR}/lib/summary.sh"
 source "${BOOTSTRAP_DIR}/lib/paths_check.sh"
 
 # ── Parse flags ───────────────────────────────────────────────────────
@@ -437,7 +438,9 @@ fi
 # point is reproducibility of the user's machine, not auditing what we
 # touched.
 brewfile_path="$HOME/.config/ai-bootstrap/Brewfile"
+summary_brewfile_path=""
 if brewfile_dump "$brewfile_path" >/dev/null; then
+  summary_brewfile_path="$brewfile_path"
   log_installed "Brewfile saved to $brewfile_path"
 else
   # Non-fatal — the bootstrap still succeeded; the user just doesn't get
@@ -459,9 +462,15 @@ else
   log_warn "Could not update state file at $state_path"
 fi
 
-echo ""
-log_info "Next steps:"
-log_info "  1. Open a new terminal window (or run: source ~/.zshenv ~/.zprofile ~/.zshrc)"
-log_info "  2. Try running: opencode"
-log_info "  3. Start building something! 🎉"
-echo ""
+if [ -z "${BOOTSTRAP_DRY_RUN:-}" ]; then
+  summary_launcher_path=""
+  if [ "${launcher_result:-}" = "installed" ] && [ -n "${LAUNCHER_DEST:-}" ]; then
+    summary_launcher_path="${LAUNCHER_DEST:-}/Just Vibes.app"
+  fi
+
+  summary_print \
+    "$WORKSPACE_PATH" \
+    "$SELECTED_TIER" \
+    "$summary_brewfile_path" \
+    "$summary_launcher_path"
+fi
