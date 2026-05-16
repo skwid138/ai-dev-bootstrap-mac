@@ -176,11 +176,15 @@ collect_module_refs() {
     while IFS= read -r ref; do
       [[ -n "$ref" ]] || continue
       base="$(basename "$ref")"
-      array_contains "$base" "${refs[@]}" || refs+=("$base")
+      if [[ "${#refs[@]}" -eq 0 ]] || ! array_contains "$base" "${refs[@]}"; then
+        refs+=("$base")
+      fi
     done < <(grep -Eoh 'modules/[[:alnum:]_.-]+\.sh|[0-9][0-9][[:alnum:]]?-[[:alnum:]_-]+\.sh' "$cfg" 2>/dev/null || true)
   done
 
-  printf '%s\n' "${refs[@]}"
+  if [[ "${#refs[@]}" -gt 0 ]]; then
+    printf '%s\n' "${refs[@]}"
+  fi
 }
 
 check_module_refs() {
@@ -202,27 +206,32 @@ check_module_refs() {
   fi
 }
 
-declare -A TEST_OVERRIDES=(
-  [args]="test_args_lib.bats"
-  [brewfile]="test_brewfile_lib.bats"
-  [checks]="test_checks.bats"
-  [common]="test_common.bats"
-  [ghostty]="test_ghostty_lib.bats"
-  [git]="test_git_lib.bats"
-  [launcher]="test_launcher_lib.bats"
-  [opencode]="test_opencode_lib.bats"
-  [paths_check]="test_check_paths.bats"
-  [plan]="test_plan_lib.bats"
-  [state]="test_state_lib.bats"
-  [ui]="test_ui.bats"
-  [workspace]="test_workspace_lib.bats"
-  [summary]="test_summary_lib.bats"
-)
+test_override_for() {
+  case "$1" in
+    args) echo "test_args_lib.bats" ;;
+    brewfile) echo "test_brewfile_lib.bats" ;;
+    checks) echo "test_checks.bats" ;;
+    common) echo "test_common.bats" ;;
+    ghostty) echo "test_ghostty_lib.bats" ;;
+    git) echo "test_git_lib.bats" ;;
+    launcher) echo "test_launcher_lib.bats" ;;
+    opencode) echo "test_opencode_lib.bats" ;;
+    paths_check) echo "test_check_paths.bats" ;;
+    plan) echo "test_plan_lib.bats" ;;
+    state) echo "test_state_lib.bats" ;;
+    summary) echo "test_summary_lib.bats" ;;
+    ui) echo "test_ui.bats" ;;
+    workspace) echo "test_workspace_lib.bats" ;;
+    *) echo "" ;;
+  esac
+}
 
 expected_lib_test() {
   local base="$1"
-  if [[ -n "${TEST_OVERRIDES[$base]:-}" ]]; then
-    printf '%s\n' "${TEST_OVERRIDES[$base]}"
+  local override
+  override="$(test_override_for "$base")"
+  if [[ -n "$override" ]]; then
+    printf '%s\n' "$override"
   else
     printf 'test_%s.bats\n' "$base"
   fi
