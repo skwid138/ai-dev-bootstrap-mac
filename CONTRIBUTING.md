@@ -20,7 +20,8 @@ Three commands. All run locally and in CI with identical args.
 
 ```sh
 shellcheck -e SC1090 -e SC1091 -e SC2034 -e SC2155 -x \
-  bootstrap.sh lib/*.sh modules/*.sh config/*.sh
+  bootstrap.sh lib/*.sh modules/*.sh config/*.sh \
+  scripts/*.sh scripts/lib/*.sh scripts/agent/*.sh launcher/*.sh
 ```
 
 ShellCheck dropped zsh support in v0.11.0, so it does **not** lint `dotfiles/*.zsh`. The dialect-aware gate for those files is `zsh -n` (see step 1b). If you have a `.zsh` file where bash-overlap coverage would be useful, you can opt in with `# shellcheck shell=bash` on line 2 (after the purpose comment) — but plan to also exclude `SC2034` since `.zsh` files often define vars consumed by external zsh plugins.
@@ -48,11 +49,11 @@ find dotfiles -type f -name '*.zsh' -exec zsh -n {} +
 
 ```sh
 # Check (matches CI):
-shfmt -d -i 2 -ci -bn bootstrap.sh lib/ modules/ config/
+shfmt -d -i 2 -ci -bn bootstrap.sh lib/ modules/ config/ scripts/ launcher/
 shfmt -d -i 2 -ci -bn dotfiles/   # auto-detects .zsh and parses with -ln zsh
 
 # Auto-fix:
-shfmt -w -i 2 -ci -bn bootstrap.sh lib/ modules/ config/
+shfmt -w -i 2 -ci -bn bootstrap.sh lib/ modules/ config/ scripts/ launcher/
 shfmt -w -i 2 -ci -bn dotfiles/
 ```
 
@@ -77,7 +78,7 @@ bats tests/
 1. Create `modules/NN-name.sh`. Modules are *sourced* by `bootstrap.sh`, not executed — they rely on `SELECTED_PACKAGES` and helpers from `lib/common.sh`.
 2. At minimum, add a parse-check or smoke test (`bats` + `bash -n`) to `tests/`.
 3. Wire it into `bootstrap.sh`'s module loop and update `config/packages.sh` if it adds a package.
-4. Update `PLAN.md`'s architecture section.
+4. Update the README or contributing docs if the user-facing behavior or project structure changed.
 
 ### Touching `dotfiles/`
 
@@ -103,4 +104,4 @@ Keep commits **atomic** — one logical change per commit. The same discipline w
 - Branch off `main`.
 - Run all three quality gates locally before opening a PR.
 - CI must be green to merge.
-- Keep PRs focused. Multi-phase work (per `PLAN.md` / `ANALYSIS_AND_PLAN.md`) lands as separate PRs per phase where reasonable.
+- Keep PRs focused. Multi-phase work should land as separate PRs per phase where reasonable.
