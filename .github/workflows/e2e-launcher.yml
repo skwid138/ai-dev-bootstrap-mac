@@ -66,6 +66,7 @@ jobs:
           # three-tier dotfiles too).
           AI_BOOTSTRAP_NONINTERACTIVE=1 \
           AI_BOOTSTRAP_TIER=essential \
+          MISE_PYTHON_GITHUB_ATTESTATIONS=false \
             ./bootstrap.sh
 
       - name: Verify three-tier files installed
@@ -181,6 +182,7 @@ jobs:
           # but append_line_if_missing must dedupe — counts stay at 1.
           AI_BOOTSTRAP_NONINTERACTIVE=1 \
           AI_BOOTSTRAP_TIER=essential \
+          MISE_PYTHON_GITHUB_ATTESTATIONS=false \
             ./bootstrap.sh
 
           test "$(grep -c 'init_env.zsh' "$HOME/.zshenv")" -eq 1
