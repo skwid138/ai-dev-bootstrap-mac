@@ -375,6 +375,29 @@ export AI_BOOTSTRAP_WORKSPACE="$WORKSPACE_PATH"
 
 # ── Run modules for selected packages ────────────────────────────────
 # Map package keys to module scripts.
+run_module_isolated() {
+  local module_file="$1"
+  local module_path="${BOOTSTRAP_DIR}/modules/${module_file}"
+
+  if [ ! -f "$module_path" ]; then
+    return 0
+  fi
+
+  local module_rc
+  set +e
+  # shellcheck disable=SC1090
+  source "$module_path"
+  module_rc=$?
+  set -e
+
+  if [ "$module_rc" -ne 0 ]; then
+    log_error "Module failed: $module_file (exit $module_rc)"
+    RESULTS_FAILED+=("$module_file")
+  fi
+
+  return 0
+}
+
 run_module_if_selected() {
   local module_file="$1"
   shift
@@ -391,7 +414,7 @@ run_module_if_selected() {
   done
 
   if $dominated && [ -f "${BOOTSTRAP_DIR}/modules/${module_file}" ]; then
-    source "${BOOTSTRAP_DIR}/modules/${module_file}"
+    run_module_isolated "$module_file"
   fi
 }
 
@@ -410,7 +433,7 @@ run_module_if_selected "09-opencode.sh" "opencode"
 # 10-shell-config.sh runs UNCONDITIONALLY (per zsh_init_plan.md §5.1 / rev-3 C1):
 # previously gated on zplug-tier packages, which left Essential-tier users
 # without working PATH config. Per-tool conditionals now live inside the module.
-source "${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
+run_module_isolated "10-shell-config.sh"
 run_module_if_selected "11-local-ai.sh" "ollama" "lm_studio"
 run_module_if_selected "12-containers.sh" "orbstack"
 run_module_if_selected "13-extras.sh" "playwright" "shfmt" "ffmpeg" "imagemagick"
