@@ -123,6 +123,21 @@
 
 set -u
 
+HELPER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+if [[ -n "${JUST_VIBES_STATE_VALIDATION_LIB:-}" && -f "$JUST_VIBES_STATE_VALIDATION_LIB" ]]; then
+  # shellcheck disable=SC1090
+  source "$JUST_VIBES_STATE_VALIDATION_LIB"
+elif [[ -f "$HELPER_DIR/state_source_validation.sh" ]]; then
+  # Bundled app path: build.sh copies the shared validator beside this helper.
+  # shellcheck disable=SC1091
+  source "$HELPER_DIR/state_source_validation.sh"
+elif [[ -f "$HELPER_DIR/../lib/state_source_validation.sh" ]]; then
+  # Repo path: tests and direct developer runs execute launcher/launch-helper.sh in place.
+  # shellcheck disable=SC1091
+  source "$HELPER_DIR/../lib/state_source_validation.sh"
+fi
+
 # Defaults; overridable via env (mainly for tests).
 LAUNCH_OPENCODE="${JUST_VIBES_LAUNCH_OPENCODE:-1}"
 STATE_FILE="${AI_BOOTSTRAP_STATE_FILE:-$HOME/.config/ai-bootstrap/state.sh}"
@@ -165,9 +180,13 @@ resolve_opencode() {
 # or sets an invalid path, we fall back to $HOME so the launcher still works.
 workspace=""
 if [[ -r "$STATE_FILE" ]]; then
-  # shellcheck disable=SC1090
-  source "$STATE_FILE" || true
-  workspace="${AI_BOOTSTRAP_WORKSPACE:-}"
+  if declare -F state_validate_sourceable_file >/dev/null && state_validate_sourceable_file "$STATE_FILE"; then
+    # shellcheck disable=SC1090
+    source "$STATE_FILE" || true
+    workspace="${AI_BOOTSTRAP_WORKSPACE:-}"
+  else
+    echo "warning: ignoring unsafe state file: $STATE_FILE" >&2
+  fi
 fi
 if [[ -z "$workspace" || ! -d "$workspace" ]]; then
   workspace="$HOME"

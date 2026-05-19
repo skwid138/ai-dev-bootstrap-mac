@@ -139,6 +139,19 @@ teardown() {
   [ "$output" = "recommended" ]
 }
 
+@test "state_read_field: rejects unsafe state content before sourcing" {
+  cat >"$STATE" <<EOF
+#!/bin/bash
+export AI_BOOTSTRAP_TIER='recommended'
+touch '$SANDBOX/pwned'
+EOF
+
+  run state_read_field "$STATE" "AI_BOOTSTRAP_TIER"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"unsafe state file"* ]]
+  [ ! -e "$SANDBOX/pwned" ]
+}
+
 @test "state_now: honors AI_BOOTSTRAP_NOW_OVERRIDE" {
   AI_BOOTSTRAP_NOW_OVERRIDE="2099-12-31T23:59:59Z"
   export AI_BOOTSTRAP_NOW_OVERRIDE

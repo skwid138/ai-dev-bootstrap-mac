@@ -156,6 +156,7 @@ _unmock_ghostty() {
   [ -x "$dest/Just Vibes.app/Contents/MacOS/applet" ]
   [ -f "$dest/Just Vibes.app/Contents/Resources/Scripts/main.scpt" ]
   [ -x "$dest/Just Vibes.app/Contents/Resources/launch-helper.sh" ]
+  [ -f "$dest/Just Vibes.app/Contents/Resources/state_source_validation.sh" ]
   [ -f "$dest/Just Vibes.app/Contents/Resources/JustVibes.icns" ]
   # Default-icon ambiguity (osacompile's applet.icns + Assets.car) must
   # be removed by build.sh so macOS can't fall back to the default
@@ -287,7 +288,7 @@ _unmock_ghostty() {
   _mock_osascript present
   _mock_opencode
   mkdir -p "$SANDBOX/workspace"
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
 
   run _run_launch
   [ "$status" -eq 0 ]
@@ -319,7 +320,7 @@ _unmock_ghostty() {
   _mock_osascript present running
   _mock_opencode
   mkdir -p "$SANDBOX/workspace"
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
 
   run _run_launch
   [ "$status" -eq 0 ]
@@ -338,7 +339,7 @@ _unmock_ghostty() {
   _mock_osascript present
   _mock_opencode
   mkdir -p "$SANDBOX/workspace"
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
 
   run _run_launch JUST_VIBES_LAUNCH_OPENCODE=0
   [ "$status" -eq 0 ]
@@ -370,11 +371,28 @@ _unmock_ghostty() {
   _mock_open
   _mock_osascript present
   _mock_opencode
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/does-not-exist\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/does-not-exist'" >"$SANDBOX/state.sh"
 
   run _run_launch
   [ "$status" -eq 0 ]
   # Cold-state default — no `-n`.
+  grep -q "open -Fa Ghostty.app --args --title=Just Vibes --working-directory=$HOME" "$MOCK_LOG"
+}
+
+@test "launch-helper.sh: unsafe state file falls back without sourcing it" {
+  _mock_open
+  _mock_osascript present
+  _mock_opencode
+  mkdir -p "$SANDBOX/workspace"
+  cat >"$SANDBOX/state.sh" <<EOF
+#!/bin/bash
+export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'
+touch '$SANDBOX/pwned'
+EOF
+
+  run _run_launch
+  [ "$status" -eq 0 ]
+  [ ! -e "$SANDBOX/pwned" ]
   grep -q "open -Fa Ghostty.app --args --title=Just Vibes --working-directory=$HOME" "$MOCK_LOG"
 }
 
@@ -403,7 +421,7 @@ _unmock_ghostty() {
   mkdir -p "$SANDBOX/workspace"
   # Drop a matching fake bundle so the filesystem existence check finds it.
   mkdir -p "$SANDBOX/Wezterm.app"
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
 
   run _run_launch JUST_VIBES_GHOSTTY_APP=Wezterm.app
   [ "$status" -eq 0 ]
@@ -419,7 +437,7 @@ _unmock_ghostty() {
   _mock_opencode
   _mock_pgrep "12345"
   mkdir -p "$SANDBOX/workspace"
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
 
   run _run_launch JUST_VIBES_TRACK_GHOSTTY_PID=1
   [ "$status" -eq 0 ]
@@ -441,7 +459,7 @@ _unmock_ghostty() {
   _mock_opencode
   _mock_pgrep ""
   mkdir -p "$SANDBOX/workspace"
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
 
   run _run_launch JUST_VIBES_TRACK_GHOSTTY_PID=1
   [ "$status" -eq 0 ]
@@ -459,7 +477,7 @@ _unmock_ghostty() {
   # 100ms with a 2s deadline, so this must still come in under 2.5s.
   _mock_pgrep ""
   mkdir -p "$SANDBOX/workspace"
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
 
   start_ms=$(perl -MTime::HiRes=time -e 'printf "%d\n", time()*1000')
   run env PGREP_SLEEP_MS=100 _run_launch_inner=1 \
@@ -522,7 +540,7 @@ _unmock_ghostty() {
 exit 0
 EOF
   chmod +x "$SANDBOX/b/opencode"
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
 
   run env \
     "JUST_VIBES_OPEN_BIN=$SANDBOX/open" \
@@ -547,7 +565,7 @@ EOF
 exit 0
 EOF
   chmod +x "$SANDBOX/custom/opencode"
-  echo "AI_BOOTSTRAP_WORKSPACE=\"$SANDBOX/workspace\"" >"$SANDBOX/state.sh"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
 
   run env \
     "JUST_VIBES_OPEN_BIN=$SANDBOX/open" \

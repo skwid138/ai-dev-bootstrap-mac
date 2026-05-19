@@ -29,6 +29,8 @@
 # Source the project version constant.
 # shellcheck disable=SC1091
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/version.sh"
+# shellcheck disable=SC1091
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/state_source_validation.sh"
 
 # ── state_now ──────────────────────────────────────────────────────────────
 # Returns the current UTC timestamp in ISO 8601 format. Pure wrapper around
@@ -54,6 +56,10 @@ state_read_field() {
   local var_name="$2"
 
   if [ ! -f "$state_file" ]; then
+    return 1
+  fi
+
+  if ! state_validate_sourceable_file "$state_file"; then
     return 1
   fi
 

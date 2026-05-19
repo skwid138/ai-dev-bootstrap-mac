@@ -60,10 +60,11 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 APPLESCRIPT_SRC="$HERE/launch.applescript"
 HELPER_SH="$HERE/launch-helper.sh"
+STATE_VALIDATION_LIB="$HERE/../lib/state_source_validation.sh"
 INFO_PLIST="$HERE/Info.plist"
 ICNS="$HERE/icon/JustVibes.icns"
 
-for f in "$APPLESCRIPT_SRC" "$HELPER_SH" "$INFO_PLIST" "$ICNS"; do
+for f in "$APPLESCRIPT_SRC" "$HELPER_SH" "$STATE_VALIDATION_LIB" "$INFO_PLIST" "$ICNS"; do
   if [[ ! -f "$f" ]]; then
     echo "error: missing required file: $f" >&2
     exit 1
@@ -130,6 +131,7 @@ plutil -lint "$bundle/Contents/Info.plist" >/dev/null
 #    Drop the helper script into Resources/ alongside Scripts/main.scpt.
 cp "$ICNS" "$bundle/Contents/Resources/JustVibes.icns"
 cp "$HELPER_SH" "$bundle/Contents/Resources/launch-helper.sh"
+cp "$STATE_VALIDATION_LIB" "$bundle/Contents/Resources/state_source_validation.sh"
 chmod 755 "$bundle/Contents/Resources/launch-helper.sh"
 
 # 4. Remove default-icon ambiguity (see header comment).
