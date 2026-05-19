@@ -54,6 +54,7 @@ Every change follows Red-Green-Refactor. No exceptions.
 5. **Tests reveal intent.** A test name and body should make expected behavior obvious.
 6. **Untestable code is design debt.** Propose the smallest refactor that introduces seams.
 7. **Test code is production code.** Same quality standards apply.
+8. **Use the project's domain glossary.** Test names and interface vocabulary should match CONTEXT.md terms when one exists.
 
 ## Test taxonomy
 
