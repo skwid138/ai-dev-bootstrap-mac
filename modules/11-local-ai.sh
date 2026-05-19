@@ -14,12 +14,22 @@ if is_selected "lm_studio"; then
 fi
 
 choice=""
-if $selected_ollama && $selected_lm_studio; then
+if [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+  # In unattended runs, avoid blocking on a preference prompt and choose the
+  # friendliest default for first-time users.
+  if $selected_ollama || $selected_lm_studio; then
+    choice="LM Studio"
+  fi
+elif $selected_ollama && $selected_lm_studio; then
   ui_header "🧠 Choose a local AI tool"
   echo ""
-  log_info "Ollama and LM Studio are alternatives. Choose one to install."
+  log_info "Local AI tools let you run models privately on your Mac."
   echo ""
-  choice=$(ui_choose "Ollama" "LM Studio")
+  log_info "• LM Studio — visual app for downloading and chatting with models (recommended)"
+  log_info "• Ollama — command-line tool for running models in the terminal"
+  echo ""
+  log_info "Which would you prefer?"
+  choice=$(ui_choose "LM Studio" "Ollama")
 elif $selected_ollama; then
   choice="Ollama"
 elif $selected_lm_studio; then

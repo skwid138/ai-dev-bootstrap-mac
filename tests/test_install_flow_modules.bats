@@ -66,3 +66,59 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"core.editor=code --wait"* ]]
 }
+
+run_local_ai_module() {
+  local noninteractive="${1:-}"
+  export MOCK_LOG="$SANDBOX/local-ai.log"
+  : >"$MOCK_LOG"
+
+  run bash -c '
+    set -euo pipefail
+    export BOOTSTRAP_DIR="$1"
+    export HOME="$2"
+    export MOCK_LOG="$3"
+
+    source "$BOOTSTRAP_DIR/lib/common.sh"
+    SELECTED_PACKAGES=("ollama" "lm_studio")
+    install_brew_formula() { printf "formula:%s\n" "$1" >>"$MOCK_LOG"; }
+    install_brew_cask() { printf "cask:%s\n" "$1" >>"$MOCK_LOG"; }
+    ui_choose() {
+      if [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
+        printf "ui_choose called in non-interactive mode\n" >&2
+        return 99
+      fi
+
+      printf "choose:%s|%s\n" "$1" "$2" >>"$MOCK_LOG"
+      printf "LM Studio\n"
+    }
+
+    if [ "$4" = "noninteractive" ]; then
+      export BOOTSTRAP_NONINTERACTIVE=1
+      export AI_BOOTSTRAP_NONINTERACTIVE=1
+    fi
+
+    run_module() {
+      source "$BOOTSTRAP_DIR/modules/11-local-ai.sh"
+    }
+    run_module
+  ' bash "$BOOTSTRAP_DIR" "$HOME" "$MOCK_LOG" "$noninteractive"
+}
+
+@test "module 11 local AI non-interactive installs LM Studio only without prompting" {
+  run_local_ai_module "noninteractive"
+
+  [ "$status" -eq 0 ]
+  grep -q "cask:lm-studio" "$MOCK_LOG"
+  run ! grep -q "formula:ollama" "$MOCK_LOG"
+}
+
+@test "module 11 local AI interactive prompt explains options and defaults to LM Studio" {
+  run_local_ai_module "interactive"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Local AI tools let you run models privately on your Mac."* ]]
+  [[ "$output" == *"LM Studio"*"visual app"* ]]
+  [[ "$output" == *"Ollama"*"command-line"* ]]
+  grep -q "choose:LM Studio|Ollama" "$MOCK_LOG"
+  grep -q "cask:lm-studio" "$MOCK_LOG"
+}
