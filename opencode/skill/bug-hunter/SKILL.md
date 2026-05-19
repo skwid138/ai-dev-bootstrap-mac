@@ -15,14 +15,15 @@ description: >-
 
 # Bug Hunter
 
-Proactively find bugs that tests miss by tracing data flow from system
-boundaries to crash sites. Focuses on the gap between what TypeScript types
-promise and what runtime data actually delivers.
+Proactively identify reliability gaps that tests may miss by tracing data flow
+from system boundaries to places where the app depends on specific data shapes.
+Focuses on the gap between what TypeScript types promise and what runtime data
+actually delivers.
 
-> **Core insight:** The most dangerous bugs live at system boundaries where
+> **Core insight:** The highest-risk reliability gaps often live at system boundaries where
 > external data enters the app. TypeScript types describe the *intended* shape,
 > but APIs, storage, and user input can deliver anything. Tests use well-formed
-> mocks that match the types, so the crash path is never exercised. Mutation
+> mocks that match the types, so the failing path is never exercised. Mutation
 > testing can't help because there's no guard code to mutate — the bug is
 > *missing* code. Only tracing the actual data flow from boundary to
 > dereference site reveals these gaps.

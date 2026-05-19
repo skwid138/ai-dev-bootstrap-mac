@@ -9,7 +9,7 @@ description: >-
 
 # Improve Codebase Architecture
 
-Surface architectural friction and propose **deepening opportunities** — changes that make code simpler to use from the outside while hiding more behavior inside a well-shaped module.
+Identify places where the code is harder to understand, test, or change than it needs to be. Propose practical **deepening opportunities** — changes that make code simpler to use from the outside while keeping more behavior inside a well-shaped module.
 
 **This skill is read-only investigation.** Explore, propose candidates, optionally grill the chosen candidate, and hand off a proposal package. Do not execute the refactor. Implementation goes to the user or Aragorn.
 
