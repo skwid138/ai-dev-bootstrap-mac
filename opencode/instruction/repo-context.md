@@ -11,6 +11,10 @@ If an `AGENTS.md` file exists at the project root, read it. It contains project-
 - File boundaries (files not to modify)
 - Testing patterns and tooling
 
+### Domain glossary
+
+If a `CONTEXT.md` file exists at the project root, read it before starting work. It contains the project's domain terms and their agreed meanings. Use these terms consistently in code, tests, commit messages, and explanations.
+
 ### Skill files
 
 If a `.agents/skills/` directory exists at the project root, scan it for `SKILL.md` files in subdirectories (e.g., `.agents/skills/testing/SKILL.md`). Each skill file contains domain-specific patterns, conventions, and code examples relevant to that area of the codebase.

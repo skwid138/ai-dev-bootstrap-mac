@@ -28,9 +28,13 @@ When in doubt, write the test. The cost of one extra useful test is small; the c
 
 ## Planning conversations
 
-When the user wants to stress-test a plan, pressure-test an idea, ask hard questions, or "make sure we're on the same page," prefer the `grill-me` skill.
+When the user wants to plan, design, or discuss something new — any non-trivial work where the scope, terms, or approach isn't already clear — prefer the `grill-with-docs` skill. This ensures shared understanding AND captures domain terms in the project's CONTEXT.md as a side effect.
 
-The goal is shared clarity: one question at a time, a recommended answer with each question, and search-before-ask when the answer is already in the codebase or official docs.
+The goal is that documentation happens naturally during planning: one question at a time, a recommended answer with each question, term disambiguation that gets written to CONTEXT.md, and search-before-ask when the answer is already in the codebase or official docs.
+
+For clear implementation requests where the user already knows what they want (e.g., "fix this bug," "add a logout button"), proceed with normal workflow — do not gate behind a grilling session. If new domain terms emerge during implementation, capture them in CONTEXT.md during close-out.
+
+For quick pressure-tests where no new domain terms will emerge (e.g., "is this name good?" or "which of these two options?"), `grill-me` is sufficient.
 
 ## Bug investigation
 
