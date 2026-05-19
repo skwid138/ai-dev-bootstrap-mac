@@ -296,6 +296,21 @@ teardown() {
   [ "$output" = "x/y" ]
 }
 
+@test "opencode_render_config: backs up existing config before overwrite" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  dest="$SANDBOX/opencode.json"
+  echo '{"user_tweak":true}' >"$dest"
+
+  run opencode_render_config "$src" "$dest" "x/y"
+  [ "$status" -eq 0 ]
+
+  backups=("$SANDBOX"/opencode.json.bak.*)
+  [ "${#backups[@]}" -eq 1 ]
+  [ -f "${backups[0]}" ]
+  run cat "${backups[0]}"
+  [ "$output" = '{"user_tweak":true}' ]
+}
+
 # ── opencode_decide_provider_path ────────────────────────────────────────────
 # 5 menu options × {gh authed, gh not authed} = 10 baseline cases, plus
 # 1 unknown-selection case = 11. The function is pure, so each case is a

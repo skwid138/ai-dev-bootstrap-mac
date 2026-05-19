@@ -220,6 +220,10 @@ opencode_render_config() {
 
   mkdir -p "$(dirname "$dest")"
 
+  if [ -f "$dest" ]; then
+    cp "$dest" "$dest.bak.$(date +%Y%m%d-%H%M%S)"
+  fi
+
   if [ -n "$model" ]; then
     # Set .model to the provided string.
     jq --arg m "$model" '.model = $m' "$src" >"$dest"
