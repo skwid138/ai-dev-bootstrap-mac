@@ -122,3 +122,34 @@ run_local_ai_module() {
   grep -q "choose:LM Studio|Ollama" "$MOCK_LOG"
   grep -q "cask:lm-studio" "$MOCK_LOG"
 }
+
+run_extras_module_with_playwright() {
+  export MOCK_LOG="$SANDBOX/extras.log"
+  : >"$MOCK_LOG"
+
+  run bash -c '
+    set -euo pipefail
+    export BOOTSTRAP_DIR="$1"
+    export HOME="$2"
+    export MOCK_LOG="$3"
+
+    source "$BOOTSTRAP_DIR/lib/common.sh"
+    SELECTED_PACKAGES=("playwright")
+    command_exists() { [ "$1" = "node" ]; }
+    ui_spin() { shift; printf "spin:%s\n" "$*" >>"$MOCK_LOG"; }
+    install_brew_formula() { printf "formula:%s\n" "$1" >>"$MOCK_LOG"; }
+
+    run_module() {
+      source "$BOOTSTRAP_DIR/modules/13-extras.sh"
+    }
+    run_module
+  ' bash "$BOOTSTRAP_DIR" "$HOME" "$MOCK_LOG"
+}
+
+@test "module 13 extras tells Playwright users to install browser binaries" {
+  run_extras_module_with_playwright
+
+  [ "$status" -eq 0 ]
+  grep -q "spin:npm install -g playwright" "$MOCK_LOG"
+  [[ "$output" == *"npx playwright install"* ]]
+}

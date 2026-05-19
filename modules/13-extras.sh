@@ -6,6 +6,7 @@ if is_selected "playwright"; then
   if command_exists node; then
     ui_spin "Installing Playwright (npm)..." npm install -g playwright
     log_installed "playwright"
+    log_info "Playwright browser binaries are installed separately: npx playwright install"
   else
     log_error "Node.js is required to install Playwright"
     RESULTS_FAILED+=("playwright")
