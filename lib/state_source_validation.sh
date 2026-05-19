@@ -25,7 +25,7 @@ state_validate_sourceable_file() {
       continue
     fi
 
-    echo "warning: unsafe state file $state_file:$line_no: $line" >&2
+    echo "Could not read saved workspace settings. Opening home folder instead. To fix this, run the installer again." >&2
     return 1
   done <"$state_file"
 

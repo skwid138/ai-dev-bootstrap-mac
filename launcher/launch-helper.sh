@@ -180,12 +180,12 @@ resolve_opencode() {
 # or sets an invalid path, we fall back to $HOME so the launcher still works.
 workspace=""
 if [[ -r "$STATE_FILE" ]]; then
-  if declare -F state_validate_sourceable_file >/dev/null && state_validate_sourceable_file "$STATE_FILE"; then
+  if declare -F state_validate_sourceable_file >/dev/null && state_validate_sourceable_file "$STATE_FILE" 2>/dev/null; then
     # shellcheck disable=SC1090
     source "$STATE_FILE" || true
     workspace="${AI_BOOTSTRAP_WORKSPACE:-}"
   else
-    echo "warning: ignoring unsafe state file: $STATE_FILE" >&2
+    echo "Could not read saved workspace settings. Opening home folder instead. To fix this, run the installer again." >&2
   fi
 fi
 if [[ -z "$workspace" || ! -d "$workspace" ]]; then

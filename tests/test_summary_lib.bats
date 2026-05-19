@@ -39,3 +39,19 @@ setup() {
   [[ "$output" == *"Brewfile:  (not generated)"* ]]
   [[ "$output" == *"Launcher:  (not generated)"* ]]
 }
+
+@test "summary_print_failure: lists failures without success celebration" {
+  run summary_print_failure \
+    "/Users/test/code" \
+    "recommended" \
+    "/Users/test/.config/ai-bootstrap/Brewfile" \
+    "" \
+    "Git and GitHub CLI" \
+    "Shell configuration"
+
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"Installation finished with issues"* ]]
+  [[ "$output" == *"- Git and GitHub CLI"* ]]
+  [[ "$output" == *"- Shell configuration"* ]]
+  [[ "$output" != *"Start building something"* ]]
+}

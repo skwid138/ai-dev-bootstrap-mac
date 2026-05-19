@@ -32,7 +32,7 @@ EOF
     bash -c 'source "$BOOTSTRAP_DIR/lib/ui.sh"; source "$BOOTSTRAP_DIR/lib/common.sh"; source "$BOOTSTRAP_DIR/modules/01-homebrew.sh"'
 
   [ "$status" -eq 1 ]
-  [[ "$output" == *"Failed to download Homebrew installer"* ]]
+  [[ "$output" == *"Could not download Homebrew. Check your internet connection, then run this installer again."* ]]
   run grep -F "curl -fsSL" "$MOCK_LOG"
   [ "$status" -eq 0 ]
 }

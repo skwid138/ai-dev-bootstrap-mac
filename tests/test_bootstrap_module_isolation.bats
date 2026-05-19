@@ -70,8 +70,10 @@ EOF
 
   run env AI_BOOTSTRAP_TIER=essential "$FIXTURE/bootstrap.sh" --non-interactive
 
-  [ "$status" -eq 0 ]
+  [ "$status" -eq 1 ]
   [[ "$output" == *"git module failing"* ]]
   [[ "$output" == *"shell config ran"* ]]
-  [[ "$output" == *"Failed (1): 04-git.sh"* ]]
+  [[ "$output" == *"Failed (1): Git and GitHub CLI"* ]]
+  [[ "$output" == *"Installation finished with issues"* ]]
+  [[ "$output" != *"Start building something"* ]]
 }

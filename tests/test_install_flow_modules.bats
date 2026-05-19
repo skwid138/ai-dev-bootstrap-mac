@@ -69,6 +69,7 @@ EOF
 
 run_local_ai_module() {
   local noninteractive="${1:-}"
+  local selection="${2:-both}"
   export MOCK_LOG="$SANDBOX/local-ai.log"
   : >"$MOCK_LOG"
 
@@ -79,7 +80,11 @@ run_local_ai_module() {
     export MOCK_LOG="$3"
 
     source "$BOOTSTRAP_DIR/lib/common.sh"
-    SELECTED_PACKAGES=("ollama" "lm_studio")
+    case "$5" in
+      ollama) SELECTED_PACKAGES=("ollama") ;;
+      lm_studio) SELECTED_PACKAGES=("lm_studio") ;;
+      *) SELECTED_PACKAGES=("ollama" "lm_studio") ;;
+    esac
     install_brew_formula() { printf "formula:%s\n" "$1" >>"$MOCK_LOG"; }
     install_brew_cask() { printf "cask:%s\n" "$1" >>"$MOCK_LOG"; }
     ui_choose() {
@@ -101,11 +106,27 @@ run_local_ai_module() {
       source "$BOOTSTRAP_DIR/modules/11-local-ai.sh"
     }
     run_module
-  ' bash "$BOOTSTRAP_DIR" "$HOME" "$MOCK_LOG" "$noninteractive"
+  ' bash "$BOOTSTRAP_DIR" "$HOME" "$MOCK_LOG" "$noninteractive" "$selection"
 }
 
 @test "module 11 local AI non-interactive installs LM Studio only without prompting" {
   run_local_ai_module "noninteractive"
+
+  [ "$status" -eq 0 ]
+  grep -q "cask:lm-studio" "$MOCK_LOG"
+  run ! grep -q "formula:ollama" "$MOCK_LOG"
+}
+
+@test "module 11 local AI non-interactive installs Ollama when only Ollama is selected" {
+  run_local_ai_module "noninteractive" "ollama"
+
+  [ "$status" -eq 0 ]
+  grep -q "formula:ollama" "$MOCK_LOG"
+  run ! grep -q "cask:lm-studio" "$MOCK_LOG"
+}
+
+@test "module 11 local AI non-interactive installs LM Studio when only LM Studio is selected" {
+  run_local_ai_module "noninteractive" "lm_studio"
 
   [ "$status" -eq 0 ]
   grep -q "cask:lm-studio" "$MOCK_LOG"
@@ -151,5 +172,6 @@ run_extras_module_with_playwright() {
 
   [ "$status" -eq 0 ]
   grep -q "spin:npm install -g playwright" "$MOCK_LOG"
+  [[ "$output" == *"Playwright needs one more step before it can control browsers"* ]]
   [[ "$output" == *"npx playwright install"* ]]
 }

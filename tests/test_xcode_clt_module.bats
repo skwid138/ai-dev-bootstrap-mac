@@ -37,5 +37,5 @@ EOF
 
   [ "$status" -eq 1 ]
   [[ "$output" == *"Look for the install popup"* ]]
-  [[ "$output" == *"timed out"* ]]
+  [[ "$output" == *"Xcode Command Line Tools did not finish within 15 minutes"* ]]
 }

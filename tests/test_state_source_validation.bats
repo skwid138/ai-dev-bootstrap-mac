@@ -50,7 +50,7 @@ EOF
 
   run state_validate_sourceable_file "$STATE"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"unsafe state file"* ]]
+  [[ "$output" == *"Could not read saved workspace settings"* ]]
   [ ! -e "$SANDBOX/pwned" ]
 }
 
@@ -59,5 +59,5 @@ EOF
 
   run state_validate_sourceable_file "$STATE"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"unsafe state file"* ]]
+  [[ "$output" == *"Could not read saved workspace settings"* ]]
 }

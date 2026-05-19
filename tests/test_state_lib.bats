@@ -148,7 +148,7 @@ EOF
 
   run state_read_field "$STATE" "AI_BOOTSTRAP_TIER"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"unsafe state file"* ]]
+  [[ "$output" == *"Could not read saved workspace settings"* ]]
   [ ! -e "$SANDBOX/pwned" ]
 }
 

@@ -93,7 +93,7 @@ workspace_validate_path() {
 
   case "$path" in
     *"'"*)
-      echo "workspace path cannot contain single quotes (got: $path)" >&2
+      echo "Folder names with apostrophes (') are not supported yet. Please choose a path without them, like ~/code" >&2
       return 1
       ;;
   esac

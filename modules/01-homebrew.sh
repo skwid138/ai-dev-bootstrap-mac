@@ -19,7 +19,7 @@ else
   HOMEBREW_INSTALLER_TMP=$(mktemp "${TMPDIR:-/tmp}/homebrew-install.XXXXXX")
   if ! curl -fsSL -o "$HOMEBREW_INSTALLER_TMP" https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh; then
     rm -f "$HOMEBREW_INSTALLER_TMP"
-    log_error "Failed to download Homebrew installer"
+    log_error "Could not download Homebrew. Check your internet connection, then run this installer again."
     RESULTS_FAILED+=("$HOMEBREW_KEY")
     return 1
   fi

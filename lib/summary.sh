@@ -38,3 +38,47 @@ summary_print() {
 
   return 0
 }
+
+# ── summary_print_failure ───────────────────────────────────────────────────
+# Args:
+#   $1: workspace — configured workspace path
+#   $2: tier      — selected install tier
+#   $3: brewfile  — generated Brewfile path
+#   $4: launcher  — generated Just Vibes.app path
+#   $@: failures  — friendly names for failed modules/tools
+#
+# Writes a failure-oriented summary + recovery steps to stdout. Returns 0;
+# callers decide the process exit code.
+summary_print_failure() {
+  local workspace="${1:-}"
+  local tier="${2:-}"
+  local brewfile="${3:-}"
+  local launcher="${4:-}"
+  shift 4 || true
+
+  echo ""
+  echo "========================================"
+  echo "  ⚠️  Installation finished with issues"
+  echo "========================================"
+  echo ""
+  echo "  Generated/configured:"
+  echo "    Workspace: ${workspace:-"(not generated)"}"
+  echo "    Tier:      ${tier:-"(not generated)"}"
+  echo "    Brewfile:  ${brewfile:-"(not generated)"}"
+  echo "    Launcher:  ${launcher:-"(not generated)"}"
+  echo ""
+  echo "  Could not finish:"
+
+  local failure
+  for failure in "$@"; do
+    echo "    - $failure"
+  done
+
+  echo ""
+  echo "  What to do next:"
+  echo "    1. Check the error messages above."
+  echo "    2. Run this installer again after fixing the problem."
+  echo ""
+
+  return 0
+}

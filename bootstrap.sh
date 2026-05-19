@@ -375,6 +375,33 @@ export AI_BOOTSTRAP_WORKSPACE="$WORKSPACE_PATH"
 
 # ── Run modules for selected packages ────────────────────────────────
 # Map package keys to module scripts.
+module_display_name() {
+  local module_file="$1"
+
+  case "$module_file" in
+    02a-bash.sh) echo "Bash" ;;
+    03-terminal.sh) echo "Ghostty" ;;
+    04-git.sh) echo "Git and GitHub CLI" ;;
+    05-editor.sh) echo "VS Code" ;;
+    06-runtime.sh) echo "JavaScript runtime" ;;
+    07-python.sh) echo "Python runtime" ;;
+    08-cli-tools.sh) echo "CLI tools" ;;
+    09-opencode.sh) echo "OpenCode" ;;
+    10-shell-config.sh) echo "Shell configuration" ;;
+    11-local-ai.sh) echo "Local AI tools" ;;
+    12-containers.sh) echo "Containers" ;;
+    13-extras.sh) echo "Extras" ;;
+    *)
+      local name="${module_file%.sh}"
+      case "$name" in
+        [0-9][0-9]-*) name="${name#??-}" ;;
+        [0-9][0-9][a-z]-*) name="${name#???-}" ;;
+      esac
+      echo "${name//-/ }"
+      ;;
+  esac
+}
+
 run_module_isolated() {
   local module_file="$1"
   local module_path="${BOOTSTRAP_DIR}/modules/${module_file}"
@@ -391,8 +418,10 @@ run_module_isolated() {
   set -e
 
   if [ "$module_rc" -ne 0 ]; then
-    log_error "Module failed: $module_file (exit $module_rc)"
-    RESULTS_FAILED+=("$module_file")
+    local module_name
+    module_name="$(module_display_name "$module_file")"
+    log_error "Module failed: $module_name (exit $module_rc)"
+    RESULTS_FAILED+=("$module_name")
   fi
 
   return 0
@@ -490,6 +519,16 @@ if [ -z "${BOOTSTRAP_DRY_RUN:-}" ]; then
   summary_launcher_path=""
   if [ "${launcher_result:-}" = "installed" ] && [ -n "${LAUNCHER_DEST:-}" ]; then
     summary_launcher_path="${LAUNCHER_DEST:-}/Just Vibes.app"
+  fi
+
+  if [ ${#RESULTS_FAILED[@]} -gt 0 ]; then
+    summary_print_failure \
+      "$WORKSPACE_PATH" \
+      "$SELECTED_TIER" \
+      "$summary_brewfile_path" \
+      "$summary_launcher_path" \
+      "${RESULTS_FAILED[@]}"
+    exit 1
   fi
 
   summary_print \

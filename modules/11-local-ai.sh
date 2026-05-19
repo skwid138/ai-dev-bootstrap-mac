@@ -16,8 +16,12 @@ fi
 choice=""
 if [ -n "${BOOTSTRAP_NONINTERACTIVE:-}" ]; then
   # In unattended runs, avoid blocking on a preference prompt and choose the
-  # friendliest default for first-time users.
-  if $selected_ollama || $selected_lm_studio; then
+  # friendliest default for first-time users when both tools are selected.
+  if $selected_ollama && $selected_lm_studio; then
+    choice="LM Studio"
+  elif $selected_ollama; then
+    choice="Ollama"
+  elif $selected_lm_studio; then
     choice="LM Studio"
   fi
 elif $selected_ollama && $selected_lm_studio; then

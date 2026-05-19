@@ -24,7 +24,7 @@ log_info "Waiting for $XCODE_CLT_NAME installation to complete..."
 log_info "Look for the install popup and approve it if macOS prompts you."
 until xcode-select -p >/dev/null 2>&1; do
   if [ $((SECONDS - XCODE_CLT_WAIT_STARTED_SECONDS)) -ge "$XCODE_CLT_TIMEOUT_SECONDS" ]; then
-    log_error "$XCODE_CLT_NAME install timed out after ${XCODE_CLT_TIMEOUT_SECONDS}s"
+    log_error "Xcode Command Line Tools did not finish within 15 minutes. If a macOS installer window is still open, finish it and run this installer again. If not, restart your Mac and try again."
     RESULTS_FAILED+=("$XCODE_CLT_KEY")
     return 1
   fi

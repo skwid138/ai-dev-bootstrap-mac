@@ -95,7 +95,7 @@ teardown() {
 @test "workspace_validate_path: rejects single quotes" {
   run workspace_validate_path "/Users/me/o'clock"
   [ "$status" -eq 1 ]
-  [[ "$output" == *"single quotes"* ]]
+  [[ "$output" == *"Folder names with apostrophes"* ]]
 }
 
 @test "workspace_validate_path: rejects /" {
