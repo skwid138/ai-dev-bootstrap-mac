@@ -103,6 +103,24 @@ teardown() {
   [ -f "$nested" ]
 }
 
+@test "state_write: does not rewrite existing state when temp file cannot be created" {
+  AI_BOOTSTRAP_NOW_OVERRIDE="2026-05-01T00:00:00Z"
+  export AI_BOOTSTRAP_NOW_OVERRIDE
+
+  locked_dir="$SANDBOX/locked"
+  mkdir -p "$locked_dir"
+  state_file="$locked_dir/state.sh"
+  echo "original" >"$state_file"
+  chmod 500 "$locked_dir"
+
+  run state_write "$state_file" "$SANDBOX/code" "recommended"
+  chmod 700 "$locked_dir"
+
+  [ "$status" -eq 1 ]
+  run cat "$state_file"
+  [ "$output" = "original" ]
+}
+
 @test "state_read_field: returns 1 when file missing" {
   run state_read_field "$SANDBOX/no-such-file.sh" "AI_BOOTSTRAP_TIER"
   [ "$status" -eq 1 ]

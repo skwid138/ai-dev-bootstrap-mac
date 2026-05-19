@@ -158,6 +158,21 @@ teardown() {
   [ -f "$state_file" ]
 }
 
+@test "workspace_write_state: does not rewrite existing state when temp file cannot be created" {
+  locked_dir="$SANDBOX/locked"
+  mkdir -p "$locked_dir"
+  state_file="$locked_dir/state.sh"
+  echo "original" >"$state_file"
+  chmod 500 "$locked_dir"
+
+  run workspace_write_state "$state_file" "$SANDBOX/code"
+  chmod 700 "$locked_dir"
+
+  [ "$status" -eq 1 ]
+  run cat "$state_file"
+  [ "$output" = "original" ]
+}
+
 @test "workspace_write_state: overwrites existing state file" {
   state_file="$SANDBOX/state.sh"
   workspace_write_state "$state_file" "$SANDBOX/code-old"
