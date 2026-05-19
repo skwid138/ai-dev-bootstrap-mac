@@ -25,15 +25,15 @@ if $install_node; then
         log_installed "node@lts"
         RESULTS_INSTALLED+=("node@lts")
       else
-        log_error "Failed to set node@lts globally"
+        log_error "Node.js installed, but we could not make it the default. Open a new terminal and run: mise use --global node@lts"
         RESULTS_FAILED+=("node@lts")
       fi
     else
-      log_error "Failed to install node@lts"
+      log_error "Could not install Node.js LTS. Check the mise message above, then run this installer again."
       RESULTS_FAILED+=("node@lts")
     fi
   else
-    log_error "mise is not available to install node@lts"
+    log_error "mise is not available, so Node.js cannot be installed yet. Run this installer again and keep the Essential runtime tools selected."
     RESULTS_FAILED+=("node@lts")
   fi
 fi

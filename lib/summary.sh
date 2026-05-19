@@ -31,9 +31,10 @@ summary_print() {
   echo "    Launcher:  ${launcher:-"(not generated)"}"
   echo ""
   echo "  Next steps:"
-  echo "    1. Open a new terminal window (or run: source ~/.zshenv ~/.zprofile ~/.zshrc)"
+  echo "    1. Quit and reopen Just Vibes, or open a new terminal window."
   echo "    2. Try running: opencode"
   echo "    3. Start building something! 🎉"
+  echo "       (If you must keep this terminal open, run: source ~/.zshenv ~/.zprofile ~/.zshrc)"
   echo ""
 
   return 0

@@ -64,7 +64,7 @@ elif ! git_is_set_global user.name && ! git_is_set_global user.email; then
     if git config --global user.name "$git_user_name"; then
       log_installed "git: user.name set"
     else
-      log_error "Failed to set git user.name"
+      log_error "Could not save your Git name. You can set it later with: git config --global user.name \"Your Name\""
     fi
   fi
 
@@ -72,7 +72,7 @@ elif ! git_is_set_global user.name && ! git_is_set_global user.email; then
     if git config --global user.email "$git_user_email"; then
       log_installed "git: user.email set"
     else
-      log_error "Failed to set git user.email"
+      log_error "Could not save your Git email. You can set it later with: git config --global user.email \"you@example.com\""
     fi
   fi
 else

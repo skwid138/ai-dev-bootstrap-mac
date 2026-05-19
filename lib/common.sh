@@ -93,7 +93,7 @@ install_brew_formula() {
     return 0
   fi
 
-  log_error "Failed to install $formula"
+  log_error "Could not install $formula. Check the Homebrew message above, then run this installer again."
   RESULTS_FAILED+=("$formula")
   return 1
 }
@@ -114,7 +114,7 @@ install_brew_cask() {
     return 0
   fi
 
-  log_error "Failed to install $cask"
+  log_error "Could not install $cask. Check the Homebrew message above, then run this installer again."
   RESULTS_FAILED+=("$cask")
   return 1
 }
@@ -124,7 +124,7 @@ install_mise_runtime() {
   local runtime="$1"
 
   if ! command_exists mise; then
-    log_error "mise is not installed"
+    log_error "mise is not available, so $runtime cannot be installed yet. Run this installer again and keep the Essential runtime tools selected."
     RESULTS_FAILED+=("$runtime")
     return 1
   fi
@@ -141,7 +141,7 @@ install_mise_runtime() {
     return 0
   fi
 
-  log_error "Failed to install $runtime"
+  log_error "Could not install $runtime with mise. Check the message above, then run this installer again."
   RESULTS_FAILED+=("$runtime")
   return 1
 }

@@ -71,8 +71,8 @@ detect_stale_shell_config() {
     for stale_file in "${stale_files[@]}"; do
       log_warn "    - ${stale_file}"
     done
-    log_warn "The new three-tier install will not source them. To clean up, run:"
-    log_warn "    rm ${install_dir}/{init,vars,paths,zsh_config,zsh_plugins,aliases}.sh"
+    log_warn "The new shell setup ignores these old files, so you can keep going."
+    log_warn "If you want them cleaned up, ask OpenCode to clean up old ai-bootstrap shell files."
   fi
 
   # 2. Old single-barrel source line in user shell-init files.
@@ -91,9 +91,8 @@ detect_stale_shell_config "$SHELL_CONFIG_DIR" "$HOME"
 
 # ── Resolve brew prefix (hard-fail if missing — plan §5.2 rev-6) ────────
 if ! command_exists brew; then
-  log_error "brew not found on PATH; cannot bake _BREW_PREFIX into shell config."
-  log_error "An earlier module (likely 01-homebrew) must have failed silently."
-  log_error "Re-run bootstrap.sh after installing Homebrew."
+  log_error "Homebrew is not available yet, so shell setup cannot finish."
+  log_error "Run this installer again; it will install Homebrew first and then finish shell setup."
   return 1
 fi
 brew_prefix="$(brew --prefix)"

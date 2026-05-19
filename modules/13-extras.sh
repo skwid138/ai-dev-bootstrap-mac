@@ -8,7 +8,7 @@ if is_selected "playwright"; then
     log_installed "playwright"
     log_info "Playwright needs one more step before it can control browsers. After this installer finishes, open a terminal and run:  npx playwright install"
   else
-    log_error "Node.js is required to install Playwright"
+    log_error "Playwright needs Node.js first. Run this installer again with Node.js selected, then run: npx playwright install"
     RESULTS_FAILED+=("playwright")
   fi
 fi

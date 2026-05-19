@@ -29,6 +29,17 @@ workspace_default_path() {
   echo "$HOME/code"
 }
 
+# ── workspace_prompt_note ────────────────────────────────────────────────────
+# Print short guidance before the interactive workspace prompt.
+# Args:
+#   $1: default workspace path shown to the user
+workspace_prompt_note() {
+  local default_path="$1"
+
+  echo "Tip: choose a simple folder path with no spaces, like ${default_path}."
+  echo "Spaces in folder names can confuse some developer tools."
+}
+
 # ── workspace_expand_path ───────────────────────────────────────────────────
 # Expand a user-supplied path. Two cases:
 #   "~/foo"      -> "$HOME/foo"
@@ -72,21 +83,21 @@ workspace_validate_path() {
   local path="$1"
 
   if [ -z "$path" ]; then
-    echo "workspace path cannot be empty" >&2
+    echo "Workspace folder cannot be empty. Press Enter to use the default, or type a path like ~/code." >&2
     return 1
   fi
 
   case "$path" in
     /*) ;;
     *)
-      echo "workspace path must be absolute (got: $path)" >&2
+      echo "Workspace folder must be an absolute path starting with / or ~. Try ~/code." >&2
       return 1
       ;;
   esac
 
   case "$path" in
     *" "*)
-      echo "workspace path cannot contain spaces (got: $path)" >&2
+      echo "Workspace folder cannot contain spaces yet. Choose a path without spaces, like ~/code." >&2
       return 1
       ;;
   esac
@@ -99,7 +110,7 @@ workspace_validate_path() {
   esac
 
   if [ "$path" = "/" ] || [ "$path" = "$HOME" ]; then
-    echo "workspace cannot be / or your home directory directly (got: $path)" >&2
+    echo "Choose a folder inside your home directory, like ~/code — not / or your home folder itself." >&2
     return 1
   fi
 
@@ -120,7 +131,7 @@ workspace_ensure_dir() {
     return 0
   fi
 
-  echo "workspace_ensure_dir: failed to create $path" >&2
+  echo "Could not create workspace folder: $path. Check that you have permission there, or choose ~/code and run the installer again." >&2
   return 1
 }
 
@@ -145,7 +156,7 @@ workspace_write_state() {
   local state_dir
   state_dir=$(dirname "$state_file")
   if ! mkdir -p "$state_dir"; then
-    echo "workspace_write_state: failed to create $state_dir" >&2
+    echo "Could not create settings folder: $state_dir. Check permissions, then run the installer again." >&2
     return 1
   fi
 
@@ -161,13 +172,13 @@ workspace_write_state() {
 export AI_BOOTSTRAP_WORKSPACE='$workspace'
 EOF
     rm -f "$tmp_file"
-    echo "workspace_write_state: failed to write $tmp_file" >&2
+    echo "Could not save workspace settings to $state_file. Check permissions, then run the installer again." >&2
     return 1
   fi
 
   if ! mv "$tmp_file" "$state_file"; then
     rm -f "$tmp_file"
-    echo "workspace_write_state: failed to replace $state_file" >&2
+    echo "Could not update workspace settings at $state_file. Check permissions, then run the installer again." >&2
     return 1
   fi
 }

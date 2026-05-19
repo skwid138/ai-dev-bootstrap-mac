@@ -20,15 +20,15 @@ if $install_python; then
         log_installed "python@latest"
         RESULTS_INSTALLED+=("python@latest")
       else
-        log_error "Failed to set python@latest globally"
+        log_error "Python installed, but we could not make it the default. Open a new terminal and run: mise use --global python@latest"
         RESULTS_FAILED+=("python@latest")
       fi
     else
-      log_error "Failed to install python@latest"
+      log_error "Could not install Python. Check the mise message above, then run this installer again."
       RESULTS_FAILED+=("python@latest")
     fi
   else
-    log_error "mise is not available to install python@latest"
+    log_error "mise is not available, so Python cannot be installed yet. Run this installer again and keep the Essential runtime tools selected."
     RESULTS_FAILED+=("python@latest")
   fi
 fi

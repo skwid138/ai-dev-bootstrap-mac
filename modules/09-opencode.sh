@@ -52,12 +52,12 @@ log_info "Installing curated agents, skills, commands, and instructions..."
 if opencode_deploy_assets "${BOOTSTRAP_DIR}/opencode" "$OPENCODE_CONFIG_DIR"; then
   log_installed "Curated assets deployed to $OPENCODE_CONFIG_DIR"
 else
-  log_error "Failed to deploy curated assets"
+  log_error "Could not install OpenCode agents and skills. Run this installer again; if it still fails, check that $OPENCODE_CONFIG_DIR is writable."
 fi
 
 if [ -z "${AI_BOOTSTRAP_WORKSPACE:-}" ]; then
   opencode_cleanup_scripts_assets "$OPENCODE_CONFIG_DIR"
-  log_error "AI_BOOTSTRAP_WORKSPACE is not set; helper scripts were not deployed"
+  log_error "Workspace was not saved, so helper scripts were not installed. Re-run the installer and choose a workspace folder like ~/code."
 elif opencode_deploy_scripts "$BOOTSTRAP_DIR/scripts" "$AI_BOOTSTRAP_WORKSPACE/scripts"; then
   log_installed "Helper scripts deployed to $AI_BOOTSTRAP_WORKSPACE/scripts"
 else
@@ -71,7 +71,7 @@ agents_md_result=$(opencode_deploy_agents_md \
 case "$agents_md_result" in
   installed) log_installed "AGENTS.md installed" ;;
   skipped) log_skip "AGENTS.md already exists (preserving your edits)" ;;
-  *) log_error "AGENTS.md deployment returned unexpected: $agents_md_result" ;;
+  *) log_error "Could not install the OpenCode AGENTS.md defaults. Run this installer again; if it still fails, share this detail with support: $agents_md_result" ;;
 esac
 
 dcp_config_result=$(opencode_deploy_dcp_config \
@@ -81,7 +81,7 @@ dcp_config_result=$(opencode_deploy_dcp_config \
 case "$dcp_config_result" in
   installed) log_installed "dcp.jsonc installed (auto-compress at 65% context)" ;;
   skipped) log_skip "dcp.jsonc already exists (preserving your edits)" ;;
-  *) log_error "dcp.jsonc deployment returned unexpected: $dcp_config_result" ;;
+  *) log_error "Could not install the OpenCode auto-compress config. Run this installer again; if it still fails, share this detail with support: $dcp_config_result" ;;
 esac
 
 # ── 3. Provider configuration ────────────────────────────────────────────────
@@ -192,7 +192,7 @@ if opencode_render_config \
     log_installed "opencode.json rendered (no model set — opencode default)"
   fi
 else
-  log_error "Failed to render opencode.json"
+  log_error "Could not write opencode.json. Check that $OPENCODE_CONFIG_DIR is writable, then run this installer again."
 fi
 
 # ── 5. Post-install help ─────────────────────────────────────────────────────

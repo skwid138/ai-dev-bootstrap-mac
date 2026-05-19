@@ -29,7 +29,7 @@ ghostty_result=$(ghostty_deploy_config \
 case "$ghostty_result" in
   installed) log_installed "Ghostty config installed" ;;
   skipped) log_skip "Ghostty config already exists (preserving your edits)" ;;
-  *) log_error "Ghostty config deployment returned unexpected: $ghostty_result" ;;
+  *) log_error "Could not install the Ghostty config. Run this installer again; if it still fails, share this detail with support: $ghostty_result" ;;
 esac
 
 # Build & install the one-click "Just Vibes" launcher. Prefers /Applications
@@ -56,5 +56,5 @@ case "$launcher_result" in
       log_info "and Finder will all find it there."
     fi
     ;;
-  *) log_error "Just Vibes launcher install returned unexpected: $launcher_result" ;;
+  *) log_error "Could not install Just Vibes. Run this installer again; if it still fails, share this detail with support: $launcher_result" ;;
 esac

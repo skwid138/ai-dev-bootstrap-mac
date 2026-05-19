@@ -11,7 +11,7 @@ if command_exists brew; then
     log_installed "$HOMEBREW_NAME updated"
     RESULTS_INSTALLED+=("$HOMEBREW_KEY")
   else
-    log_error "Failed to update $HOMEBREW_NAME"
+    log_error "Could not update $HOMEBREW_NAME. Check your internet connection, then run this installer again."
     RESULTS_FAILED+=("$HOMEBREW_KEY")
   fi
 else
@@ -30,7 +30,7 @@ else
     RESULTS_INSTALLED+=("$HOMEBREW_KEY")
   else
     rm -f "$HOMEBREW_INSTALLER_TMP"
-    log_error "Failed to install $HOMEBREW_NAME"
+    log_error "Could not install $HOMEBREW_NAME. Check the installer message above, then run this installer again."
     RESULTS_FAILED+=("$HOMEBREW_KEY")
     return 1
   fi

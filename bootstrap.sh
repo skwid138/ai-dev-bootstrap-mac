@@ -173,7 +173,7 @@ if [ -n "${BOOTSTRAP_REFRESH_PATHS:-}" ]; then
   if [ -f "${BOOTSTRAP_DIR}/modules/10-shell-config.sh" ]; then
     # shellcheck source=modules/10-shell-config.sh
     source "${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
-    log_installed "Shell config refreshed. Open a new terminal or run: source ~/.zshenv ~/.zprofile ~/.zshrc"
+    log_installed "Shell config refreshed. Quit and reopen Just Vibes, or open a new terminal window. (If you must keep this terminal, run: source ~/.zshenv ~/.zprofile ~/.zshrc)"
     exit 0
   else
     log_error "modules/10-shell-config.sh not found at ${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
@@ -326,6 +326,7 @@ else
   echo ""
   log_info "Pick a directory to keep your code projects in. We'll create it"
   log_info "if it doesn't exist, and the 'cdc' shortcut will jump there."
+  workspace_prompt_note "$WORKSPACE_DEFAULT"
   echo ""
 
   while [ -z "$WORKSPACE_PATH" ]; do
@@ -362,13 +363,13 @@ fi
 if workspace_ensure_dir "$WORKSPACE_PATH"; then
   log_installed "Workspace: $WORKSPACE_PATH"
 else
-  log_error "Failed to create workspace directory: $WORKSPACE_PATH"
+  log_error "Could not create workspace directory: $WORKSPACE_PATH. Choose a folder you can write to, like ~/code, then run this installer again."
 fi
 
 if workspace_write_state "$HOME/.config/ai-bootstrap/state.sh" "$WORKSPACE_PATH"; then
   log_installed "Workspace path saved to ~/.config/ai-bootstrap/state.sh"
 else
-  log_error "Failed to write workspace state file"
+  log_error "Could not save the workspace setting. Check permissions for ~/.config/ai-bootstrap, then run this installer again."
 fi
 
 export AI_BOOTSTRAP_WORKSPACE="$WORKSPACE_PATH"
