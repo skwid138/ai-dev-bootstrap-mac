@@ -219,15 +219,16 @@ run_module() {
   grep -q "bug-hunter" "$bug_hunter"
 }
 
-@test "module: scripts deployment decline removes dependency-update assets" {
+@test "module: scripts deployment decline preserves dependency-update assets" {
   export OPENCODE_TEST_MENU_SELECTION=skip
   mkdir -p "$AI_BOOTSTRAP_WORKSPACE/scripts"
 
   run_module
   [ "$status" -eq 0 ]
 
-  [ ! -e "$HOME/.config/opencode/skill/dependency-update" ]
-  [ ! -e "$HOME/.config/opencode/command/update-opencode-deps.md" ]
+  [ -e "$HOME/.config/opencode/skill/dependency-update" ]
+  [ -e "$HOME/.config/opencode/command/update-opencode-deps.md" ]
+  [[ "$output" == *"No keeps your existing scripts"* ]]
 }
 
 @test "module: non-interactive mode deploys scripts when destination exists" {

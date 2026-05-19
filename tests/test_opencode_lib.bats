@@ -117,6 +117,7 @@ teardown() {
   run bash -c "source '$BOOTSTRAP_DIR/lib/opencode.sh'; opencode_deploy_scripts '$src' '$dest' <<< n"
   [ "$status" -eq 1 ]
   [[ "$output" == *"Overwrite?"* ]]
+  [[ "$output" == *"No keeps your existing scripts"* ]]
 
   run cat "$dest/agent/check.sh"
   [ "$output" = "old" ]

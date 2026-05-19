@@ -75,7 +75,7 @@ opencode_deploy_scripts() {
 
   if [ -d "$dest" ] && [ "${BOOTSTRAP_NONINTERACTIVE:-}" != "1" ]; then
     local reply
-    printf "Scripts directory already exists at %s. Overwrite? (y/n) " "$dest" >&2
+    printf "Scripts directory already exists at %s. Overwrite? (y/n) No keeps your existing scripts and skips helper script updates. " "$dest" >&2
     if ! IFS= read -r reply; then
       echo "opencode_deploy_scripts: overwrite declined" >&2
       return 1

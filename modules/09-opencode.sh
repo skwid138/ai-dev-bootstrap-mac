@@ -61,8 +61,7 @@ if [ -z "${AI_BOOTSTRAP_WORKSPACE:-}" ]; then
 elif opencode_deploy_scripts "$BOOTSTRAP_DIR/scripts" "$AI_BOOTSTRAP_WORKSPACE/scripts"; then
   log_installed "Helper scripts deployed to $AI_BOOTSTRAP_WORKSPACE/scripts"
 else
-  opencode_cleanup_scripts_assets "$OPENCODE_CONFIG_DIR"
-  log_skip "Helper scripts not deployed; dependency-update assets removed"
+  log_skip "Helper scripts not deployed; existing scripts and dependency-update assets preserved"
 fi
 
 agents_md_result=$(opencode_deploy_agents_md \
