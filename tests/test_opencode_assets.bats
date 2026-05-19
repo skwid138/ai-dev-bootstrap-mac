@@ -24,6 +24,8 @@ setup() {
   setup_test_env
   OPENCODE_DIR="${BOOTSTRAP_DIR}/opencode"
   export OPENCODE_DIR
+  # shellcheck source=../lib/opencode.sh
+  source "${BOOTSTRAP_DIR}/lib/opencode.sh"
 }
 
 teardown() {
@@ -187,6 +189,47 @@ assert_literal_exists_after() {
 }
 
 # ── Top-level files ──────────────────────────────────────────────────────────
+
+@test "opencode_deploy_assets: first run writes manifest without stale cleanup" {
+  src="$TMP_DIR/src-opencode"
+  dest="$TMP_DIR/dest-opencode"
+  mkdir -p "$src/agent" "$dest/agent"
+  echo "new" >"$src/agent/gandalf.md"
+  echo "user or preexisting" >"$dest/agent/stale.md"
+
+  run opencode_deploy_assets "$src" "$dest"
+  [ "$status" -eq 0 ]
+
+  [ -f "$dest/agent/gandalf.md" ]
+  [ -f "$dest/agent/stale.md" ]
+  [ -f "$dest/.managed-files" ]
+  run grep -Fx "agent/gandalf.md" "$dest/.managed-files"
+  [ "$status" -eq 0 ]
+  run grep -Fx "agent/stale.md" "$dest/.managed-files"
+  [ "$status" -eq 1 ]
+}
+
+@test "opencode_deploy_assets: removes files dropped from previous manifest" {
+  src="$TMP_DIR/src-opencode"
+  dest="$TMP_DIR/dest-opencode"
+  mkdir -p "$src/agent" "$dest/agent"
+  echo "new" >"$src/agent/gandalf.md"
+  echo "old managed" >"$dest/agent/old-managed.md"
+  echo "user custom" >"$dest/agent/custom.md"
+  cat >"$dest/.managed-files" <<'EOF'
+agent/gandalf.md
+agent/old-managed.md
+EOF
+
+  run opencode_deploy_assets "$src" "$dest"
+  [ "$status" -eq 0 ]
+
+  [ -f "$dest/agent/gandalf.md" ]
+  [ ! -e "$dest/agent/old-managed.md" ]
+  [ -f "$dest/agent/custom.md" ]
+  run grep -Fx "agent/old-managed.md" "$dest/.managed-files"
+  [ "$status" -eq 1 ]
+}
 
 @test "opencode/AGENTS.md exists" {
   [ -f "${OPENCODE_DIR}/AGENTS.md" ]

@@ -41,15 +41,39 @@ opencode_deploy_assets() {
 
   mkdir -p "$dest"
 
+  local new_manifest
+  new_manifest=$(mktemp "${TMPDIR:-/tmp}/opencode-managed-files.XXXXXX")
+  : >"$new_manifest"
+
   local subdir
   for subdir in agent skill command instruction; do
     if [ -d "$src/$subdir" ]; then
+      find "$src/$subdir" -type f -print | while IFS= read -r asset_file; do
+        printf '%s\n' "${asset_file#$src/}" >>"$new_manifest"
+      done
       mkdir -p "$dest/$subdir"
       # cp -R src/sub/. dest/sub/ — the trailing /. on the source ensures
       # contents are copied into dest/sub/, not nested as dest/sub/sub/.
       cp -R "$src/$subdir/." "$dest/$subdir/"
     fi
   done
+
+  if [ -f "$dest/.managed-files" ]; then
+    local old_entry
+    while IFS= read -r old_entry || [ -n "$old_entry" ]; do
+      [ -z "$old_entry" ] && continue
+      case "$old_entry" in
+        /* | *..*) continue ;;
+      esac
+      if ! grep -Fxq "$old_entry" "$new_manifest"; then
+        rm -f "$dest/$old_entry"
+      fi
+    done <"$dest/.managed-files"
+  fi
+
+  sort "$new_manifest" >"$new_manifest.sorted"
+  mv "$new_manifest.sorted" "$dest/.managed-files"
+  rm -f "$new_manifest"
 }
 
 # ── opencode_deploy_scripts ──────────────────────────────────────────────────
