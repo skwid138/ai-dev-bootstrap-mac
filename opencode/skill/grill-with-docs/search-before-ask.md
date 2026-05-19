@@ -45,10 +45,10 @@ Ask the user when:
 
 ## Reporting search results
 
-When you searched, tell the user what you checked and what you found.
+When you searched, tell the user the conclusion in plain language, not the mechanics of the search.
 
 Example:
 
-> "I checked `src/checkout.ts`; cancellation changes `status` and emits an event. Is that the cancellation you meant, or the billing one?"
+> "I found that cancellation currently changes the order status and sends a notification. Is that the cancellation you meant, or the billing one?"
 
 Do not silently use a search result when the user may need to correct the scope.

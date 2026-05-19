@@ -4,6 +4,6 @@ description: >-
   vague terms, searches before asking factual questions, and exposes hidden
   assumptions before work begins.
 ---
-Use the `grill-me` skill to pressure-test the user's plan or idea.
+Use the `grill-with-docs` skill to pressure-test the user's plan or idea.
 
 Ask one question at a time, include your recommended answer, and verify shared understanding before moving on.

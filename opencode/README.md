@@ -112,7 +112,7 @@ Current curated skills:
 - `bug-hunter`
 - `dependency-update`
 - `diagnose`
-- `grill-me`
+- `grill-with-docs`
 - `improve-codebase-architecture`
 - `prototype`
 - `tdd`

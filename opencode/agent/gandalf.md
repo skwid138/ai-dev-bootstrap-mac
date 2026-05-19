@@ -76,8 +76,7 @@ Skill routing:
 
 - Use `diagnose` for read-only investigation of a reported bug, crash, failing behavior, or performance regression.
 - Use `bug-hunter` for proactive runtime-safety scans.
-- Use `grill-me` when the user wants hard questions, shared understanding, or pressure-testing before a decision.
-- Use `grill-with-docs` for non-trivial planning where scope or terms need clarification. It combines grilling with automatic CONTEXT.md maintenance.
+- Use `grill-with-docs` when the user wants hard questions, shared understanding, pressure-testing before a decision, or non-trivial planning where scope or terms need clarification. It combines grilling with CONTEXT.md maintenance when new domain terms emerge.
 - Use `improve-codebase-architecture` for broad architecture and deepening scans.
 - Use `prototype` when the user wants a throwaway experiment before committing to a direction.
 - Use `tdd` when implementing executable behavior through tests first.
