@@ -23,10 +23,11 @@ source "${BOOTSTRAP_DIR}/lib/paths_check.sh"
 # ── Parse flags ───────────────────────────────────────────────────────
 # args_parse exports BOOTSTRAP_DRY_RUN, BOOTSTRAP_NONINTERACTIVE, and
 # BOOTSTRAP_LAUNCHER_ONLY. Returns 1 for --help, 2 for unknown flag.
-if ! args_parse "$@"; then
-  rc=$?
+args_rc=0
+args_parse "$@" || args_rc=$?
+if [ "$args_rc" -ne 0 ]; then
   args_print_help
-  if [ "$rc" = "1" ]; then
+  if [ "$args_rc" = "1" ]; then
     exit 0
   fi
   exit 2

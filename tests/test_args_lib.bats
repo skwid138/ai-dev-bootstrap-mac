@@ -94,6 +94,12 @@ teardown() {
   [ "$status" -eq 1 ]
 }
 
+@test "bootstrap.sh: --help exits 0" {
+  run "${BOOTSTRAP_DIR}/bootstrap.sh" --help
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"AI Dev Bootstrap for Mac"* ]]
+}
+
 @test "args_parse: -h returns 1" {
   run args_parse -h
   [ "$status" -eq 1 ]
