@@ -9,7 +9,6 @@ install_brew_cask "visual-studio-code"
 # shellcheck source=lib/git.sh
 source "${BOOTSTRAP_DIR}/lib/git.sh"
 
-local editor
 editor="$(git_choose_editor)"
 if [ -n "$editor" ]; then
   case "$(git_set_default_if_unset "core.editor" "$editor")" in
