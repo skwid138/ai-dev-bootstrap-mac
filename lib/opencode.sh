@@ -49,7 +49,7 @@ opencode_deploy_assets() {
   for subdir in agent skill command instruction; do
     if [ -d "$src/$subdir" ]; then
       find "$src/$subdir" -type f -print | while IFS= read -r asset_file; do
-        printf '%s\n' "${asset_file#$src/}" >>"$new_manifest"
+        printf '%s\n' "${asset_file#"$src"/}" >>"$new_manifest"
       done
       mkdir -p "$dest/$subdir"
       # cp -R src/sub/. dest/sub/ — the trailing /. on the source ensures
