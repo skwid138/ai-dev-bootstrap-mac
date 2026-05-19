@@ -16,10 +16,20 @@ if command_exists brew; then
   fi
 else
   log_info "Installing $HOMEBREW_NAME..."
-  if ui_spin "Installing Homebrew..." /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"; then
+  HOMEBREW_INSTALLER_TMP=$(mktemp "${TMPDIR:-/tmp}/homebrew-install.XXXXXX")
+  if ! curl -fsSL -o "$HOMEBREW_INSTALLER_TMP" https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh; then
+    rm -f "$HOMEBREW_INSTALLER_TMP"
+    log_error "Failed to download Homebrew installer"
+    RESULTS_FAILED+=("$HOMEBREW_KEY")
+    return 1
+  fi
+
+  if ui_spin "Installing Homebrew..." /bin/bash "$HOMEBREW_INSTALLER_TMP"; then
+    rm -f "$HOMEBREW_INSTALLER_TMP"
     log_installed "$HOMEBREW_NAME"
     RESULTS_INSTALLED+=("$HOMEBREW_KEY")
   else
+    rm -f "$HOMEBREW_INSTALLER_TMP"
     log_error "Failed to install $HOMEBREW_NAME"
     RESULTS_FAILED+=("$HOMEBREW_KEY")
     return 1
