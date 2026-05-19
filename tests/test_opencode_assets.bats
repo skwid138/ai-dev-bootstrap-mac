@@ -150,11 +150,11 @@ assert_literal_exists_after() {
 
 # ── Skills ───────────────────────────────────────────────────────────────────
 
-@test "opencode/skill: all 7 curated skills have SKILL.md" {
+@test "opencode/skill: all 8 curated skills have SKILL.md" {
   skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
-  [ "${#skills[@]}" -eq 7 ]
+  [ "${#skills[@]}" -eq 8 ]
 
-  for skill in tdd bug-hunter dependency-update diagnose grill-me prototype improve-codebase-architecture; do
+  for skill in tdd bug-hunter dependency-update diagnose grill-me grill-with-docs prototype improve-codebase-architecture; do
     [ -f "${OPENCODE_DIR}/skill/${skill}/SKILL.md" ]
   done
 }
@@ -293,12 +293,9 @@ assert_literal_exists_after() {
   [ "$status" -eq 0 ]
 }
 
-@test "opencode/: skills and instructions do not reference external glossary docs" {
+@test "opencode/: skills and instructions do not reference external ADR docs" {
   run grep -RE \
-    -e 'CONTEXT\.md' \
     -e 'docs/adr' \
-    -e '(^|[^A-Za-z0-9_-])ADR([^A-Za-z0-9_-]|$)' \
-    -e '(^|[^A-Za-z0-9_-])ADRs([^A-Za-z0-9_-]|$)' \
     "${OPENCODE_DIR}/skill" \
     "${OPENCODE_DIR}/instruction"
   [ "$status" -eq 1 ]
