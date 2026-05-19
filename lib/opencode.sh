@@ -58,6 +58,14 @@ opencode_deploy_assets() {
     fi
   done
 
+  local top_file
+  for top_file in package.json package-lock.json; do
+    if [ -f "$src/$top_file" ]; then
+      cp "$src/$top_file" "$dest/$top_file"
+      printf '%s\n' "$top_file" >>"$new_manifest"
+    fi
+  done
+
   if [ -f "$dest/.managed-files" ]; then
     local old_entry
     while IFS= read -r old_entry || [ -n "$old_entry" ]; do

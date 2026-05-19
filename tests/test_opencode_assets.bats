@@ -231,6 +231,25 @@ EOF
   [ "$status" -eq 1 ]
 }
 
+@test "opencode_deploy_assets: copies package manifests when present" {
+  src="$TMP_DIR/src-opencode"
+  dest="$TMP_DIR/dest-opencode"
+  mkdir -p "$src/agent"
+  echo "agent" >"$src/agent/gandalf.md"
+  echo '{"scripts":{"test":"vitest"}}' >"$src/package.json"
+  echo '{"lockfileVersion":3}' >"$src/package-lock.json"
+
+  run opencode_deploy_assets "$src" "$dest"
+  [ "$status" -eq 0 ]
+
+  [ -f "$dest/package.json" ]
+  [ -f "$dest/package-lock.json" ]
+  run grep -Fx "package.json" "$dest/.managed-files"
+  [ "$status" -eq 0 ]
+  run grep -Fx "package-lock.json" "$dest/.managed-files"
+  [ "$status" -eq 0 ]
+}
+
 @test "opencode/AGENTS.md exists" {
   [ -f "${OPENCODE_DIR}/AGENTS.md" ]
 }
