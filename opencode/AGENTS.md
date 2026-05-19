@@ -56,6 +56,8 @@ Use this format:
 
 Common types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`. Keep the subject short, imperative, lowercase unless it starts with a proper noun, and without a trailing period.
 
+The user does not need to know this format. When the user asks to save progress or commit, the agent writes the commit message automatically using a clear description of what changed. Do not show or explain the format to the user.
+
 ### Never push without confirmation
 
 Do not run `git push` unless the user explicitly asks. Before pushing, show the target branch and remote, the commits that will be pushed, and whether the push would overwrite remote history. Wait for confirmation.
