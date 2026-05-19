@@ -8,6 +8,13 @@ Set up your Mac for vibe-coding with AI in minutes.
 
 AI Dev Bootstrap for Mac is an interactive installer that prepares a brand‑new or existing Mac for building apps and automations with AI coding tools like OpenCode. It’s designed for non‑technical users, with guided prompts and safe defaults. You can run it multiple times — it only installs what’s missing and skips what you already have.
 
+## ✅ Requirements
+
+- **macOS 15 (Sequoia) or newer**
+- **Apple Silicon or Intel Mac**
+- **Internet connection** for downloading installers
+- **Git** for the manual clone option below. If Git is missing, macOS will offer to install the Xcode Command Line Tools when you run the installer.
+
 ## ⚡ Quick Start
 
 You have two ways to install. Pick whichever you prefer — they end up at the same place.
@@ -18,7 +25,7 @@ You have two ways to install. Pick whichever you prefer — they end up at the s
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/skwid138/ai-dev-bootstrap-mac/main/install.sh)"
 ```
 
-This downloads a small bootstrapper that clones the repo into `~/code/ai-dev-bootstrap-mac` and then runs the installer. Requires `git` (which ships with the Xcode Command Line Tools — the bootstrapper will prompt to install them if missing).
+This downloads a small setup script that copies this project (the “repo,” short for repository) into `~/code/ai-dev-bootstrap-mac` and then runs the installer. If Git is missing, macOS will offer to install the Xcode Command Line Tools first.
 
 To pass flags through the one‑liner, add `-s --` and your flags after the closing paren:
 
@@ -29,6 +36,7 @@ To pass flags through the one‑liner, add `-s --` and your flags after the clos
 **Or clone the repo yourself:**
 
 ```bash
+mkdir -p ~/code
 git clone https://github.com/skwid138/ai-dev-bootstrap-mac.git ~/code/ai-dev-bootstrap-mac
 ~/code/ai-dev-bootstrap-mac/bootstrap.sh
 ```
@@ -36,6 +44,8 @@ git clone https://github.com/skwid138/ai-dev-bootstrap-mac.git ~/code/ai-dev-boo
 Either way, the repo lives at `~/code/ai-dev-bootstrap-mac` afterward and you can re‑run `bootstrap.sh` (or just `./bootstrap.sh --launcher-only`) any time.
 
 ## 📦 Install Tiers
+
+Install tiers are bundles of tools. Start with **Recommended** if you are unsure; choose **Custom** if you want to pick tools one by one.
 
 | Tier | Packages | What you get | Key tools |
 | --- | --- | --- | --- |
@@ -99,11 +109,11 @@ Want more control? Choose **Custom** in the installer and pick exactly what you 
 
 ## 🧭 How It Works
 
-1. **Preflight checks** for macOS version, architecture, and disk space.
+1. **Preflight checks** for macOS version, Mac chip type, and disk space.
 2. **Tier selection** (Essential, Recommended, Complete, or Custom).
-3. **Idempotent installs** — already‑installed tools are skipped.
-4. **Shell configuration** with a clean, modular dotfile setup.
-5. **OpenCode provider setup** with guided API key prompts.
+3. **Safe re-runs** — already‑installed tools are skipped, so you can run the installer again later.
+4. **Terminal startup setup** with small, organized shell files.
+5. **OpenCode AI provider setup** with guided prompts for the account or API key OpenCode should use.
 6. **Summary** of what was installed, skipped, or failed.
 
 ## 💬 What Working With OpenCode Looks Like
@@ -146,7 +156,7 @@ Open it from Spotlight, Launchpad, or Finder — drag it to your Dock for one‑
 
 ## 🐚 Shell Configuration
 
-This project uses a modular dotfile setup stored in:
+This project uses small shell startup files stored in:
 
 ```
 ~/.config/ai-bootstrap/shell/
@@ -165,15 +175,15 @@ Your existing `~/.zshenv`, `~/.zprofile`, and `~/.zshrc` are never replaced. Thr
 [[ -f ~/.config/ai-bootstrap/shell/init_rc.zsh ]] && source ~/.config/ai-bootstrap/shell/init_rc.zsh
 ```
 
-### Shell init layers
+### Shell startup layers
 
-Zsh runs three different startup files depending on how a shell is opened, and each one has a different job. The bootstrap mirrors that split so the right things load at the right time:
+Zsh runs three different startup files depending on how a terminal or script is opened, and each one has a different job. The installer mirrors that split so the right things load at the right time:
 
-- **`init_env.zsh`** (sourced from `~/.zshenv`) — runs in **every** zsh, including non‑interactive scripts. Sets up `PATH` and other environment variables. Stays silent and fast so background scripts and editor integrations aren't slowed down.
-- **`init_profile.zsh`** (sourced from `~/.zprofile`) — runs in **login** shells (your first shell after logging in, or `ssh` sessions). Re‑applies `PATH` after macOS's `path_helper` runs, and activates tools like `mise` that need login‑shell context.
-- **`init_rc.zsh`** (sourced from `~/.zshrc`) — runs in **interactive** shells (any terminal you actually type into). Loads zsh plugins (`zplug`), the **Spaceship** prompt, syntax highlighting, autosuggestions, and quality‑of‑life aliases.
+- **`init_env.zsh`** (loaded by `~/.zshenv`) — runs in **every** zsh, including background scripts. Sets up `PATH`, the list of folders your Mac searches for commands. Stays silent and fast so scripts and editor integrations aren't slowed down.
+- **`init_profile.zsh`** (loaded by `~/.zprofile`) — runs in **login** shells, such as your first terminal after logging in. Re‑applies `PATH` after macOS adjusts it, and activates tools like `mise` that need login-shell context.
+- **`init_rc.zsh`** (loaded by `~/.zshrc`) — runs in **interactive** shells, meaning terminals you actually type into. Loads zsh plugins (`zplug`), the **Spaceship** prompt, command highlighting, suggestions, and quality‑of‑life aliases.
 
-Each block is sentinel‑guarded against double‑sourcing and uses idempotent `PATH` manipulation, so re‑running the bootstrap or having extra dotfiles around won't break anything.
+Each block is guarded so it does not load twice, and `PATH` updates are safe to repeat. Re‑running the installer or having extra shell files around should not break anything.
 
 ## 🛠 Troubleshooting
 
@@ -196,11 +206,6 @@ Exits `0` if paths are healthy, non‑zero if they look stale.
 ## 🔁 Re‑running
 
 Safe to run again anytime. The installer skips what you already have and can add new tools later (for example, upgrading from Essential to Recommended).
-
-## ✅ Requirements
-
-- **macOS 15 (Sequoia) or newer**
-- **Apple Silicon or Intel**
 
 ## 🧪 Running Tests
 
