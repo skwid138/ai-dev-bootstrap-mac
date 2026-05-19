@@ -92,6 +92,12 @@ teardown() {
   [[ "$output" == *"spaces"* ]]
 }
 
+@test "workspace_validate_path: rejects single quotes" {
+  run workspace_validate_path "/Users/me/o'clock"
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"single quotes"* ]]
+}
+
 @test "workspace_validate_path: rejects /" {
   run workspace_validate_path "/"
   [ "$status" -eq 1 ]

@@ -91,6 +91,13 @@ workspace_validate_path() {
       ;;
   esac
 
+  case "$path" in
+    *"'"*)
+      echo "workspace path cannot contain single quotes (got: $path)" >&2
+      return 1
+      ;;
+  esac
+
   if [ "$path" = "/" ] || [ "$path" = "$HOME" ]; then
     echo "workspace cannot be / or your home directory directly (got: $path)" >&2
     return 1
