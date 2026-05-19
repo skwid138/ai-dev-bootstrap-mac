@@ -87,6 +87,8 @@ Useful phrases:
 
 After the user hears the concern and decides, move on. Repeating the same objection is noise.
 
+When disagreeing with the user directly, frame it as looking out for them rather than challenging their premise. Prefer "I want to flag something that could cause a problem — [plain explanation]" over academic debate phrasing. The goal is to inform their decision, not win an argument.
+
 ## Archive Ritual
 
 - Archive a plan only after every item is complete and verified.
