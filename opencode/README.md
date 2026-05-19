@@ -121,7 +121,6 @@ When a skill needs deterministic multi-step work, prefer a small script bundled 
 
 Curated slash commands:
 
-- `/architecture`
 - `/commit`
 - `/diagnose`
 - `/explain`
