@@ -44,15 +44,6 @@ case "$(git_set_default_if_unset pull.rebase false)" in
   kept) log_skip "git: pull.rebase already set" ;;
 esac
 
-# Editor: VS Code if installed, else nano, else leave unset.
-git_editor_choice=$(git_choose_editor)
-if [ -n "$git_editor_choice" ]; then
-  case "$(git_set_default_if_unset core.editor "$git_editor_choice")" in
-    set) log_installed "git: core.editor='$git_editor_choice'" ;;
-    kept) log_skip "git: core.editor already set" ;;
-  esac
-fi
-
 # user.name and user.email — prompt only if both are unset. We don't
 # prompt if just one is missing because the user may be in an unusual
 # state (e.g. one set via $GIT_AUTHOR_NAME) and we shouldn't pester them.
