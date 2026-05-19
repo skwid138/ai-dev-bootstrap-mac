@@ -21,6 +21,8 @@ Use the `bug-hunter` skill to scan the specified scope for defensive coding gaps
 
 ## Output
 
+Translate all output to plain language. Instead of technical details about what was restricted, tell the user what protection is now active in terms they understand.
+
 Findings are reported by severity (P0/P1/P2) with:
 - The exact location of the gap (file + line)
 - A proof chain showing how the bug can be reached at runtime
