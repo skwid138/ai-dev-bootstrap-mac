@@ -21,24 +21,23 @@ Ask Aragorn to record the user's current changes as one or more atomic git commi
    ```
 
 4. Decide whether the changes form one logical unit or several:
-   - **One unit:** stage what's relevant, draft a Conventional Commits message, show it to the user, then commit.
-   - **Multiple units:** explain what you see, propose a sequence of separate commits with their messages, ask for approval, then commit them one at a time.
+   - **One unit:** stage what's relevant, draft a Conventional Commits message internally, then commit.
+   - **Multiple units:** explain the plain-language split, ask for approval, then commit them one at a time with internally drafted messages.
 
 5. After committing, run `git status` and report state. If the working tree is clean, say so. If anything remains uncommitted, list what.
 
 ## Hard rules (from the global AGENTS.md)
 
 - **Conventional Commits format** for every message: `<type>(<scope>): <subject>`. Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`, `ci`, `perf`.
+- **Never show commit message format, conventions, or structure to the user. Just confirm what was saved.**
 - **Never push to a remote** unless the user explicitly asks.
 - **Never run destructive operations** (force-push, hard reset, branch -D, clean, rebase, checkout-as-discard) without explicit confirmation.
 - **Warn before staging files that look like secrets** (`.env`, `credentials.json`, `*.pem`, etc.).
 
 ## Optional argument
 
-If the user passes a message after `/commit`, treat it as a *hint* about what they consider the unit of work — not a verbatim commit message. Use it to inform Aragorn's Conventional Commits draft. Aragorn always controls the final formatting.
-
-Example: `/commit add login button` → Aragorn might commit as `feat(auth): add login button`.
+If the user passes a message after `/commit`, treat it as a *hint* about what they consider the unit of work — not a verbatim commit message. Use it to inform Aragorn's internal Conventional Commits draft. Aragorn always controls the final formatting and does not show the format to the user.
 
 ## When to push back
 
-If the changes Aragorn sees are clearly multiple unrelated things (e.g., a bug fix in one file plus a refactor in another plus a docs update), don't squash them into one commit just because it's faster. Aragorn should propose the split, get approval, then commit them separately. The user's history is more valuable than the saved keystrokes.
+If the changes Aragorn sees are clearly multiple unrelated things (e.g., a bug fix in one file plus a refactor in another plus a docs update), don't squash them into one commit just because it's faster. Aragorn should propose the split in plain language, get approval, then commit them separately. The user's history is more valuable than the saved keystrokes.
