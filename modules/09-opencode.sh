@@ -74,7 +74,7 @@ case "$agents_md_result" in
   *) log_error "Could not install the OpenCode AGENTS.md defaults. Run this installer again; if it still fails, share this detail with support: $agents_md_result" ;;
 esac
 
-dcp_config_result=$(opencode_deploy_dcp_config \
+dcp_config_result=$(opencode_deploy_if_missing \
   "${BOOTSTRAP_DIR}/opencode/dcp.jsonc.template" \
   "$OPENCODE_CONFIG_DIR/dcp.jsonc")
 
@@ -82,6 +82,16 @@ case "$dcp_config_result" in
   installed) log_installed "dcp.jsonc installed (auto-compress at 65% context)" ;;
   skipped) log_skip "dcp.jsonc already exists (preserving your edits)" ;;
   *) log_error "Could not install the OpenCode auto-compress config. Run this installer again; if it still fails, share this detail with support: $dcp_config_result" ;;
+esac
+
+tui_config_result=$(opencode_deploy_if_missing \
+  "${BOOTSTRAP_DIR}/opencode/tui.json.template" \
+  "$OPENCODE_CONFIG_DIR/tui.json")
+
+case "$tui_config_result" in
+  installed) log_installed "tui.json installed (friendly home prompts enabled)" ;;
+  skipped) log_skip "tui.json already exists (preserving your edits)" ;;
+  *) log_error "Could not install the OpenCode TUI config. Run this installer again; if it still fails, share this detail with support: $tui_config_result" ;;
 esac
 
 # ── 3. Provider configuration ────────────────────────────────────────────────
