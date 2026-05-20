@@ -1,7 +1,7 @@
 #!/bin/bash
 # Argument parsing for bootstrap.sh.
 #
-# Five flags supported:
+# Seven flags supported:
 #   --dry-run         Print the install plan and exit. Side-effect-free:
 #                     no brew, no file writes, no module sourcing.
 #   --non-interactive Skip all prompts. Falls back to defaults
@@ -31,6 +31,10 @@
 #                     or if AI_BOOTSTRAP_TIER='custom' (we can't
 #                     reconstruct the custom package list from state.sh
 #                     alone — re-run full bootstrap instead).
+#   --list-modules    Print canonical module names, one per line, and exit.
+#                     Implies --non-interactive.
+#   --module <name>   Run only one named module from a previous standard-tier
+#                     install. Implies --non-interactive.
 #
 # Why a dedicated arg-parse module:
 #
@@ -68,6 +72,11 @@ Usage:
                                     shell config (re-runs the shell-config
                                     module only). ~1-2 seconds. Run after
                                     --check-paths reports stale.
+  ./bootstrap.sh --list-modules     Show module names that can be used with
+                                    --module, one per line.
+  ./bootstrap.sh --module <name>    Run one module by name from a previous
+                                    standard-tier install. Use --list-modules
+                                    to see available names.
   ./bootstrap.sh --help             Show this help message
 
 Flags can be combined. Examples:
@@ -90,6 +99,8 @@ EOF
 #   BOOTSTRAP_LAUNCHER_ONLY    ="1" if --launcher-only was passed
 #   BOOTSTRAP_CHECK_PATHS      ="1" if --check-paths was passed
 #   BOOTSTRAP_REFRESH_PATHS    ="1" if --refresh-paths was passed
+#   BOOTSTRAP_LIST_MODULES     ="1" if --list-modules was passed
+#   BOOTSTRAP_MODULE_ONLY      = module name if --module <name> was passed
 #
 # Honors AI_BOOTSTRAP_NONINTERACTIVE env as alias for --non-interactive
 # (preserves backward compat with the early workspace-prompt wiring).
@@ -148,6 +159,25 @@ args_parse() {
         export BOOTSTRAP_NONINTERACTIVE=1
         export AI_BOOTSTRAP_NONINTERACTIVE=1
         shift
+        ;;
+      --list-modules)
+        export BOOTSTRAP_LIST_MODULES=1
+        # Implies non-interactive — list is read-only; nothing to prompt.
+        export BOOTSTRAP_NONINTERACTIVE=1
+        export AI_BOOTSTRAP_NONINTERACTIVE=1
+        shift
+        ;;
+      --module)
+        if [ $# -lt 2 ]; then
+          echo "error: --module requires a module name argument" >&2
+          echo "  Run with --list-modules to see available names." >&2
+          return 2
+        fi
+        export BOOTSTRAP_MODULE_ONLY="$2"
+        # Implies non-interactive — module-only mode reads existing state.
+        export BOOTSTRAP_NONINTERACTIVE=1
+        export AI_BOOTSTRAP_NONINTERACTIVE=1
+        shift 2
         ;;
       *)
         echo "Unknown flag: $1" >&2

@@ -33,6 +33,136 @@ if [ "$args_rc" -ne 0 ]; then
   exit 2
 fi
 
+# ── Module registry ───────────────────────────────────────────────────
+# Hardcoded by design: module-only mode should expose a stable, documented
+# interface instead of discovering arbitrary shell files at runtime.
+bootstrap_module_names() {
+  cat <<'EOF'
+xcode-clt
+homebrew
+gum
+bash
+terminal
+git
+editor
+runtime
+python
+cli-tools
+opencode
+shell-config
+local-ai
+containers
+extras
+EOF
+}
+
+resolve_module_file() {
+  local module_name="$1"
+
+  case "$module_name" in
+    xcode-clt) echo "00-xcode-clt.sh" ;;
+    homebrew) echo "01-homebrew.sh" ;;
+    gum) echo "02-gum.sh" ;;
+    bash) echo "02a-bash.sh" ;;
+    terminal) echo "03-terminal.sh" ;;
+    git) echo "04-git.sh" ;;
+    editor) echo "05-editor.sh" ;;
+    runtime) echo "06-runtime.sh" ;;
+    python) echo "07-python.sh" ;;
+    cli-tools) echo "08-cli-tools.sh" ;;
+    opencode) echo "09-opencode.sh" ;;
+    shell-config) echo "10-shell-config.sh" ;;
+    local-ai) echo "11-local-ai.sh" ;;
+    containers) echo "12-containers.sh" ;;
+    extras) echo "13-extras.sh" ;;
+    *) return 1 ;;
+  esac
+}
+
+reconstruct_selected_packages_for_tier() {
+  local tier="$1"
+
+  SELECTED_PACKAGES=()
+  while IFS= read -r pkg; do
+    [ -z "$pkg" ] && continue
+    SELECTED_PACKAGES+=("$pkg")
+  done <<<"$(get_tier_packages "$tier")"
+  export SELECTED_PACKAGES
+}
+
+# ── List-modules fast path ────────────────────────────────────────────
+# Print canonical module names without reading state or touching the user's
+# machine. This must run before preflight and all installer modules.
+if [ -n "${BOOTSTRAP_LIST_MODULES:-}" ]; then
+  bootstrap_module_names
+  exit 0
+fi
+
+# ── Module-only fast path ─────────────────────────────────────────────
+# Re-run exactly one named module from a previous standard-tier install.
+# Reads persisted tier/workspace, reconstructs SELECTED_PACKAGES for modules
+# that gate sub-work via is_selected, then sources the requested module
+# directly and exits with that module's status.
+if [ -n "${BOOTSTRAP_MODULE_ONLY:-}" ]; then
+  state_path="$HOME/.config/ai-bootstrap/state.sh"
+
+  if [ ! -f "$state_path" ]; then
+    log_error "No state.sh found at $state_path"
+    log_error "Run the full bootstrap first; --module only works after a previous install."
+    exit 1
+  fi
+
+  if ! MODULE_TIER=$(state_read_field "$state_path" "AI_BOOTSTRAP_TIER"); then
+    log_error "Could not read AI_BOOTSTRAP_TIER from $state_path"
+    log_error "state.sh may be corrupted. Re-run the full bootstrap to repair."
+    exit 1
+  fi
+
+  if ! MODULE_WORKSPACE=$(state_read_field "$state_path" "AI_BOOTSTRAP_WORKSPACE"); then
+    log_error "Could not read AI_BOOTSTRAP_WORKSPACE from $state_path"
+    log_error "state.sh may be corrupted. Re-run the full bootstrap to repair."
+    exit 1
+  fi
+
+  case "$MODULE_TIER" in
+    essential | recommended | complete) ;;
+    custom)
+      log_error "error: --module requires a standard tier (essential, recommended, or complete)."
+      exit 2
+      ;;
+    *)
+      log_error "AI_BOOTSTRAP_TIER='$MODULE_TIER' is not a valid tier."
+      log_error "Valid values: essential, recommended, complete."
+      exit 2
+      ;;
+  esac
+
+  reconstruct_selected_packages_for_tier "$MODULE_TIER"
+  SELECTED_TIER="$MODULE_TIER"
+  WORKSPACE_PATH="$MODULE_WORKSPACE"
+  export AI_BOOTSTRAP_TIER="$MODULE_TIER"
+  export AI_BOOTSTRAP_WORKSPACE="$MODULE_WORKSPACE"
+
+  if ! module_file=$(resolve_module_file "$BOOTSTRAP_MODULE_ONLY"); then
+    log_error "Unknown module: $BOOTSTRAP_MODULE_ONLY"
+    log_error "Run with --list-modules to see available names."
+    exit 2
+  fi
+
+  module_path="${BOOTSTRAP_DIR}/modules/${module_file}"
+  if [ ! -f "$module_path" ]; then
+    log_error "Module file not found: modules/${module_file}"
+    exit 1
+  fi
+
+  set +e
+  # shellcheck disable=SC1090
+  source "$module_path"
+  module_rc=$?
+  set -e
+  exit "$module_rc"
+fi
+
 # ── Launcher-only fast path ───────────────────────────────────────────
 # Skip preflight, Phase 0, tier selection, workspace prompt, and all
 # modules. Just rebuild ~/Applications/Just Vibes.app and exit. Useful
