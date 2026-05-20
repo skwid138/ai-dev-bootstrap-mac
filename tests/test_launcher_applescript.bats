@@ -141,6 +141,39 @@ _stripped() {
   ' | grep -qE '^[[:space:]]*on[[:space:]]+error[[:space:]]*$'
 }
 
+@test "launch.applescript: on quit cleans up tracked Ghostty PID best-effort before continuing quit" {
+  # Branch F.2: quitting Just Vibes should also ask the tracked Ghostty
+  # process to terminate and remove the PID file. This must remain
+  # best-effort (try-wrapped) and must still end with `continue quit` so
+  # cleanup failures never strand the AppleScript applet.
+  _stripped | awk '
+    /^[[:space:]]*on[[:space:]]+quit[[:space:]]*$/ { in_handler=1; next }
+    in_handler && /^[[:space:]]*end[[:space:]]+quit[[:space:]]*$/ { in_handler=0; next }
+    in_handler { print }
+  ' | grep -qE 'set[[:space:]]+pid[[:space:]]+to[[:space:]]+my[[:space:]]+readGhostyPid\(\)'
+  _stripped | awk '
+    /^[[:space:]]*on[[:space:]]+quit[[:space:]]*$/ { in_handler=1; next }
+    in_handler && /^[[:space:]]*end[[:space:]]+quit[[:space:]]*$/ { in_handler=0; next }
+    in_handler { print }
+  ' | grep -qE 'do[[:space:]]+shell[[:space:]]+script[[:space:]]+"kill "[[:space:]]+&[[:space:]]+pid'
+  _stripped | awk '
+    /^[[:space:]]*on[[:space:]]+quit[[:space:]]*$/ { in_handler=1; next }
+    in_handler && /^[[:space:]]*end[[:space:]]+quit[[:space:]]*$/ { in_handler=0; next }
+    in_handler { print }
+  ' | grep -qE 'rm[[:space:]]+-f.*ghostty\.pid'
+  _stripped | awk '
+    /^[[:space:]]*on[[:space:]]+quit[[:space:]]*$/ { in_handler=1; next }
+    in_handler && /^[[:space:]]*end[[:space:]]+quit[[:space:]]*$/ { in_handler=0; next }
+    in_handler && /^[[:space:]]*try[[:space:]]*$/ { tries++ }
+    END { exit !(tries >= 2) }
+  '
+  _stripped | awk '
+    /^[[:space:]]*on[[:space:]]+quit[[:space:]]*$/ { in_handler=1; next }
+    in_handler && /^[[:space:]]*end[[:space:]]+quit[[:space:]]*$/ { in_handler=0; next }
+    in_handler { print }
+  ' | grep -qE '^[[:space:]]*continue[[:space:]]+quit[[:space:]]*$'
+}
+
 @test "launch.applescript: pid-file path matches launch-helper.sh writer" {
   # The reader (readGhostyPid in AppleScript) and the writer
   # (launch-helper.sh) must agree on the path. If a refactor moves
@@ -213,15 +246,18 @@ EOF
     "$lsregister" -f "$bundle" >/dev/null 2>&1 || true
   fi
 
-  # `open -g` launches the bundle in the background; the applet's
-  # `on run` fires (which invokes the helper once — the cold-state
-  # baseline). Wait for that, then fire reopen and observe a SECOND
-  # helper invocation.
+  # Launch the applet executable directly in the background; the
+  # applet's `on run` fires (which invokes the helper once — the
+  # cold-state baseline). Wait for that, then fire reopen and observe a
+  # SECOND helper invocation. Direct launch avoids LaunchServices quirks
+  # where `open -g` can return 0 without actually starting temporary
+  # unsigned applets in headless test sessions.
   #
   # We use `tell application id "<test_id>" to reopen` rather than the
   # bundle name because the unique id avoids LaunchServices ambiguity
   # if a real Just Vibes is installed on the test host.
-  TMPDIR="$SANDBOX/tmp" open -g -n "$bundle" >/dev/null 2>&1 || true
+  TMPDIR="$SANDBOX/tmp" "$bundle/Contents/MacOS/applet" >/dev/null 2>&1 &
+  app_pid=$!
   # Wait for `on run` to complete and write the first helper line.
   for _ in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
     if [ -s "$helper_log" ]; then break; fi
@@ -249,8 +285,69 @@ EOF
 
   # Cleanup: ask the applet to quit so it doesn't hang around.
   osascript -e "tell application id \"$test_id\" to quit" >/dev/null 2>&1 || true
+  kill "$app_pid" >/dev/null 2>&1 || true
   # Best-effort de-register from LaunchServices so subsequent test runs
   # see a fresh bundle.
+  if [ -x "$lsregister" ]; then
+    "$lsregister" -u "$bundle" >/dev/null 2>&1 || true
+  fi
+}
+
+@test "launch.applescript: on quit kills tracked PID and removes pidfile" {
+  command -v osacompile >/dev/null 2>&1 || skip "osacompile not available"
+  command -v osascript >/dev/null 2>&1 || skip "osascript not available"
+
+  bundle="$SANDBOX/Quit Test.app"
+  osacompile -s -o "$bundle" "$APPLESCRIPT_SRC"
+
+  test_id="dev.aibootstrap.justvibes.quit.test.$$.$RANDOM"
+  plutil -replace CFBundleIdentifier -string "$test_id" "$bundle/Contents/Info.plist"
+
+  mkdir -p "$bundle/Contents/Resources"
+  cat >"$bundle/Contents/Resources/launch-helper.sh" <<'EOF'
+#!/usr/bin/env bash
+exit 0
+EOF
+  chmod +x "$bundle/Contents/Resources/launch-helper.sh"
+  codesign -s - --force --deep "$bundle" >/dev/null 2>&1 || true
+
+  lsregister="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+  if [ -x "$lsregister" ]; then
+    "$lsregister" -f "$bundle" >/dev/null 2>&1 || true
+  fi
+
+  pid_dir="$SANDBOX/tmp/just-vibes"
+  mkdir -p "$pid_dir"
+  term_log="$SANDBOX/term.log"
+  /bin/sh -c 'trap "echo term > \"$1\"; exit 0" TERM; while :; do sleep 1; done' sh "$term_log" &
+  ghostty_pid=$!
+  echo "$ghostty_pid" >"$pid_dir/ghostty.pid"
+
+  TMPDIR="$SANDBOX/tmp" "$bundle/Contents/MacOS/applet" >/dev/null 2>&1 &
+  app_pid=$!
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    TMPDIR="$SANDBOX/tmp" osascript -e "tell application id \"$test_id\" to get running" >/dev/null 2>&1 && break
+    sleep 0.2
+  done
+
+  TMPDIR="$SANDBOX/tmp" osascript -e "tell application id \"$test_id\" to quit" >/dev/null 2>&1 || true
+
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    if [ -s "$term_log" ]; then break; fi
+    sleep 0.2
+  done
+
+  if [ ! -s "$term_log" ]; then
+    kill "$ghostty_pid" >/dev/null 2>&1 || true
+    wait "$ghostty_pid" 2>/dev/null || true
+    echo "tracked process did not receive TERM from on quit"
+    return 1
+  fi
+  wait "$ghostty_pid" 2>/dev/null || true
+
+  [ ! -e "$pid_dir/ghostty.pid" ]
+  kill "$app_pid" >/dev/null 2>&1 || true
+
   if [ -x "$lsregister" ]; then
     "$lsregister" -u "$bundle" >/dev/null 2>&1 || true
   fi
