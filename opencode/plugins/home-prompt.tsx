@@ -14,10 +14,16 @@ const tui = async (api: any) => {
             placeholders={{
               normal: [
                 "Build me a recipe app",
-                "Help me organize my photos",
-                "What can you help me with?",
+                "Help me organize something",
+                "Will you help me with something?",
                 "Make a website for my business",
                 "I have an idea for an app",
+                "My computer is doing something weird, can you fix it?",
+                "Can you automate something for me?",
+                "Is there a better way to do this?",
+                "Can you make me an app I can use on my phone?",
+                "Can you help me get data from a website?",
+                "Can you help me build a goal tracking app?",
               ],
               shell: [
                 "Show me my files",
