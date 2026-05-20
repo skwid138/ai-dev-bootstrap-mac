@@ -20,7 +20,7 @@
 #   $2: dest dir   (typically "$HOME/.config/opencode")
 #
 # Behavior:
-# - Copies these subtrees: agent/, skill/, command/, instruction/
+# - Copies these subtrees: agent/, skill/, command/, instruction/, plugins/
 # - Does NOT touch AGENTS.md (handled separately, see opencode_deploy_agents_md).
 # - Does NOT touch opencode.json (handled separately, see opencode_render_config).
 # - Overwrites destination files unconditionally — they're maintained by
@@ -46,7 +46,7 @@ opencode_deploy_assets() {
   : >"$new_manifest"
 
   local subdir
-  for subdir in agent skill command instruction; do
+  for subdir in agent skill command instruction plugins; do
     if [ -d "$src/$subdir" ]; then
       find "$src/$subdir" -type f -print | while IFS= read -r asset_file; do
         printf '%s\n' "${asset_file#"$src"/}" >>"$new_manifest"
@@ -178,27 +178,25 @@ opencode_deploy_agents_md() {
   echo "installed"
 }
 
-# ── opencode_deploy_dcp_config ───────────────────────────────────────────────
-# Install ~/.config/opencode/dcp.jsonc with overwrite protection.
+# ── opencode_deploy_if_missing ───────────────────────────────────────────────
+# Install an OpenCode support config file with overwrite protection.
 #
-# dcp (the dynamic-context-pruning plugin loaded via opencode.json's
-# `plugin` array) reads its config from a sibling file, NOT from
-# opencode.json. The user may tune `compress.maxContextLimit` to taste,
-# so this function preserves their edits on re-bootstrap (same semantics
-# as opencode_deploy_agents_md).
+# Some OpenCode support files are templates that users may tune later, so this
+# function installs them only when missing and preserves existing edits on
+# re-bootstrap (same semantics as opencode_deploy_agents_md).
 #
 # Args:
-#   $1: source dcp.jsonc.template path
-#   $2: dest   dcp.jsonc path
+#   $1: source template path
+#   $2: dest   config path
 #
 # Returns: 0 if installed or skipped cleanly, 1 on error.
 # Stdout: "installed", "skipped", or "" on error (machine-readable).
-opencode_deploy_dcp_config() {
+opencode_deploy_if_missing() {
   local src="$1"
   local dest="$2"
 
   if [ ! -f "$src" ]; then
-    echo "opencode_deploy_dcp_config: source file not found: $src" >&2
+    echo "opencode_deploy_if_missing: source file not found: $src" >&2
     return 1
   fi
 

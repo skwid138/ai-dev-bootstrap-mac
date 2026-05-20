@@ -29,11 +29,12 @@ teardown() {
 @test "opencode_deploy_assets: copies expected subtrees" {
   src="$SANDBOX/src"
   dest="$SANDBOX/dest"
-  mkdir -p "$src"/{agent,skill/foo,command,instruction}
+  mkdir -p "$src"/{agent,skill/foo,command,instruction,plugins}
   echo "agent" >"$src/agent/x.md"
   echo "skill" >"$src/skill/foo/SKILL.md"
   echo "cmd" >"$src/command/c.md"
   echo "ins" >"$src/instruction/i.md"
+  echo "plugin" >"$src/plugins/p.ts"
 
   run opencode_deploy_assets "$src" "$dest"
   [ "$status" -eq 0 ]
@@ -42,6 +43,7 @@ teardown() {
   [ -f "$dest/skill/foo/SKILL.md" ]
   [ -f "$dest/command/c.md" ]
   [ -f "$dest/instruction/i.md" ]
+  [ -f "$dest/plugins/p.ts" ]
 }
 
 @test "opencode_deploy_assets: skips missing subdirs gracefully" {
@@ -49,7 +51,7 @@ teardown() {
   dest="$SANDBOX/dest"
   mkdir -p "$src/agent"
   echo "agent" >"$src/agent/x.md"
-  # Note: no skill/, command/, instruction/ — should be fine.
+  # Note: no skill/, command/, instruction/, plugins/ — should be fine.
 
   run opencode_deploy_assets "$src" "$dest"
   [ "$status" -eq 0 ]
@@ -189,14 +191,14 @@ teardown() {
   [ "$status" -ne 0 ]
 }
 
-# ── opencode_deploy_dcp_config ───────────────────────────────────────────────
+# ── opencode_deploy_if_missing ───────────────────────────────────────────────
 
-@test "opencode_deploy_dcp_config: installs when destination missing" {
+@test "opencode_deploy_if_missing: installs when destination missing" {
   src="$SANDBOX/dcp.jsonc"
   dest="$SANDBOX/dest/dcp.jsonc"
   echo '{ "compress": { "maxContextLimit": "65%" } }' >"$src"
 
-  run opencode_deploy_dcp_config "$src" "$dest"
+  run opencode_deploy_if_missing "$src" "$dest"
   [ "$status" -eq 0 ]
   [ "$output" = "installed" ]
   [ -f "$dest" ]
@@ -204,22 +206,22 @@ teardown() {
   [ "$status" -eq 0 ]
 }
 
-@test "opencode_deploy_dcp_config: skips when destination exists (overwrite-protect)" {
+@test "opencode_deploy_if_missing: skips when destination exists (overwrite-protect)" {
   src="$SANDBOX/dcp.jsonc"
   dest="$SANDBOX/dest/dcp.jsonc"
   echo '{ "new": true }' >"$src"
   mkdir -p "$(dirname "$dest")"
   echo '{ "user_tweaked": true }' >"$dest"
 
-  run opencode_deploy_dcp_config "$src" "$dest"
+  run opencode_deploy_if_missing "$src" "$dest"
   [ "$status" -eq 0 ]
   [ "$output" = "skipped" ]
   run cat "$dest"
   [ "$output" = '{ "user_tweaked": true }' ]
 }
 
-@test "opencode_deploy_dcp_config: errors when source missing" {
-  run opencode_deploy_dcp_config "$SANDBOX/nope.jsonc" "$SANDBOX/dest/dcp.jsonc"
+@test "opencode_deploy_if_missing: errors when source missing" {
+  run opencode_deploy_if_missing "$SANDBOX/nope.jsonc" "$SANDBOX/dest/dcp.jsonc"
   [ "$status" -ne 0 ]
 }
 
