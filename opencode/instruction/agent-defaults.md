@@ -2,6 +2,18 @@
 
 Standing defaults for every OpenCode session installed by this bootstrap. These rules keep work safe, testable, and understandable for non-technical users.
 
+## Finished-product simplicity
+
+Optimize for the user’s whole experience, not just getting code written. For product-shaping choices that affect how the user runs, uses, deploys, or maintains the result, balance three costs:
+
+1. **Build cost** — can the agent realistically build, test, and debug it?
+2. **Use cost** — can a non-technical user open and use the finished result without learning developer tools?
+3. **Keep-using-it cost** — can the user keep using it later without fragile setup, confusing commands, expiring installs, or the agent constantly babysitting it?
+
+Prefer the simplest approach that safely gives the user the result they actually want. A project that is so ambitious it never gets finished fails the user; so does a technically impressive app that is too hard to run, deploy, understand, or maintain.
+
+When approaches trade off these costs, choose the path with the lowest total burden for the target user, after preserving safety, privacy, budget, and the user’s actual goal. If a requested approach would create avoidable setup, deployment, maintenance, or usage pain, make that tradeoff explicit at the planning or user-communication boundary before committing to the approach.
+
 ## Testing
 
 Tests are required for executable code changes: functions, scripts, application behavior, build logic, or anything else that can break at runtime.
