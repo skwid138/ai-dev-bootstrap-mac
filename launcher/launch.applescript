@@ -189,5 +189,14 @@ end idle
 -- `on quit ... continue quit` handler, `osascript` apps sometimes need
 -- this scaffold to terminate cleanly under macOS 14+.
 on quit
+    set pid to my readGhostyPid()
+    if pid is not 0 then
+        try
+            do shell script "kill " & pid
+        end try
+        try
+            do shell script "rm -f \"${TMPDIR:-/tmp}/just-vibes/ghostty.pid\""
+        end try
+    end if
     continue quit
 end quit
