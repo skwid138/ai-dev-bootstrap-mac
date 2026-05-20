@@ -26,6 +26,8 @@ setup() {
   unset BOOTSTRAP_LAUNCHER_ONLY
   unset BOOTSTRAP_CHECK_PATHS
   unset BOOTSTRAP_REFRESH_PATHS
+  unset BOOTSTRAP_LIST_MODULES
+  unset BOOTSTRAP_MODULE_ONLY
 }
 
 teardown() {
@@ -35,6 +37,8 @@ teardown() {
   unset BOOTSTRAP_LAUNCHER_ONLY
   unset BOOTSTRAP_CHECK_PATHS
   unset BOOTSTRAP_REFRESH_PATHS
+  unset BOOTSTRAP_LIST_MODULES
+  unset BOOTSTRAP_MODULE_ONLY
 }
 
 @test "args_parse: no flags leaves all env vars unset" {
@@ -125,6 +129,8 @@ teardown() {
   [[ "$output" == *"--launcher-only"* ]]
   [[ "$output" == *"--check-paths"* ]]
   [[ "$output" == *"--refresh-paths"* ]]
+  [[ "$output" == *"--list-modules"* ]]
+  [[ "$output" == *"--module"* ]]
   [[ "$output" == *"--help"* ]]
 }
 
@@ -212,4 +218,35 @@ teardown() {
   [ "$BOOTSTRAP_REFRESH_PATHS" = "1" ]
   [ "$BOOTSTRAP_DRY_RUN" = "1" ]
   [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+}
+
+# ── --list-modules / --module ──────────────────────────────────────────────
+
+@test "args_parse: --list-modules sets BOOTSTRAP_LIST_MODULES=1" {
+  args_parse --list-modules
+  [ "$BOOTSTRAP_LIST_MODULES" = "1" ]
+}
+
+@test "args_parse: --list-modules implies non-interactive" {
+  args_parse --list-modules
+  [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+  [ "$AI_BOOTSTRAP_NONINTERACTIVE" = "1" ]
+}
+
+@test "args_parse: --module without argument returns 2" {
+  run args_parse --module
+  [ "$status" -eq 2 ]
+  [[ "$output" == *"--module requires a module name argument"* ]]
+  [[ "$output" == *"--list-modules"* ]]
+}
+
+@test "args_parse: --module git sets BOOTSTRAP_MODULE_ONLY=git" {
+  args_parse --module git
+  [ "$BOOTSTRAP_MODULE_ONLY" = "git" ]
+}
+
+@test "args_parse: --module implies non-interactive" {
+  args_parse --module git
+  [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+  [ "$AI_BOOTSTRAP_NONINTERACTIVE" = "1" ]
 }
