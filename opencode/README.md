@@ -28,12 +28,28 @@ opencode/
 ├── command/                    # custom slash commands
 ├── skill/                      # on-demand skill definitions
 ├── package.json                # plugin/runtime dependencies
+├── plugins/                    # deployable plugin source copied to users
+├── plugins-dev/                # local-only plugin test infrastructure
 └── package-lock.json
 ```
 
 The `template` extension on `opencode.json.template` exists because the bootstrap renders it into the final `opencode.json` on the user's machine.
 
 The repo-level `scripts/` tree is deployed separately to `$AI_BOOTSTRAP_WORKSPACE/scripts/`. Commands or skills that need deterministic shell logic should call those deployed scripts rather than embedding long shell snippets in prompts.
+
+### Plugin development files
+
+`plugins/` contains deployable plugin source and is copied to users by the installer. Keep it free of test runners, dependency manifests, lockfiles, and generated dependencies.
+
+`plugins-dev/` contains local plugin test infrastructure: tests, Vitest config, TypeScript config, `package.json`, and the generated lockfile. It is **not** deployed to users.
+
+To run plugin tests:
+
+```sh
+cd opencode/plugins-dev
+npm install
+npm test
+```
 
 ---
 
