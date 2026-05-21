@@ -218,6 +218,18 @@ teardown() {
   [[ "$output" == *"ls -la"* ]]
 }
 
+@test "init_rc.zsh: contains optional tailscale.zsh source after aliases and before compinit" {
+  aliases_line="$(grep -nF 'rc/aliases.zsh' "$BOOTSTRAP_DIR/dotfiles/init_rc.zsh" | cut -d: -f1 | tail -n 1)"
+  tailscale_line="$(grep -nF 'rc/tailscale.zsh' "$BOOTSTRAP_DIR/dotfiles/init_rc.zsh" | cut -d: -f1 | tail -n 1)"
+  compinit_line="$(grep -nF 'compinit with daily cache' "$BOOTSTRAP_DIR/dotfiles/init_rc.zsh" | cut -d: -f1)"
+
+  [ -n "$aliases_line" ]
+  [ -n "$tailscale_line" ]
+  [ -n "$compinit_line" ]
+  [ "$aliases_line" -lt "$tailscale_line" ]
+  [ "$tailscale_line" -lt "$compinit_line" ]
+}
+
 @test "init_rc.zsh: sentinel-guarded against double-source" {
   run zsh -c "
     HOME='$HOME'

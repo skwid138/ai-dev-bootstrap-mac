@@ -30,6 +30,10 @@ _AI_BOOTSTRAP_SHELL_DIR="${HOME}/.config/ai-bootstrap/shell"
 [[ -f "${_AI_BOOTSTRAP_SHELL_DIR}/rc/aliases.zsh" ]] \
   && source "${_AI_BOOTSTRAP_SHELL_DIR}/rc/aliases.zsh"
 
+# 4b. Tailscale Remote Access aliases (add-on; no-op when file absent).
+[[ -f "${_AI_BOOTSTRAP_SHELL_DIR}/rc/tailscale.zsh" ]] \
+  && source "${_AI_BOOTSTRAP_SHELL_DIR}/rc/tailscale.zsh"
+
 # 5. compinit with daily cache. Saves 15-50ms on warm shells.
 #    Single-fire via _COMPINIT_DONE sentinel (shared with other barrel chains
 #    on the dev machine — first-source wins, second is no-op).

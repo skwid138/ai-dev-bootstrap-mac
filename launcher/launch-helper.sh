@@ -238,6 +238,14 @@ if "$OSASCRIPT_BIN" -e "running of application \"${GHOSTTY_APP%.app}\"" 2>/dev/n
   n_flag="-n"
 fi
 
+launch_command="$opencode_bin"
+if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
+  if command -v tailscale &>/dev/null \
+    && security find-generic-password -s opencode-server-password -a "$USER" -w &>/dev/null; then
+    launch_command="'\"$workspace/scripts/personal/opensession.sh\" || \"$opencode_bin\"'"
+  fi
+fi
+
 if [[ -n "$n_flag" ]]; then
   args=("$n_flag" -Fa "$GHOSTTY_APP" --args "--title=Just Vibes" "--working-directory=$workspace")
 else
@@ -245,7 +253,7 @@ else
 fi
 if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
   # See header comment for why --command= replaces -e.
-  args+=("--command=zsh -l -i -c $opencode_bin")
+  args+=("--command=zsh -l -i -c $launch_command")
 fi
 
 # `open -Fa` returns immediately (the spawned ghostty is reparented to

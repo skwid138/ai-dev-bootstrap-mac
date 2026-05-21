@@ -37,6 +37,15 @@ setup() {
   # $SANDBOX/Ghostty.app. Tests that simulate "Ghostty not installed"
   # remove this with `rm -rf "$SANDBOX/Ghostty.app"` (see _unmock_ghostty).
   mkdir -p "$SANDBOX/Ghostty.app"
+
+  # Default Remote Access prerequisite state: no saved Keychain password.
+  # Tests that need the password present overwrite this with _mock_security.
+  cat >"$SANDBOX/security" <<'EOF'
+#!/usr/bin/env bash
+echo "security $*" >>"$MOCK_LOG"
+exit 44
+EOF
+  chmod +x "$SANDBOX/security"
 }
 
 teardown() {
@@ -91,6 +100,35 @@ _mock_opencode() {
 exit 0
 EOF
   chmod +x "$SANDBOX/opencode"
+}
+
+_mock_security() {
+  local mode="${1:-present}"
+  cat >"$SANDBOX/security" <<EOF
+#!/usr/bin/env bash
+echo "security \$*" >>"\$MOCK_LOG"
+if [[ "\$1" == "find-generic-password" ]]; then
+  [[ "$mode" == "present" ]] && exit 0 || exit 44
+fi
+exit 0
+EOF
+  chmod +x "$SANDBOX/security"
+}
+
+_mock_tailscale() {
+  cat >"$SANDBOX/tailscale" <<'EOF'
+#!/usr/bin/env bash
+echo "tailscale $*" >>"$MOCK_LOG"
+exit 0
+EOF
+  chmod +x "$SANDBOX/tailscale"
+}
+
+_make_hermetic_launcher_path() {
+  mkdir -p "$SANDBOX/hermetic-bin"
+  ln -sf /bin/bash "$SANDBOX/hermetic-bin/bash"
+  ln -sf /usr/bin/dirname "$SANDBOX/hermetic-bin/dirname"
+  ln -sf /usr/bin/grep "$SANDBOX/hermetic-bin/grep"
 }
 
 # Drop a mock `pgrep` at $SANDBOX/pgrep that echoes whatever is configured
@@ -313,6 +351,52 @@ _unmock_ghostty() {
   # Phase 6.6 regression gate: cold-state must NOT include `-n`.
   [[ "$saved" != *"open -nFa"* ]]
   [[ "$saved" != *"open -nF "* ]]
+}
+
+@test "launch-helper.sh: uses opensession when keychain password and tailscale CLI exist" {
+  _mock_open
+  _mock_osascript present
+  _mock_opencode
+  _mock_security present
+  _mock_tailscale
+  mkdir -p "$SANDBOX/workspace"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
+
+  run _run_launch
+  [ "$status" -eq 0 ]
+  grep -q "open -Fa Ghostty.app --args --title=Just Vibes --working-directory=$SANDBOX/workspace --command=zsh -l -i -c '\"$SANDBOX/workspace/scripts/personal/opensession.sh\" || \"$SANDBOX/opencode\"'" "$MOCK_LOG"
+  grep -q "security find-generic-password -s opencode-server-password -a $USER -w" "$MOCK_LOG"
+}
+
+@test "launch-helper.sh: uses bare opencode when keychain password is missing" {
+  _mock_open
+  _mock_osascript present
+  _mock_opencode
+  _mock_security missing
+  _mock_tailscale
+  mkdir -p "$SANDBOX/workspace"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
+
+  run _run_launch
+  [ "$status" -eq 0 ]
+  saved="$(cat "$MOCK_LOG")"
+  [[ "$saved" == *"--command=zsh -l -i -c $SANDBOX/opencode"* ]]
+  [[ "$saved" != *"opensession.sh"* ]]
+}
+
+@test "launch-helper.sh: uses bare opencode when tailscale CLI is missing" {
+  _mock_open
+  _mock_osascript present
+  _mock_opencode
+  _mock_security present
+  mkdir -p "$SANDBOX/workspace"
+  echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
+
+  run _run_launch
+  [ "$status" -eq 0 ]
+  saved="$(cat "$MOCK_LOG")"
+  [[ "$saved" == *"--command=zsh -l -i -c $SANDBOX/opencode"* ]]
+  [[ "$saved" != *"opensession.sh"* ]]
 }
 
 @test "launch-helper.sh: hot-state (Ghostty already running) launches with -nFa" {
@@ -541,16 +625,19 @@ exit 0
 EOF
   chmod +x "$SANDBOX/b/opencode"
   echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
+  _make_hermetic_launcher_path
 
-  run env \
+  run /usr/bin/env \
     "JUST_VIBES_OPEN_BIN=$SANDBOX/open" \
     "JUST_VIBES_OSASCRIPT_BIN=$SANDBOX/osascript" \
     "JUST_VIBES_OPENCODE_PATHS=$SANDBOX/a/opencode:$SANDBOX/b/opencode" \
     "JUST_VIBES_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
-    bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
+    "JUST_VIBES_TRACK_GHOSTTY_PID=0" \
+    "PATH=$SANDBOX/hermetic-bin" \
+    /bin/bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
   [ "$status" -eq 0 ]
-  grep -q "\-\-command=zsh -l -i -c $SANDBOX/b/opencode" "$MOCK_LOG"
+  grep -q -- "--command=zsh -l -i -c $SANDBOX/b/opencode" "$MOCK_LOG"
 }
 
 @test "launch-helper.sh: falls back to PATH when no candidate path matches" {
@@ -566,17 +653,19 @@ exit 0
 EOF
   chmod +x "$SANDBOX/custom/opencode"
   echo "export AI_BOOTSTRAP_WORKSPACE='$SANDBOX/workspace'" >"$SANDBOX/state.sh"
+  _make_hermetic_launcher_path
 
-  run env \
+  run /usr/bin/env \
     "JUST_VIBES_OPEN_BIN=$SANDBOX/open" \
     "JUST_VIBES_OSASCRIPT_BIN=$SANDBOX/osascript" \
     "JUST_VIBES_OPENCODE_PATHS=/nonexistent" \
     "JUST_VIBES_GHOSTTY_SEARCH_PATHS=$SANDBOX" \
     "AI_BOOTSTRAP_STATE_FILE=$SANDBOX/state.sh" \
-    "PATH=$SANDBOX/custom:/usr/bin:/bin" \
-    bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
+    "JUST_VIBES_TRACK_GHOSTTY_PID=0" \
+    "PATH=$SANDBOX/custom:$SANDBOX/hermetic-bin" \
+    /bin/bash "${BOOTSTRAP_DIR}/launcher/launch-helper.sh"
   [ "$status" -eq 0 ]
-  grep -q "\-\-command=zsh -l -i -c $SANDBOX/custom/opencode" "$MOCK_LOG"
+  grep -q -- "--command=zsh -l -i -c $SANDBOX/custom/opencode" "$MOCK_LOG"
 }
 
 # ── launcher_resolve_dest ──────────────────────────────────────────────────
