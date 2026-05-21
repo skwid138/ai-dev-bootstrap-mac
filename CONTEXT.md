@@ -62,6 +62,14 @@ The rendered OpenCode configuration file. Always overwritten on re-run (with `.b
 **Helper scripts**:
 Shell scripts deployed from `scripts/` to `$WORKSPACE/scripts/`. Used by OpenCode skills at runtime (e.g., dependency checks, bootstrap doctor).
 
+**Add-on module**:
+A module excluded from all tier expansions. Only runs when explicitly requested via `--module <name>`. Has its own preflight checks and can trigger the full installer if dependencies are missing. Example: `14-tailscale.sh`.
+_Avoid_: bonus module, optional module, extra
+
+**Breadcrumb**:
+A file written to `~/.config/ai-bootstrap/` by an add-on module when it cannot proceed due to missing dependencies and the user chooses "Run full installer." The bootstrap checks for pending breadcrumbs at completion and offers to continue with the add-on setup. Cleaned up after use or decline.
+_Avoid_: flag file, marker
+
 ## Relationships
 
 - A **Tier** determines which **Modules** run and which packages are installed.
@@ -69,6 +77,8 @@ Shell scripts deployed from `scripts/` to `$WORKSPACE/scripts/`. Used by OpenCod
 - The **State file** is written by the installer and consumed by **Just Vibes** and shell config.
 - **Curated assets** are managed by a manifest; **opencode.json** is rendered separately.
 - **Helper scripts** are optional; declining the overwrite prompt preserves existing scripts without removing curated assets.
+- **Add-on modules** are excluded from **Tier** expansion; they run only via explicit `--module` flag.
+- A **Breadcrumb** bridges an interrupted **Add-on module** run to the **Bootstrap** completion, enabling seamless continuation.
 
 ## Example dialogue
 
