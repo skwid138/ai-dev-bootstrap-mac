@@ -17,6 +17,11 @@ Icon?
 *.tmp
 tmp/
 
+# Test log fixtures are source data, not runtime logs
+!tests/fixtures/
+!tests/fixtures/permission-audit/
+!tests/fixtures/permission-audit/*.log
+
 # Node (in case launcher/plugins land later)
 node_modules/
 

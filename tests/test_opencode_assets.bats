@@ -12,7 +12,7 @@
 #   opencode.json.template instruction list.
 # - Catches re-introduction of forbidden tokens during future edits
 #   (Jira / Sonar / Stryker / Wpromote / acli / atlassian / BIXB-NNNN /
-#   hardcoded /Users/hunter or /code/wpromote paths).
+#   hardcoded personal home paths or /code/wpromote paths).
 # - Catches malformed JSON in the template before B2 ever consumes it.
 # - Catches missing YAML frontmatter on agent files (opencode requires it).
 #
@@ -152,12 +152,12 @@ assert_literal_exists_after() {
 
 # ── Skills ───────────────────────────────────────────────────────────────────
 
-@test "opencode/skill: all 7 curated skills have SKILL.md" {
+@test "opencode/skill: all 8 curated skills have SKILL.md" {
   skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
-  [ "${#skills[@]}" -eq 7 ]
+  [ "${#skills[@]}" -eq 8 ]
 
   deepening_skill="improve-codebase-arch""itecture"
-  for skill in tdd bug-hunter dependency-update diagnose grill-with-docs prototype "$deepening_skill"; do
+  for skill in tdd bug-hunter dependency-update permission-audit diagnose grill-with-docs prototype "$deepening_skill"; do
     [ -f "${OPENCODE_DIR}/skill/${skill}/SKILL.md" ]
   done
 }
@@ -170,11 +170,11 @@ assert_literal_exists_after() {
 
 # ── Commands ─────────────────────────────────────────────────────────────────
 
-@test "opencode/command: all 8 curated commands exist" {
+@test "opencode/command: all 9 curated commands exist" {
   commands=("${OPENCODE_DIR}"/command/*.md)
-  [ "${#commands[@]}" -eq 8 ]
+  [ "${#commands[@]}" -eq 9 ]
 
-  for cmd in help-me explain safer commit diagnose grill prototype update-opencode-deps; do
+  for cmd in help-me explain safer commit diagnose grill prototype update-opencode-deps permission-audit; do
     [ -f "${OPENCODE_DIR}/command/${cmd}.md" ]
   done
 }
@@ -381,7 +381,7 @@ EOF
     -e '(^|[^a-z])acli([^a-z]|$)' \
     -e '(^|[^a-z])atlassian([^a-z]|$)' \
     -e 'BIXB-[0-9]+' \
-    -e '/Users/hunter' \
+    -e '/Users/'"hunter" \
     -e '/code/wpromote' \
     "${OPENCODE_DIR}"
   # grep exits 1 on no-match, which is what we want.
