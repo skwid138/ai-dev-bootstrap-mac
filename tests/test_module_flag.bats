@@ -89,7 +89,7 @@ EOF
   run "$REPO_ROOT/bootstrap.sh" --list-modules
 
   [ "$status" -eq 0 ]
-  expected=$'xcode-clt\nhomebrew\ngum\nbash\nterminal\ngit\neditor\nruntime\npython\ncli-tools\nopencode\nshell-config\nlocal-ai\ncontainers\nextras'
+  expected=$'xcode-clt\nhomebrew\ngum\nbash\nterminal\ngit\neditor\nruntime\npython\ncli-tools\nopencode\nshell-config\nlocal-ai\ncontainers\nextras\ntailscale'
   [ "$output" = "$expected" ]
 }
 

@@ -33,8 +33,9 @@
 #                     alone — re-run full bootstrap instead).
 #   --list-modules    Print canonical module names, one per line, and exit.
 #                     Implies --non-interactive.
-#   --module <name>   Run only one named module from a previous standard-tier
-#                     install. Implies --non-interactive.
+#   --module <name>   Run only one named module. Standard modules require a
+#                     previous standard-tier install; add-on modules can define
+#                     their own prerequisites. Implies --non-interactive.
 #
 # Why a dedicated arg-parse module:
 #
@@ -76,7 +77,8 @@ Usage:
                                     --module, one per line.
   ./bootstrap.sh --module <name>    Run one module by name from a previous
                                     standard-tier install. Use --list-modules
-                                    to see available names.
+                                    to see available names; add-on modules
+                                    such as tailscale can be run this way.
   ./bootstrap.sh --help             Show this help message
 
 Flags can be combined. Examples:

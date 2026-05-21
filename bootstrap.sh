@@ -19,6 +19,7 @@ source "${BOOTSTRAP_DIR}/lib/plan.sh"
 source "${BOOTSTRAP_DIR}/lib/launcher.sh"
 source "${BOOTSTRAP_DIR}/lib/summary.sh"
 source "${BOOTSTRAP_DIR}/lib/paths_check.sh"
+source "${BOOTSTRAP_DIR}/lib/breadcrumb.sh"
 
 # ── Parse flags ───────────────────────────────────────────────────────
 # args_parse exports BOOTSTRAP_DRY_RUN, BOOTSTRAP_NONINTERACTIVE, and
@@ -53,6 +54,7 @@ shell-config
 local-ai
 containers
 extras
+tailscale
 EOF
 }
 
@@ -75,8 +77,52 @@ resolve_module_file() {
     local-ai) echo "11-local-ai.sh" ;;
     containers) echo "12-containers.sh" ;;
     extras) echo "13-extras.sh" ;;
+    tailscale) echo "14-tailscale.sh" ;;
     *) return 1 ;;
   esac
+}
+
+is_addon_module() {
+  local module_name="$1"
+
+  case "$module_name" in
+    tailscale) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+bootstrap_handle_pending_breadcrumbs() {
+  local pending_modules=()
+  local module_name
+
+  while IFS= read -r module_name; do
+    [ -n "$module_name" ] || continue
+    pending_modules+=("$module_name")
+  done <<<"$(breadcrumb_pending || true)"
+
+  [ "${#pending_modules[@]}" -gt 0 ] || return 0
+
+  for module_name in "${pending_modules[@]}"; do
+    if ! is_addon_module "$module_name"; then
+      log_warn "Skipping unknown add-on breadcrumb: $module_name"
+      breadcrumb_clear "$module_name"
+      continue
+    fi
+
+    if ui_confirm "Continue setting up $module_name now?"; then
+      local addon_rc
+      set +e
+      "${BOOTSTRAP_DIR}/bootstrap.sh" --module "$module_name"
+      addon_rc=$?
+      set -e
+      breadcrumb_clear "$module_name"
+      if [ "$addon_rc" -ne 0 ]; then
+        return "$addon_rc"
+      fi
+    else
+      breadcrumb_clear "$module_name"
+    fi
+  done
 }
 
 reconstruct_selected_packages_for_tier() {
@@ -99,49 +145,56 @@ if [ -n "${BOOTSTRAP_LIST_MODULES:-}" ]; then
 fi
 
 # ── Module-only fast path ─────────────────────────────────────────────
-# Re-run exactly one named module from a previous standard-tier install.
-# Reads persisted tier/workspace, reconstructs SELECTED_PACKAGES for modules
-# that gate sub-work via is_selected, then sources the requested module
-# directly and exits with that module's status.
+# Re-run exactly one named module. Standard modules read persisted
+# tier/workspace and reconstruct SELECTED_PACKAGES for modules that gate
+# sub-work via is_selected. Add-on modules can run without state and own their
+# prerequisite checks. Then source the requested module directly and exit with
+# that module's status.
 if [ -n "${BOOTSTRAP_MODULE_ONLY:-}" ]; then
   state_path="$HOME/.config/ai-bootstrap/state.sh"
+  module_is_addon=false
+  if is_addon_module "$BOOTSTRAP_MODULE_ONLY"; then
+    module_is_addon=true
+  fi
 
-  if [ ! -f "$state_path" ]; then
+  if ! $module_is_addon && [ ! -f "$state_path" ]; then
     log_error "No state.sh found at $state_path"
     log_error "Run the full bootstrap first; --module only works after a previous install."
     exit 1
   fi
 
-  if ! MODULE_TIER=$(state_read_field "$state_path" "AI_BOOTSTRAP_TIER"); then
-    log_error "Could not read AI_BOOTSTRAP_TIER from $state_path"
-    log_error "state.sh may be corrupted. Re-run the full bootstrap to repair."
-    exit 1
+  if ! $module_is_addon; then
+    if ! MODULE_TIER=$(state_read_field "$state_path" "AI_BOOTSTRAP_TIER"); then
+      log_error "Could not read AI_BOOTSTRAP_TIER from $state_path"
+      log_error "state.sh may be corrupted. Re-run the full bootstrap to repair."
+      exit 1
+    fi
+
+    if ! MODULE_WORKSPACE=$(state_read_field "$state_path" "AI_BOOTSTRAP_WORKSPACE"); then
+      log_error "Could not read AI_BOOTSTRAP_WORKSPACE from $state_path"
+      log_error "state.sh may be corrupted. Re-run the full bootstrap to repair."
+      exit 1
+    fi
+
+    case "$MODULE_TIER" in
+      essential | recommended | complete) ;;
+      custom)
+        log_error "error: --module requires a standard tier (essential, recommended, or complete)."
+        exit 2
+        ;;
+      *)
+        log_error "AI_BOOTSTRAP_TIER='$MODULE_TIER' is not a valid tier."
+        log_error "Valid values: essential, recommended, complete."
+        exit 2
+        ;;
+    esac
+
+    reconstruct_selected_packages_for_tier "$MODULE_TIER"
+    SELECTED_TIER="$MODULE_TIER"
+    WORKSPACE_PATH="$MODULE_WORKSPACE"
+    export AI_BOOTSTRAP_TIER="$MODULE_TIER"
+    export AI_BOOTSTRAP_WORKSPACE="$MODULE_WORKSPACE"
   fi
-
-  if ! MODULE_WORKSPACE=$(state_read_field "$state_path" "AI_BOOTSTRAP_WORKSPACE"); then
-    log_error "Could not read AI_BOOTSTRAP_WORKSPACE from $state_path"
-    log_error "state.sh may be corrupted. Re-run the full bootstrap to repair."
-    exit 1
-  fi
-
-  case "$MODULE_TIER" in
-    essential | recommended | complete) ;;
-    custom)
-      log_error "error: --module requires a standard tier (essential, recommended, or complete)."
-      exit 2
-      ;;
-    *)
-      log_error "AI_BOOTSTRAP_TIER='$MODULE_TIER' is not a valid tier."
-      log_error "Valid values: essential, recommended, complete."
-      exit 2
-      ;;
-  esac
-
-  reconstruct_selected_packages_for_tier "$MODULE_TIER"
-  SELECTED_TIER="$MODULE_TIER"
-  WORKSPACE_PATH="$MODULE_WORKSPACE"
-  export AI_BOOTSTRAP_TIER="$MODULE_TIER"
-  export AI_BOOTSTRAP_WORKSPACE="$MODULE_WORKSPACE"
 
   if ! module_file=$(resolve_module_file "$BOOTSTRAP_MODULE_ONLY"); then
     log_error "Unknown module: $BOOTSTRAP_MODULE_ONLY"
@@ -661,6 +714,8 @@ if [ -z "${BOOTSTRAP_DRY_RUN:-}" ]; then
       "${RESULTS_FAILED[@]}"
     exit 1
   fi
+
+  bootstrap_handle_pending_breadcrumbs
 
   summary_print \
     "$WORKSPACE_PATH" \
