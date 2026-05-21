@@ -34,6 +34,10 @@ _AI_BOOTSTRAP_SHELL_DIR="${HOME}/.config/ai-bootstrap/shell"
 [[ -f "${_AI_BOOTSTRAP_SHELL_DIR}/rc/tailscale.zsh" ]] \
   && source "${_AI_BOOTSTRAP_SHELL_DIR}/rc/tailscale.zsh"
 
+# 4c. OpenCode Go/Zen API key (no-op when Keychain entry absent).
+[[ -f "${_AI_BOOTSTRAP_SHELL_DIR}/rc/opencode-key.zsh" ]] \
+  && source "${_AI_BOOTSTRAP_SHELL_DIR}/rc/opencode-key.zsh"
+
 # 5. compinit with daily cache. Saves 15-50ms on warm shells.
 #    Single-fire via _COMPINIT_DONE sentinel (shared with other barrel chains
 #    on the dev machine — first-source wins, second is no-op).

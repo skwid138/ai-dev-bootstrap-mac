@@ -108,6 +108,7 @@ cp "${BOOTSTRAP_DIR}/dotfiles/env/paths.zsh" "$SHELL_CONFIG_DIR/env/paths.zsh"
 
 cp "${BOOTSTRAP_DIR}/dotfiles/rc/zsh_config.zsh" "$SHELL_CONFIG_DIR/rc/zsh_config.zsh"
 cp "${BOOTSTRAP_DIR}/dotfiles/rc/aliases.zsh" "$SHELL_CONFIG_DIR/rc/aliases.zsh"
+cp "${BOOTSTRAP_DIR}/dotfiles/rc/opencode-key.zsh" "$SHELL_CONFIG_DIR/rc/opencode-key.zsh"
 
 # Bake brew prefix into installed paths.zsh. sed -i.bak for portability
 # across BSD (macOS) and GNU sed; remove the .bak afterward.
