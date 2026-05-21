@@ -185,6 +185,22 @@ Zsh runs three different startup files depending on how a terminal or script is 
 
 Each block is guarded so it does not load twice, and `PATH` updates are safe to repeat. Re‑running the installer or having extra shell files around should not break anything.
 
+### Manual API Key Setup (OpenCode Go/Zen)
+
+If you chose OpenCode Go/Zen and need to add or rotate your API key:
+
+1. Visit https://opencode.ai and sign in
+2. Navigate to the **Zen** tab
+3. Click **Copy Key**
+4. Run in Terminal:
+
+```bash
+security delete-generic-password -s 'opencode-api-key' -a "$USER" 2>/dev/null
+security add-generic-password -s 'opencode-api-key' -a "$USER" -w "$(pbpaste)"
+```
+
+The key will be loaded automatically on your next terminal session or Just Vibes launch. Using `pbpaste` keeps the key out of your shell history.
+
 ## 🛠 Troubleshooting
 
 **A CLI tool stopped working after `brew upgrade` (or after a long time without re‑running bootstrap).** Run:
