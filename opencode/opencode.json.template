@@ -16,6 +16,7 @@
     "bash": {
       "*": "ask",
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh *": "allow",
+      "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/permission-audit.sh *": "allow",
       "bats *": "allow",
       "cat *": "allow",
       "diff *": "allow",
