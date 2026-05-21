@@ -21,7 +21,27 @@ vi.mock(
   { virtual: true },
 );
 
-import plugin from "./home-prompt";
+vi.mock(
+  "@opentui/solid/jsx-dev-runtime",
+  () => {
+    const render = (type: unknown, props: Record<string, unknown>) => {
+      if (typeof type === "function") {
+        return (type as (props: Record<string, unknown>) => unknown)(props);
+      }
+
+      return { type, props };
+    };
+
+    return {
+      Fragment: (props: { children: unknown }) => props.children,
+      jsxDEV: render,
+    };
+  },
+  // @ts-expect-error Vitest supports virtual mocks at runtime, but v3 types do not expose this option.
+  { virtual: true },
+);
+
+import plugin from "../../plugins/home-prompt";
 
 (globalThis as typeof globalThis & { React: unknown }).React = {
   createElement(
