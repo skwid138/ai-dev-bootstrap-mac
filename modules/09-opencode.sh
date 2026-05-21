@@ -13,8 +13,8 @@
 #          GitHub Copilot non-interactively via
 #          `opencode auth login --provider github-copilot --method oauth`.
 #        - Otherwise show a 5-option menu (Anthropic / OpenAI / Gemini /
-#          OpenCode Zen / Skip) with a dated pricing snapshot, then drive
-#          the matching `opencode auth login --provider <X>` flow.
+#          OpenCode Go / Zen / Skip) with a dated pricing snapshot, then drive
+#          the matching provider setup flow.
 #        - Skip writes opencode.json without a model field, so opencode
 #          falls back to its built-in default. The post-install message
 #          tells the user how to fix it later.
@@ -27,7 +27,7 @@
 #   OPENCODE_TEST_MENU_SELECTION=<id>    — preselected menu choice when
 #                                           the user would normally pick
 #                                           one of: copilot/anthropic/
-#                                           openai/gemini/zen/skip
+#                                           openai/gemini/opencode/skip
 #   OPENCODE_TEST_USE_COPILOT=yes|no     — preanswered "use Copilot?"
 #                                           question when gh is authed
 
@@ -105,6 +105,7 @@ echo ""
 opencode_provider_id=""
 opencode_model_id=""
 opencode_login_invoked=false
+selection_id=""
 
 if opencode_has_github_auth; then
   log_info "You're already signed in to GitHub. We can use your free GitHub"
@@ -151,14 +152,14 @@ if [ -z "$opencode_provider_id" ]; then
       "Anthropic Claude — Pro/Max sub from claude.ai (~\$20/mo) or API key (~\$3-15/M tokens)" \
       "OpenAI — ChatGPT Plus/Pro from openai.com (~\$20/mo) or API key (~\$2.50-15/M tokens)" \
       "Google Gemini — API key, free tier ~250 req/day on Flash" \
-      "OpenCode Zen — pay-as-you-go (~\$3-15/M tokens, requires credit card)" \
+      "OpenCode Go / Zen — pay-as-you-go (\$10/mo or ~\$3-15/M tokens, requires credit card)" \
       "Skip — set this up later")
 
     case "$menu_label" in
       *Anthropic*) selection_id="anthropic" ;;
       *OpenAI*) selection_id="openai" ;;
       *Gemini*) selection_id="gemini" ;;
-      *Zen*) selection_id="zen" ;;
+      *"OpenCode Go"*) selection_id="opencode" ;;
       *) selection_id="skip" ;;
     esac
   fi
@@ -168,14 +169,65 @@ if [ -z "$opencode_provider_id" ]; then
   opencode_model_id=$(echo "$decide_out" | sed -n '2p')
 fi
 
+# OpenCode Go/Zen uses a shared API key loaded at shell startup from Keychain.
+# It does not use `opencode auth login`.
+if [ "$selection_id" = "opencode" ]; then
+  log_info "Opening opencode.ai so you can sign in and copy your API key..."
+  log_info "Once logged in, go to the Zen tab and click the blue 'Copy Key' button."
+  if [ "${OPENCODE_BOOTSTRAP_TEST:-0}" != "1" ]; then
+    open "https://opencode.ai"
+  fi
+
+  api_key="" empty_count=0
+  while true; do
+    if [ "${OPENCODE_BOOTSTRAP_TEST:-0}" = "1" ]; then
+      api_key="${OPENCODE_TEST_API_KEY:-$(printf '%0.s0' {1..64})}"
+      break
+    fi
+    api_key=$(gum input --placeholder "Paste your OpenCode API key here" --password)
+    if [ -z "$api_key" ]; then
+      empty_count=$((empty_count + 1))
+      if [ "$empty_count" -ge 2 ]; then
+        log_warn "Skipping API key setup. You can add it later with:"
+        log_warn "  security add-generic-password -s 'opencode-api-key' -a \"\$USER\" -w 'your-key'"
+        break
+      fi
+      log_warn "API key cannot be empty. Press Enter again to skip."
+      continue
+    fi
+    if [ "${#api_key}" -lt 32 ]; then
+      log_warn "That doesn't look like a valid API key (too short). Please try again."
+      continue
+    fi
+    break
+  done
+
+  if [ -n "$api_key" ]; then
+    # Store in macOS Keychain (overwrites if exists).
+    security delete-generic-password -s 'opencode-api-key' -a "$USER" 2>/dev/null || true
+    if security add-generic-password -s 'opencode-api-key' -a "$USER" -w "$api_key"; then
+      log_installed "API key stored in Keychain"
+    else
+      log_warn "Could not save API key to Keychain. You may need to add it manually:"
+      log_warn "  security add-generic-password -s 'opencode-api-key' -a \"\$USER\" -w 'your-key'"
+    fi
+  fi
+
+  # Mark login handled regardless of success/skip — prevents fallthrough
+  # to generic auth login (which is also guarded by provider_id != opencode-go).
+  opencode_login_invoked=true
+fi
+
 # Drive the auth login if a real provider was chosen.
-if [ -n "$opencode_provider_id" ] && [ "$opencode_provider_id" != "none" ]; then
+if [ -n "$opencode_provider_id" ] && [ "$opencode_provider_id" != "none" ] && [ "$opencode_provider_id" != "opencode-go" ]; then
   log_info "Logging in to $opencode_provider_id (this may open your browser)..."
 
   if [ "$opencode_provider_id" = "github-copilot" ]; then
     if opencode auth login --provider github-copilot --method oauth; then
       log_installed "GitHub Copilot authenticated"
       opencode_login_invoked=true
+      # Clean up stale OpenCode API key if switching away from Go/Zen.
+      security delete-generic-password -s 'opencode-api-key' -a "$USER" 2>/dev/null || true
     else
       log_warn "GitHub Copilot login didn't complete — you can retry by"
       log_warn "running 'opencode auth login --provider github-copilot' later."
@@ -184,6 +236,8 @@ if [ -n "$opencode_provider_id" ] && [ "$opencode_provider_id" != "none" ]; then
     if opencode auth login --provider "$opencode_provider_id"; then
       log_installed "$opencode_provider_id authenticated"
       opencode_login_invoked=true
+      # Clean up stale OpenCode API key if switching away from Go/Zen.
+      security delete-generic-password -s 'opencode-api-key' -a "$USER" 2>/dev/null || true
     else
       log_warn "$opencode_provider_id login didn't complete — you can retry"
       log_warn "by running '/connect' inside OpenCode on first launch."
