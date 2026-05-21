@@ -301,6 +301,39 @@ assert_tree_not_contains() {
   ! grep -R -qF "$needle" "$dir"
 }
 
+@test "pkg install resolves highest stable version before reporting download failure" {
+  rm -rf "$TAILSCALE_APP_PATH"
+  write_mock curl <<'EOF'
+#!/usr/bin/env bash
+printf 'curl:%s\n' "$*" >>"$MOCK_LOG"
+
+if [ "$1" = "-fsSL" ] && [ "$2" = "https://pkgs.tailscale.com/stable/" ]; then
+  cat <<'HTML'
+<a href="Tailscale-1.82.5-macos.pkg">Tailscale-1.82.5-macos.pkg</a>
+<a href="Tailscale-1.84.1-macos.pkg">Tailscale-1.84.1-macos.pkg</a>
+<a href="Tailscale-1.84.2-macos.pkg">Tailscale-1.84.2-macos.pkg</a>
+<a href="Tailscale-latest-macos.pkg">Tailscale-latest-macos.pkg</a>
+HTML
+  exit 0
+fi
+
+if [ "$1" = "-fsSLo" ]; then
+  printf 'download-url:%s\n' "$3" >>"$MOCK_LOG"
+  exit 23
+fi
+
+exit 99
+EOF
+
+  run_module
+
+  [ "$status" -eq 1 ]
+  grep -qF 'curl:-fsSL https://pkgs.tailscale.com/stable/' "$MOCK_LOG"
+  grep -qF 'download-url:https://pkgs.tailscale.com/stable/Tailscale-1.84.2-macos.pkg' "$MOCK_LOG"
+  ! grep -q -- '-latest-macos.pkg' "$MOCK_LOG"
+  [[ "$output" == *"1.84.2"* ]]
+}
+
 @test "re-run skips pkg install when Tailscale.app exists" {
   mkdir -p "$TAILSCALE_APP_PATH"
   write_tailscale_state

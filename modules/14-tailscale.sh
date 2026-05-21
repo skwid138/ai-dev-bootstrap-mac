@@ -8,7 +8,9 @@ TAILSCALE_STATE_FILE="$TAILSCALE_STATE_DIR/tailscale.sh"
 TAILSCALE_APP_PATH="${TAILSCALE_APP_PATH:-/Applications/Tailscale.app}"
 TAILSCALE_APP_BIN="${TAILSCALE_APP_BIN:-/Applications/Tailscale.app/Contents/MacOS/tailscale}"
 TAILSCALE_WRAPPER_PATH="${TAILSCALE_WRAPPER_PATH:-/usr/local/bin/tailscale}"
-TAILSCALE_PKG_URL="https://pkgs.tailscale.com/stable/Tailscale-latest-macos.pkg"
+TAILSCALE_PKG_INDEX_URL="https://pkgs.tailscale.com/stable/"
+TAILSCALE_PKG_URL=""
+TAILSCALE_PKG_VERSION=""
 TAILSCALE_TEAM_ID="W5364U7YZB"
 TAILSCALE_BIN=""
 
@@ -110,6 +112,45 @@ tailscale_preflight() {
   esac
 }
 
+tailscale_sort_versions() {
+  if sort -V </dev/null >/dev/null 2>&1; then
+    sort -V
+  else
+    sort -t. -k1,1n -k2,2n -k3,3n
+  fi
+}
+
+tailscale_select_pkg_version() {
+  local index versions version
+
+  TAILSCALE_PKG_VERSION=""
+  TAILSCALE_PKG_URL=""
+
+  if ! index=$(curl -fsSL "$TAILSCALE_PKG_INDEX_URL"); then
+    tailscale_log_error "Tailscale versions could not be checked. Check your internet connection, then try again."
+    return 1
+  fi
+
+  versions=$(printf "%s\n" "$index" \
+    | grep -Eo 'Tailscale-[0-9]+[.][0-9]+[.][0-9]+-macos[.]pkg' \
+    | sed -E 's/^Tailscale-//; s/-macos[.]pkg$//' \
+    | sort -u)
+
+  if [ -z "$versions" ]; then
+    tailscale_log_error "Tailscale versions could not be found. Try Remote Access again in a few minutes."
+    return 1
+  fi
+
+  version=$(printf "%s\n" "$versions" | tailscale_sort_versions | tail -n 1)
+  if [ -z "$version" ]; then
+    tailscale_log_error "Tailscale versions could not be sorted. Try Remote Access again in a few minutes."
+    return 1
+  fi
+
+  TAILSCALE_PKG_VERSION="$version"
+  TAILSCALE_PKG_URL="${TAILSCALE_PKG_INDEX_URL}Tailscale-${version}-macos.pkg"
+}
+
 tailscale_install_pkg() {
   if [ -d "$TAILSCALE_APP_PATH" ]; then
     log_skip "Tailscale is already installed"
@@ -117,35 +158,37 @@ tailscale_install_pkg() {
   fi
 
   local tmpfile signature
+  tailscale_select_pkg_version || return 1
+
   tmpfile=$(mktemp "${TMPDIR:-/tmp}/tailscale.XXXXXX.pkg") || return 1
 
   if ! curl -fsSLo "$tmpfile" "$TAILSCALE_PKG_URL"; then
     rm -f "$tmpfile"
-    tailscale_log_error "Tailscale could not be downloaded. Check your internet connection, then try again."
+    tailscale_log_error "Tailscale $TAILSCALE_PKG_VERSION could not be downloaded. Check your internet connection, then try again."
     return 1
   fi
 
   if ! signature=$(pkgutil --check-signature "$tmpfile" 2>&1); then
     rm -f "$tmpfile"
-    tailscale_log_error "The Tailscale installer could not be verified, so setup stopped before installing it."
+    tailscale_log_error "The Tailscale $TAILSCALE_PKG_VERSION installer could not be verified, so setup stopped before installing it."
     return 1
   fi
 
   if [[ "$signature" != *"$TAILSCALE_TEAM_ID"* ]] || [[ "$signature" != *"Tailscale Inc"* ]]; then
     rm -f "$tmpfile"
-    tailscale_log_error "The Tailscale installer did not look like the official Tailscale installer, so setup stopped."
+    tailscale_log_error "The Tailscale $TAILSCALE_PKG_VERSION installer did not look like the official Tailscale installer, so setup stopped."
     return 1
   fi
 
   if ! sudo installer -pkg "$tmpfile" -target /; then
     rm -f "$tmpfile"
-    tailscale_log_error "Tailscale did not finish installing. Try Remote Access again after the installer window closes."
+    tailscale_log_error "Tailscale $TAILSCALE_PKG_VERSION did not finish installing. Try Remote Access again after the installer window closes."
     return 1
   fi
 
   rm -f "$tmpfile"
   open "$TAILSCALE_APP_PATH" >/dev/null 2>&1 || true
-  log_installed "Tailscale installed"
+  log_installed "Tailscale $TAILSCALE_PKG_VERSION installed"
 }
 
 tailscale_resolve_runtime_cli() {
