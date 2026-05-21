@@ -242,6 +242,7 @@ launch_command="$opencode_bin"
 if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
   if command -v tailscale &>/dev/null \
     && security find-generic-password -s opencode-server-password -a "$USER" -w &>/dev/null; then
+    # NOTE: This quoting assumes workspace paths contain no spaces (enforced by bootstrap workspace validation).
     launch_command="'\"$workspace/scripts/personal/opensession.sh\" || \"$opencode_bin\"'"
   fi
 fi
