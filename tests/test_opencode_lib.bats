@@ -374,14 +374,14 @@ _decide() {
   [ "$MODEL" = "google/gemini-2.5-flash" ]
 }
 
-@test "decide: zen -> opencode-zen / opencode/claude-sonnet-4.6" {
-  _decide yes zen
-  [ "$PROVIDER" = "opencode-zen" ]
-  [ "$MODEL" = "opencode/claude-sonnet-4.6" ]
+@test "decide: opencode -> opencode-go / opencode-go/deepseek-v4-pro" {
+  _decide yes opencode
+  [ "$PROVIDER" = "opencode-go" ]
+  [ "$MODEL" = "opencode-go/deepseek-v4-pro" ]
 
-  _decide no zen
-  [ "$PROVIDER" = "opencode-zen" ]
-  [ "$MODEL" = "opencode/claude-sonnet-4.6" ]
+  _decide no opencode
+  [ "$PROVIDER" = "opencode-go" ]
+  [ "$MODEL" = "opencode-go/deepseek-v4-pro" ]
 }
 
 @test "decide: skip -> none with empty model (so opencode falls back)" {

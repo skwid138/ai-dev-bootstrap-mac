@@ -112,6 +112,7 @@ run_module_with_all_selected() {
 
   [ -f "$HOME/.config/ai-bootstrap/shell/rc/zsh_config.zsh" ]
   [ -f "$HOME/.config/ai-bootstrap/shell/rc/aliases.zsh" ]
+  [ -f "$HOME/.config/ai-bootstrap/shell/rc/opencode-key.zsh" ]
 }
 
 @test "module copies rc/zsh_plugins.zsh ONLY when zplug is selected" {

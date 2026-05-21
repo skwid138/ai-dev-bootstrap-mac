@@ -37,6 +37,7 @@ setup() {
   cp "$BOOTSTRAP_DIR/dotfiles/env/paths.zsh" "$install_dir/env/paths.zsh"
   cp "$BOOTSTRAP_DIR/dotfiles/rc/zsh_config.zsh" "$install_dir/rc/zsh_config.zsh"
   cp "$BOOTSTRAP_DIR/dotfiles/rc/aliases.zsh" "$install_dir/rc/aliases.zsh"
+  cp "$BOOTSTRAP_DIR/dotfiles/rc/opencode-key.zsh" "$install_dir/rc/opencode-key.zsh"
 
   # Substitute __BREW_PREFIX__ in paths.zsh — same operation the install
   # module performs. macOS-portable sed (-i with empty backup arg).
@@ -218,16 +219,64 @@ teardown() {
   [[ "$output" == *"ls -la"* ]]
 }
 
-@test "init_rc.zsh: contains optional tailscale.zsh source after aliases and before compinit" {
+@test "init_rc.zsh: sources optional tailscale and opencode key files after aliases and before compinit" {
   aliases_line="$(grep -nF 'rc/aliases.zsh' "$BOOTSTRAP_DIR/dotfiles/init_rc.zsh" | cut -d: -f1 | tail -n 1)"
   tailscale_line="$(grep -nF 'rc/tailscale.zsh' "$BOOTSTRAP_DIR/dotfiles/init_rc.zsh" | cut -d: -f1 | tail -n 1)"
+  opencode_key_line="$(grep -nF 'rc/opencode-key.zsh' "$BOOTSTRAP_DIR/dotfiles/init_rc.zsh" | cut -d: -f1 | tail -n 1)"
   compinit_line="$(grep -nF 'compinit with daily cache' "$BOOTSTRAP_DIR/dotfiles/init_rc.zsh" | cut -d: -f1)"
 
   [ -n "$aliases_line" ]
   [ -n "$tailscale_line" ]
+  [ -n "$opencode_key_line" ]
   [ -n "$compinit_line" ]
   [ "$aliases_line" -lt "$tailscale_line" ]
   [ "$tailscale_line" -lt "$compinit_line" ]
+  [ "$tailscale_line" -lt "$opencode_key_line" ]
+  [ "$opencode_key_line" -lt "$compinit_line" ]
+}
+
+@test "init_rc.zsh: exports OPENCODE_API_KEY when Keychain entry exists" {
+  fake_bin="$SANDBOX/fake_bin"
+  mkdir -p "$fake_bin"
+  cat >"$fake_bin/security" <<'EOF'
+#!/bin/sh
+if [ "$1" = "find-generic-password" ]; then
+  printf '%s\n' 'key-from-keychain'
+  exit 0
+fi
+exit 1
+EOF
+  chmod +x "$fake_bin/security"
+
+  run zsh -c "
+    HOME='$HOME'
+    PATH='$fake_bin:/usr/bin:/bin'
+    unset OPENCODE_API_KEY
+    source '$HOME/.config/ai-bootstrap/shell/init_rc.zsh'
+    print -r -- \"OPENCODE_API_KEY=\$OPENCODE_API_KEY\"
+  "
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"OPENCODE_API_KEY=key-from-keychain"* ]]
+}
+
+@test "init_rc.zsh: leaves OPENCODE_API_KEY unset when Keychain entry is absent" {
+  fake_bin="$SANDBOX/fake_bin"
+  mkdir -p "$fake_bin"
+  cat >"$fake_bin/security" <<'EOF'
+#!/bin/sh
+exit 44
+EOF
+  chmod +x "$fake_bin/security"
+
+  run zsh -c "
+    HOME='$HOME'
+    PATH='$fake_bin:/usr/bin:/bin'
+    unset OPENCODE_API_KEY
+    source '$HOME/.config/ai-bootstrap/shell/init_rc.zsh'
+    print -r -- \"OPENCODE_API_KEY=\${OPENCODE_API_KEY-unset}\"
+  "
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"OPENCODE_API_KEY=unset"* ]]
 }
 
 @test "init_rc.zsh: sentinel-guarded against double-source" {

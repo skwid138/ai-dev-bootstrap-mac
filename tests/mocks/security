@@ -1,0 +1,23 @@
+#!/bin/bash
+# Mock macOS `security` for tests. Never touches the real Keychain.
+
+log_file="${MOCK_LOG:-/dev/null}"
+echo "security $*" >>"$log_file"
+
+case "$1" in
+  find-generic-password)
+    if [ -n "${MOCK_SECURITY_FIND_VALUE:-}" ]; then
+      printf '%s\n' "$MOCK_SECURITY_FIND_VALUE"
+      exit 0
+    fi
+    exit 44
+    ;;
+  delete-generic-password)
+    exit 0
+    ;;
+  add-generic-password)
+    exit "${MOCK_SECURITY_ADD_STATUS:-0}"
+    ;;
+esac
+
+exit 0

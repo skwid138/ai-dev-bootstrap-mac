@@ -107,6 +107,7 @@ run_module() {
   # Anthropic login (NOT copilot) was driven.
   grep -q "opencode auth login --provider anthropic" "$MOCK_LOG"
   run ! grep -q "opencode auth login --provider github-copilot" "$MOCK_LOG"
+  grep -q "security delete-generic-password -s opencode-api-key -a" "$MOCK_LOG"
 
   run jq -r '.model' "$HOME/.config/opencode/opencode.json"
   [ "$output" = "anthropic/claude-sonnet-4.5" ]
@@ -139,17 +140,84 @@ run_module() {
   [ "$output" = "google/gemini-2.5-flash" ]
 }
 
-# ── Path 5: gh not authed -> menu -> zen ─────────────────────────────────────
-@test "module: gh not authed + menu=zen -> opencode-zen login + sonnet-4.6 model" {
-  export OPENCODE_TEST_MENU_SELECTION=zen
+# ── Path 5: gh not authed -> menu -> OpenCode Go/Zen ─────────────────────────
+@test "module: gh not authed + menu=opencode -> stores API key + skips auth login" {
+  export OPENCODE_TEST_MENU_SELECTION=opencode
+  export OPENCODE_TEST_API_KEY="test-opencode-api-key-0000000000000000000000000000"
 
   run_module
   [ "$status" -eq 0 ]
 
-  grep -q "opencode auth login --provider opencode-zen" "$MOCK_LOG"
+  grep -q "security delete-generic-password -s opencode-api-key -a" "$MOCK_LOG"
+  grep -q "security add-generic-password -s opencode-api-key -a" "$MOCK_LOG"
+  grep -q -- "-w $OPENCODE_TEST_API_KEY" "$MOCK_LOG"
+  run ! grep -q "opencode auth login --provider opencode-go" "$MOCK_LOG"
 
   run jq -r '.model' "$HOME/.config/opencode/opencode.json"
-  [ "$output" = "opencode/claude-sonnet-4.6" ]
+  [ "$output" = "opencode-go/deepseek-v4-pro" ]
+}
+
+@test "module: OpenCode Go/Zen reports Keychain write failure clearly" {
+  export OPENCODE_TEST_MENU_SELECTION=opencode
+  export OPENCODE_TEST_API_KEY="test-opencode-api-key-0000000000000000000000000000"
+  export MOCK_SECURITY_ADD_STATUS=1
+
+  run_module
+  [ "$status" -eq 0 ]
+
+  [[ "$output" == *"Could not save API key to Keychain"* ]]
+  [[ "$output" != *"API key stored in Keychain"* ]]
+  grep -q "security add-generic-password -s opencode-api-key -a" "$MOCK_LOG"
+  run ! grep -q "opencode auth login --provider opencode-go" "$MOCK_LOG"
+}
+
+@test "module: OpenCode Go/Zen allows two-empty-input skip without auth fallthrough" {
+  unset OPENCODE_BOOTSTRAP_TEST
+
+  local_mocks="$SANDBOX/local-mocks"
+  mkdir -p "$local_mocks"
+  cat >"$local_mocks/gum" <<'EOF'
+#!/bin/bash
+echo "gum $*" >>"${MOCK_LOG:-/dev/null}"
+case "$1" in
+  choose)
+    printf '%s\n' 'OpenCode Go / Zen — pay-as-you-go ($10/mo or ~$3-15/M tokens, requires credit card)'
+    ;;
+  input)
+    printf '\n'
+    ;;
+  style)
+    last=""
+    for arg in "$@"; do last="$arg"; done
+    printf '%s\n' "$last"
+    ;;
+  spin)
+    while [ "$#" -gt 0 ] && [ "$1" != "--" ]; do shift; done
+    [ "$1" = "--" ] && shift
+    "$@"
+    ;;
+  *) ;;
+esac
+EOF
+  cat >"$local_mocks/open" <<'EOF'
+#!/bin/bash
+echo "open $*" >>"${MOCK_LOG:-/dev/null}"
+exit 0
+EOF
+  chmod +x "$local_mocks/gum" "$local_mocks/open"
+  export PATH="$local_mocks:$PATH"
+
+  run_module
+  [ "$status" -eq 0 ]
+  module_output="$output"
+
+  grep -q "open https://opencode.ai" "$MOCK_LOG"
+  [ "$(grep -c "gum input" "$MOCK_LOG")" -eq 2 ]
+  run ! grep -q "security add-generic-password" "$MOCK_LOG"
+  run ! grep -q "opencode auth login" "$MOCK_LOG"
+  [[ "$module_output" == *"Skipping API key setup"* ]]
+  [[ "$module_output" == *"First time? Try '/help-me'"* ]]
+  [[ "$module_output" != *"Provider login didn't finish"* ]]
 }
 
 # ── Path 6: skip path -> no auth login + no model field in config ────────────
