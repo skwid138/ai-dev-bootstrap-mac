@@ -156,3 +156,18 @@ jobs:
 
       - name: Check formatting (dotfiles/, dialect auto-detected from .zsh extension)
         run: shfmt -d -i 2 -ci -bn dotfiles/
+
+  plugin-tests:
+    name: Plugin Tests (vitest)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install dependencies
+        working-directory: opencode/plugins-dev
+        run: npm ci
+      - name: Run plugin tests
+        working-directory: opencode/plugins-dev
+        run: npm test
