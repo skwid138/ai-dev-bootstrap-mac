@@ -161,6 +161,45 @@ EOF
   [ ! -f "$HOME/.config/ai-bootstrap/breadcrumbs/tailscale" ]
 }
 
+@test "summary keeps pending tailscale breadcrumb when accepted setup fails" {
+  make_fixture
+  cat >"$FIXTURE/modules/14-tailscale.sh" <<'EOF'
+#!/bin/bash
+echo "tailscale module failed"
+exit 42
+EOF
+  MOCK_LOG="$SANDBOX/gum-fail.log"
+  export MOCK_LOG
+  MOCKS_DIR="$SANDBOX/mocks-fail"
+  mkdir -p "$MOCKS_DIR"
+  cat >"$MOCKS_DIR/gum" <<'EOF'
+#!/usr/bin/env bash
+case "$1" in
+  confirm)
+    printf "confirm:%s\n" "$2" >>"$MOCK_LOG"
+    exit 0
+    ;;
+  style)
+    shift
+    printf "%s\n" "${@: -1}"
+    ;;
+  *) exit 0 ;;
+esac
+EOF
+  chmod +x "$MOCKS_DIR/gum"
+  export PATH="$MOCKS_DIR:$PATH"
+
+  source "$FIXTURE/lib/breadcrumb.sh"
+  breadcrumb_write tailscale
+
+  run "$FIXTURE/bootstrap.sh" --non-interactive
+
+  [ "$status" -eq 42 ]
+  grep -q "confirm:Continue setting up tailscale now?" "$MOCK_LOG"
+  [[ "$output" == *"tailscale module failed"* ]]
+  [ -f "$HOME/.config/ai-bootstrap/breadcrumbs/tailscale" ]
+}
+
 @test "help text documents tailscale as an add-on module example" {
   run "$REPO_ROOT/bootstrap.sh" --help
 

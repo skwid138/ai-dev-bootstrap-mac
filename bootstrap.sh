@@ -115,10 +115,10 @@ bootstrap_handle_pending_breadcrumbs() {
       "${BOOTSTRAP_DIR}/bootstrap.sh" --module "$module_name"
       addon_rc=$?
       set -e
-      breadcrumb_clear "$module_name"
       if [ "$addon_rc" -ne 0 ]; then
         return "$addon_rc"
       fi
+      breadcrumb_clear "$module_name"
     else
       breadcrumb_clear "$module_name"
     fi
