@@ -305,13 +305,13 @@ opencode_login_copilot() {
 #   $1: gh_auth_state   — "yes" if `gh auth status` succeeded, else "no"
 #   $2: menu_selection  — one of:
 #                           "copilot"   (chosen because gh_auth=yes and user agreed)
-#                           "anthropic" "openai" "gemini" "zen" "skip"
+#                           "anthropic" "openai" "gemini" "opencode" "skip"
 #                         These are stable IDs the orchestrator emits after
 #                         translating the human-readable ui_choose label.
 #
 # Stdout (two lines, in order):
 #   1. provider id   ("github-copilot", "anthropic", "openai", "google",
-#                     "opencode-zen", or "none" for skip)
+#                     "opencode-go", or "none" for skip)
 #   2. model id      e.g. "github-copilot/claude-sonnet-4.5", or empty
 #                    string for skip
 #
@@ -344,8 +344,8 @@ opencode_decide_provider_path() {
     gemini)
       printf '%s\n%s\n' "google" "google/gemini-2.5-flash"
       ;;
-    zen)
-      printf '%s\n%s\n' "opencode-zen" "opencode/claude-sonnet-4.6"
+    opencode)
+      printf '%s\n%s\n' "opencode-go" "opencode-go/deepseek-v4-pro"
       ;;
     skip)
       printf '%s\n%s\n' "none" ""
