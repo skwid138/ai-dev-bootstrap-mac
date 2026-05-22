@@ -5,7 +5,8 @@
   "share": "disabled",
   "instructions": [
     "instruction/repo-context.md",
-    "instruction/agent-defaults.md"
+    "instruction/agent-defaults.md",
+    "instruction/update-awareness.md"
   ],
   "plugin": [
     "@tarquinen/opencode-dcp@3.1.11"
@@ -15,6 +16,7 @@
     "write": { "*": "ask" },
     "bash": {
       "*": "ask",
+      "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/bootstrap-update-check.sh *": "allow",
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh *": "allow",
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/permission-audit.sh *": "allow",
       "bats *": "allow",
