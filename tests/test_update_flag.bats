@@ -1,6 +1,6 @@
 #!/usr/bin/env bats
 # Tests for `bootstrap.sh --update` — the fast path that refreshes managed
-# OpenCode assets/scripts/config, shell config, and the Just Vibes launcher
+# OpenCode assets/scripts/config, shell config, and the JustVibes launcher
 # without re-running the full installer.
 
 bats_require_minimum_version 1.5.0
@@ -39,8 +39,33 @@ EOF
   mkdir -p "$MOCK_BREW_PREFIX/bin" "$MOCK_BREW_PREFIX/sbin"
   : >"$MOCK_LOG"
 
-  export JUST_VIBES_DEST_DIR_OVERRIDE="$BATS_TEST_TMPDIR/Applications"
-  mkdir -p "$JUST_VIBES_DEST_DIR_OVERRIDE/Just Vibes.app"
+  export JUSTVIBES_DEST_DIR_OVERRIDE="$BATS_TEST_TMPDIR/Applications"
+  mkdir -p "$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app/Contents"
+  cat >"$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app/Contents/Info.plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>dev.aibootstrap.justvibes</string>
+</dict>
+</plist>
+EOF
+}
+
+seed_legacy_launcher() {
+  local legacy_app="$JUSTVIBES_DEST_DIR_OVERRIDE/Just Vibes.app"
+  mkdir -p "$legacy_app/Contents"
+  cat >"$legacy_app/Contents/Info.plist" <<'EOF'
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>dev.aibootstrap.justvibes</string>
+</dict>
+</plist>
+EOF
 }
 
 write_state() {
@@ -64,7 +89,7 @@ save_current_launcher_checksum() {
 @test "--update refreshes assets, scripts, config, shell config, and state without rebuilding unchanged launcher" {
   write_state "recommended"
   save_current_launcher_checksum
-  echo "keep-me-if-launcher-skipped" >"$JUST_VIBES_DEST_DIR_OVERRIDE/Just Vibes.app/UNCHANGED"
+  echo "keep-me-if-launcher-skipped" >"$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app/UNCHANGED"
   cat >"$HOME/.config/opencode/opencode.json" <<'EOF'
 {"model":"openai/gpt-5.2"}
 EOF
@@ -79,7 +104,7 @@ EOF
   grep -qF "Usage: opencode-deps-check" "$WORKSPACE/scripts/agent/opencode-deps-check.sh"
   [ "$(jq -r '.model' "$HOME/.config/opencode/opencode.json")" = "openai/gpt-5.2" ]
   grep -qF "$MOCK_BREW_PREFIX/bin" "$HOME/.config/ai-bootstrap/shell/env/paths.zsh"
-  [ -f "$JUST_VIBES_DEST_DIR_OVERRIDE/Just Vibes.app/UNCHANGED" ]
+  [ -f "$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app/UNCHANGED" ]
   grep -qF "export AI_BOOTSTRAP_DIR='$REPO_ROOT'" "$HOME/.config/ai-bootstrap/state.sh"
 }
 
@@ -119,17 +144,41 @@ EOF
 @test "--update rebuilds launcher when checksum mismatches" {
   write_state "essential"
   echo "old-checksum" >"$HOME/.config/ai-bootstrap/launcher-checksum"
-  mkdir -p "$JUST_VIBES_DEST_DIR_OVERRIDE/Just Vibes.app"
-  echo "stale" >"$JUST_VIBES_DEST_DIR_OVERRIDE/Just Vibes.app/STALE"
+  mkdir -p "$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app"
+  echo "stale" >"$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app/STALE"
 
   run "$REPO_ROOT/bootstrap.sh" --update
 
   [ "$status" -eq 0 ]
-  [ -f "$JUST_VIBES_DEST_DIR_OVERRIDE/Just Vibes.app/Contents/Info.plist" ]
-  [ ! -f "$JUST_VIBES_DEST_DIR_OVERRIDE/Just Vibes.app/STALE" ]
+  [ -f "$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app/Contents/Info.plist" ]
+  [ ! -f "$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app/STALE" ]
   # shellcheck source=../lib/launcher.sh
   source "$REPO_ROOT/lib/launcher.sh"
   [ "$(cat "$HOME/.config/ai-bootstrap/launcher-checksum")" = "$(launcher_checksum_compute)" ]
+}
+
+@test "--update removes legacy Just Vibes.app after rebuilding launcher" {
+  write_state "essential"
+  echo "old-checksum" >"$HOME/.config/ai-bootstrap/launcher-checksum"
+  seed_legacy_launcher
+
+  run "$REPO_ROOT/bootstrap.sh" --update
+
+  [ "$status" -eq 0 ]
+  [ -d "$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app" ]
+  [ ! -d "$JUSTVIBES_DEST_DIR_OVERRIDE/Just Vibes.app" ]
+}
+
+@test "--update removes legacy Just Vibes.app even when launcher rebuild is skipped" {
+  write_state "recommended"
+  save_current_launcher_checksum
+  seed_legacy_launcher
+
+  run "$REPO_ROOT/bootstrap.sh" --update
+
+  [ "$status" -eq 0 ]
+  [ -d "$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app" ]
+  [ ! -d "$JUSTVIBES_DEST_DIR_OVERRIDE/Just Vibes.app" ]
 }
 
 @test "--update writes AI_BOOTSTRAP_DIR to state" {

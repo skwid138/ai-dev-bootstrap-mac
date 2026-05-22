@@ -18,14 +18,14 @@ setup() {
     "/Users/test/code" \
     "recommended" \
     "/Users/test/.config/ai-bootstrap/Brewfile" \
-    "/Applications/Just Vibes.app"
+    "/Applications/JustVibes.app"
 
   [ "$status" -eq 0 ]
   [[ "$output" == *"Installation Summary"* ]]
   [[ "$output" == *"Workspace: /Users/test/code"* ]]
   [[ "$output" == *"Tier:      recommended"* ]]
   [[ "$output" == *"Brewfile:  /Users/test/.config/ai-bootstrap/Brewfile"* ]]
-  [[ "$output" == *"Launcher:  /Applications/Just Vibes.app"* ]]
+  [[ "$output" == *"Launcher:  /Applications/JustVibes.app"* ]]
   [[ "$output" == *"Next steps:"* ]]
   [[ "$output" == *"Try running: opencode"* ]]
 }

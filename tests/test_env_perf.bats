@@ -2,7 +2,7 @@
 # Performance budget for env-tier (init_env.zsh).
 #
 # The env tier runs in EVERY shell zsh starts — login, non-login, scripts,
-# subshells. Tool launchers (Just Vibes, opencode, GUI integrations) spawn
+# subshells. Tool launchers (JustVibes, opencode, GUI integrations) spawn
 # many short-lived shells per second; a 50ms cost per spawn is a multi-second
 # UX regression.
 #

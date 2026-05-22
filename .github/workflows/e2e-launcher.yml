@@ -192,7 +192,7 @@ jobs:
           test "$(grep -c '^# ai-bootstrap$' "$HOME/.zprofile")" -eq 1
           test "$(grep -c '^# ai-bootstrap$' "$HOME/.zshrc")" -eq 1
 
-      - name: Rebuild Just Vibes.app (launcher-only)
+      - name: Rebuild JustVibes.app (launcher-only)
         run: |
           # --launcher-only does NOT install Ghostty; it just produces the
           # .app bundle from launcher/launch.sh. Used here to inspect the
@@ -213,10 +213,10 @@ jobs:
           # On macos-latest /Applications is writable so the bundle lands
           # there; on locked-down Macs it falls back to ~/Applications.
           # Try /Applications first then ~/Applications.
-          app="/Applications/Just Vibes.app"
-          test -d "$app" || app="$HOME/Applications/Just Vibes.app"
+          app="/Applications/JustVibes.app"
+          test -d "$app" || app="$HOME/Applications/JustVibes.app"
           test -d "$app" || {
-            echo "FAIL: Just Vibes.app not found in /Applications or ~/Applications" >&2
+            echo "FAIL: JustVibes.app not found in /Applications or ~/Applications" >&2
             exit 1
           }
 
@@ -255,7 +255,7 @@ jobs:
 
           # Branch F bundle identity. CFBundleIdentifier must be distinct
           # from Ghostty's `com.mitchellh.ghostty` so LaunchServices treats
-          # Just Vibes as its own app (separate Dock tile, separate TCC
+          # JustVibes as its own app (separate Dock tile, separate TCC
           # entry, separate Cmd-Tab card). Both icon keys must point at
           # JustVibes (modern macOS may prefer CFBundleIconName).
           plist="$app/Contents/Info.plist"
@@ -266,8 +266,8 @@ jobs:
             exit 1
           fi
           got_name=$(/usr/libexec/PlistBuddy -c "Print :CFBundleName" "$plist")
-          if [ "$got_name" != "Just Vibes" ]; then
-            echo "FAIL: CFBundleName=$got_name (expected 'Just Vibes')" >&2
+          if [ "$got_name" != "JustVibes" ]; then
+            echo "FAIL: CFBundleName=$got_name (expected 'JustVibes')" >&2
             exit 1
           fi
           got_iconfile=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIconFile" "$plist")
@@ -277,7 +277,7 @@ jobs:
             exit 1
           fi
 
-          # Bundle must be ad-hoc-signed with the Just Vibes identifier
+          # Bundle must be ad-hoc-signed with the JustVibes identifier
           # post-plist-edit. Without re-signing, macOS Gatekeeper refuses
           # to launch.
           if ! codesign -dv "$app" 2>&1 | grep -q "Identifier=$want_id"; then
@@ -320,11 +320,11 @@ jobs:
             exit 1
           }
 
-          # Phase 6.5 / rev-8: --title=Just Vibes identifies the spawned
+          # Phase 6.5 / rev-8: --title=JustVibes identifies the spawned
           # window as launcher-originated. Tags the window in the title bar
-          # and reinforces the "Just Vibes is its own thing" UX.
-          grep -qF -- '--title=Just Vibes' "$helper" || {
-            echo "FAIL: helper missing '--title=Just Vibes' (Phase 6.5 regression)" >&2
+          # and reinforces the "JustVibes is its own thing" UX.
+          grep -qF -- '--title=JustVibes' "$helper" || {
+            echo "FAIL: helper missing '--title=JustVibes' (Phase 6.5 regression)" >&2
             exit 1
           }
 
@@ -376,7 +376,7 @@ jobs:
           fi
 
           # Branch F.1 / §8.7: the `on reopen` Cmd-Tab focus handler
-          # must be present. Without it, Cmd-Tabbing to "Just Vibes"
+          # must be present. Without it, Cmd-Tabbing to "JustVibes"
           # while the applet is already running does nothing visible
           # (the applet has no UI window) — the cosmetic gap §8.7 fixes.
           if ! echo "$stripped" | grep -qE '^[[:space:]]*on[[:space:]]+reopen[[:space:]]*$'; then

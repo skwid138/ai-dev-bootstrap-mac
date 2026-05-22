@@ -1,8 +1,8 @@
 #!/usr/bin/env bats
-# AppleScript-host tests for the Just Vibes launcher (Branch F.1, §8.7).
+# AppleScript-host tests for the JustVibes launcher (Branch F.1, §8.7).
 #
 # These tests cover the `on reopen` focus handler added in Branch F.1.
-# The handler's job is: when the user Cmd-Tabs to "Just Vibes" while the
+# The handler's job is: when the user Cmd-Tabs to "JustVibes" while the
 # applet is already running, bring the spawned Ghostty window forward
 # instead of doing nothing visible.
 #
@@ -67,7 +67,7 @@ _stripped() {
 
 @test "launch.applescript: declares an on reopen handler" {
   # The whole point of Branch F.1 (§8.7). Without `on reopen`,
-  # Cmd-Tabbing to Just Vibes while it's running does nothing visible.
+  # Cmd-Tabbing to JustVibes while it's running does nothing visible.
   _stripped | grep -qE '^[[:space:]]*on[[:space:]]+reopen[[:space:]]*$'
 }
 
@@ -142,7 +142,7 @@ _stripped() {
 }
 
 @test "launch.applescript: on quit cleans up tracked Ghostty PID best-effort before continuing quit" {
-  # Branch F.2: quitting Just Vibes should also ask the tracked Ghostty
+  # Branch F.2: quitting JustVibes should also ask the tracked Ghostty
   # process to terminate and remove the PID file. This must remain
   # best-effort (try-wrapped) and must still end with `continue quit` so
   # cleanup failures never strand the AppleScript applet.
@@ -179,10 +179,10 @@ _stripped() {
   # (launch-helper.sh) must agree on the path. If a refactor moves
   # one without the other, the focus path silently never finds a PID
   # and we always fall back to relaunch. Assert both reference the
-  # same `${TMPDIR:-/tmp}/just-vibes/ghostty.pid` shape.
-  _stripped | grep -qE '\$\{TMPDIR:-/tmp\}/just-vibes/ghostty\.pid'
-  grep -qE '\$\{TMPDIR:-/tmp\}/just-vibes"' "$BOOTSTRAP_DIR/launcher/launch-helper.sh" \
-    || grep -qE '\$\{TMPDIR:-/tmp\}/just-vibes/ghostty\.pid' "$BOOTSTRAP_DIR/launcher/launch-helper.sh"
+  # same `${TMPDIR:-/tmp}/justvibes/ghostty.pid` shape.
+  _stripped | grep -qE '\$\{TMPDIR:-/tmp\}/justvibes/ghostty\.pid'
+  grep -qE '\$\{TMPDIR:-/tmp\}/justvibes"' "$BOOTSTRAP_DIR/launcher/launch-helper.sh" \
+    || grep -qE '\$\{TMPDIR:-/tmp\}/justvibes/ghostty\.pid' "$BOOTSTRAP_DIR/launcher/launch-helper.sh"
 }
 
 # ── Dynamic: compile + fire reopen against a missing pidfile ───────────────
@@ -238,7 +238,7 @@ EOF
 
   # Override TMPDIR so readGhostyPid looks at our sandbox, not the
   # host's real temp dir. Ensure the pidfile is genuinely absent.
-  pid_dir="$SANDBOX/tmp/just-vibes"
+  pid_dir="$SANDBOX/tmp/justvibes"
   rm -rf "$pid_dir"
 
   # Register the bundle with LaunchServices so `tell application id`
@@ -257,7 +257,7 @@ EOF
   #
   # We use `tell application id "<test_id>" to reopen` rather than the
   # bundle name because the unique id avoids LaunchServices ambiguity
-  # if a real Just Vibes is installed on the test host.
+  # if a real JustVibes is installed on the test host.
   TMPDIR="$SANDBOX/tmp" "$bundle/Contents/MacOS/applet" >/dev/null 2>&1 &
   app_pid=$!
   # Wait for `on run` to complete and write the first helper line.
@@ -320,7 +320,7 @@ EOF
     "$lsregister" -f "$bundle" >/dev/null 2>&1 || true
   fi
 
-  pid_dir="$SANDBOX/tmp/just-vibes"
+  pid_dir="$SANDBOX/tmp/justvibes"
   mkdir -p "$pid_dir"
   term_log="$SANDBOX/term.log"
   /bin/sh -c 'trap "echo term > \"$1\"; exit 0" TERM; while :; do sleep 1; done' sh "$term_log" &

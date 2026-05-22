@@ -88,12 +88,12 @@ setup() {
   # Recommended tier includes ghostty.
   run plan_render "recommended" "/Users/test/code" ""
   [[ "$output" == *"~/.config/ghostty/config"* ]]
-  [[ "$output" == *"Just Vibes.app"* ]]
+  [[ "$output" == *"JustVibes.app"* ]]
 
   # Essential tier does not include ghostty.
   run plan_render "essential" "/Users/test/code" ""
   [[ "$output" != *"~/.config/ghostty/config"* ]]
-  [[ "$output" != *"Just Vibes.app"* ]]
+  [[ "$output" != *"JustVibes.app"* ]]
 }
 
 @test "plan_render: shows opencode assets only when opencode selected" {
