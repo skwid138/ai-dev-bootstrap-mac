@@ -87,6 +87,7 @@ state_read_field() {
 #   $1: state_file  — absolute path
 #   $2: workspace   — absolute, validated workspace path
 #   $3: tier        — selected tier key (essential|recommended|complete|custom)
+#   $4: bootstrap_dir (optional) — repo checkout path for update helpers
 #
 # Returns:
 #   0  on success
@@ -95,6 +96,7 @@ state_write() {
   local state_file="$1"
   local workspace="$2"
   local tier="$3"
+  local bootstrap_dir="${4:-}"
 
   local state_dir
   state_dir=$(dirname "$state_file")
@@ -133,6 +135,14 @@ EOF
     rm -f "$tmp_file"
     echo "state_write: failed to write $tmp_file" >&2
     return 1
+  fi
+
+  if [ -n "$bootstrap_dir" ]; then
+    if ! printf "export AI_BOOTSTRAP_DIR='%s'\n" "$bootstrap_dir" >>"$tmp_file"; then
+      rm -f "$tmp_file"
+      echo "state_write: failed to write AI_BOOTSTRAP_DIR to $tmp_file" >&2
+      return 1
+    fi
   fi
 
   if ! mv "$tmp_file" "$state_file"; then
