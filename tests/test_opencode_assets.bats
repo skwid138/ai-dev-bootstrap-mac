@@ -152,12 +152,12 @@ assert_literal_exists_after() {
 
 # ── Skills ───────────────────────────────────────────────────────────────────
 
-@test "opencode/skill: all 8 curated skills have SKILL.md" {
+@test "opencode/skill: all 9 curated skills have SKILL.md" {
   skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
-  [ "${#skills[@]}" -eq 8 ]
+  [ "${#skills[@]}" -eq 9 ]
 
   deepening_skill="improve-codebase-arch""itecture"
-  for skill in tdd bug-hunter dependency-update permission-audit diagnose grill-with-docs prototype "$deepening_skill"; do
+  for skill in tdd bug-hunter dependency-update permission-audit diagnose grill-with-docs prototype check-updates "$deepening_skill"; do
     [ -f "${OPENCODE_DIR}/skill/${skill}/SKILL.md" ]
   done
 }
@@ -170,23 +170,24 @@ assert_literal_exists_after() {
 
 # ── Commands ─────────────────────────────────────────────────────────────────
 
-@test "opencode/command: all 9 curated commands exist" {
+@test "opencode/command: all 10 curated commands exist" {
   commands=("${OPENCODE_DIR}"/command/*.md)
-  [ "${#commands[@]}" -eq 9 ]
+  [ "${#commands[@]}" -eq 10 ]
 
-  for cmd in help-me explain safer commit diagnose grill prototype update-opencode-deps permission-audit; do
+  for cmd in help-me explain safer commit diagnose grill prototype update-opencode-deps permission-audit check-updates; do
     [ -f "${OPENCODE_DIR}/command/${cmd}.md" ]
   done
 }
 
 # ── Instructions ─────────────────────────────────────────────────────────────
 
-@test "opencode/instruction: all 2 curated instructions exist" {
+@test "opencode/instruction: all 3 curated instructions exist" {
   instructions=("${OPENCODE_DIR}"/instruction/*.md)
-  [ "${#instructions[@]}" -eq 2 ]
+  [ "${#instructions[@]}" -eq 3 ]
 
   [ -f "${OPENCODE_DIR}/instruction/repo-context.md" ]
   [ -f "${OPENCODE_DIR}/instruction/agent-defaults.md" ]
+  [ -f "${OPENCODE_DIR}/instruction/update-awareness.md" ]
 }
 
 # ── Top-level files ──────────────────────────────────────────────────────────

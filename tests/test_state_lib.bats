@@ -56,6 +56,30 @@ teardown() {
   [[ "$values" == *"LAST=2026-05-01T00:00:00Z"* ]]
 }
 
+@test "state_write: writes AI_BOOTSTRAP_DIR when bootstrap dir is provided" {
+  AI_BOOTSTRAP_NOW_OVERRIDE="2026-05-01T00:00:00Z"
+  export AI_BOOTSTRAP_NOW_OVERRIDE
+
+  run state_write "$STATE" "$SANDBOX/code" "recommended" "$SANDBOX/ai-dev-bootstrap-mac"
+  [ "$status" -eq 0 ]
+
+  values=$(
+    # shellcheck disable=SC1090
+    source "$STATE"
+    echo "DIR=$AI_BOOTSTRAP_DIR"
+  )
+  [[ "$values" == *"DIR=$SANDBOX/ai-dev-bootstrap-mac"* ]]
+}
+
+@test "state_write: omits AI_BOOTSTRAP_DIR when bootstrap dir is empty" {
+  AI_BOOTSTRAP_NOW_OVERRIDE="2026-05-01T00:00:00Z"
+  export AI_BOOTSTRAP_NOW_OVERRIDE
+
+  run state_write "$STATE" "$SANDBOX/code" "recommended"
+  [ "$status" -eq 0 ]
+  ! grep -qF "AI_BOOTSTRAP_DIR" "$STATE"
+}
+
 @test "state_write: preserves AI_BOOTSTRAP_FIRST_RUN_AT across re-runs" {
   # Run 1: pin time T1, expect FIRST_RUN_AT=T1.
   AI_BOOTSTRAP_NOW_OVERRIDE="2026-01-01T00:00:00Z"

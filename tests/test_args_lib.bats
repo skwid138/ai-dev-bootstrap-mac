@@ -26,6 +26,7 @@ setup() {
   unset BOOTSTRAP_LAUNCHER_ONLY
   unset BOOTSTRAP_CHECK_PATHS
   unset BOOTSTRAP_REFRESH_PATHS
+  unset BOOTSTRAP_UPDATE
   unset BOOTSTRAP_LIST_MODULES
   unset BOOTSTRAP_MODULE_ONLY
 }
@@ -37,6 +38,7 @@ teardown() {
   unset BOOTSTRAP_LAUNCHER_ONLY
   unset BOOTSTRAP_CHECK_PATHS
   unset BOOTSTRAP_REFRESH_PATHS
+  unset BOOTSTRAP_UPDATE
   unset BOOTSTRAP_LIST_MODULES
   unset BOOTSTRAP_MODULE_ONLY
 }
@@ -218,6 +220,17 @@ teardown() {
   [ "$BOOTSTRAP_REFRESH_PATHS" = "1" ]
   [ "$BOOTSTRAP_DRY_RUN" = "1" ]
   [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+}
+
+@test "args_parse: --update sets BOOTSTRAP_UPDATE=1" {
+  args_parse --update
+  [ "$BOOTSTRAP_UPDATE" = "1" ]
+}
+
+@test "args_parse: --update implies non-interactive" {
+  args_parse --update
+  [ "$BOOTSTRAP_NONINTERACTIVE" = "1" ]
+  [ "$AI_BOOTSTRAP_NONINTERACTIVE" = "1" ]
 }
 
 # ── --list-modules / --module ──────────────────────────────────────────────
