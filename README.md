@@ -223,6 +223,24 @@ Exits `0` if paths are healthy, non‑zero if they look stale.
 
 Safe to run again anytime. The installer skips what you already have and can add new tools later (for example, upgrading from Essential to Recommended).
 
+## ⬆️ Updating
+
+To get the latest AI skills, commands, helper scripts, OpenCode settings, and Just Vibes launcher updates without repeating the full installer prompts, run:
+
+```bash
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/skwid138/ai-dev-bootstrap-mac/main/install.sh)" -s -- --update
+```
+
+The update path uses your saved tier and workspace. It refreshes managed OpenCode assets, overwrites helper scripts, preserves your current OpenCode model setting, re-runs the shell configuration module, and rebuilds Just Vibes only when the launcher files changed. Module 10 may install shell config dependencies like zplug if selected in your tier.
+
+Inside OpenCode, you can also ask “am I up to date?” or run:
+
+```text
+/check-updates
+```
+
+After an update, quit and reopen Just Vibes so OpenCode loads the latest skills, commands, and instructions.
+
 ## 🧪 Running Tests
 
 ```bash
