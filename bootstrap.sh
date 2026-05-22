@@ -136,6 +136,97 @@ reconstruct_selected_packages_for_tier() {
   export SELECTED_PACKAGES
 }
 
+# ── Update fast path ──────────────────────────────────────────────────
+# Refresh managed bootstrap assets without running the full installer. This
+# is intentionally state-driven and non-interactive: the user's previous tier
+# and workspace decide what is refreshed, and custom-tier installs are refused
+# because their package selections are not persisted in state.sh.
+if [ -n "${BOOTSTRAP_UPDATE:-}" ]; then
+  # shellcheck source=lib/opencode.sh
+  source "${BOOTSTRAP_DIR}/lib/opencode.sh"
+  # shellcheck source=lib/common.sh
+  source "${BOOTSTRAP_DIR}/lib/common.sh"
+  # shellcheck source=lib/launcher.sh
+  source "${BOOTSTRAP_DIR}/lib/launcher.sh"
+
+  if ! command -v jq >/dev/null 2>&1; then
+    log_error "jq is required for --update, but it is not available. Re-run the full bootstrap to repair your install."
+    exit 1
+  fi
+
+  state_path="$HOME/.config/ai-bootstrap/state.sh"
+  if [ ! -f "$state_path" ]; then
+    log_error "No state.sh found at $state_path"
+    log_error "Run the full bootstrap first; --update only works after a previous install."
+    exit 1
+  fi
+
+  if ! state_validate_sourceable_file "$state_path"; then
+    log_error "Could not read saved bootstrap state. Re-run the full bootstrap to repair."
+    exit 1
+  fi
+
+  # shellcheck disable=SC1090
+  source "$state_path"
+
+  if [ "${AI_BOOTSTRAP_TIER:-}" = "custom" ]; then
+    log_error "--update does not support custom-tier installs."
+    log_error "Re-run the full installer so you can choose packages again."
+    exit 1
+  fi
+
+  case "${AI_BOOTSTRAP_TIER:-}" in
+    essential | recommended | complete) ;;
+    *)
+      log_error "AI_BOOTSTRAP_TIER='${AI_BOOTSTRAP_TIER:-}' is not a valid tier."
+      log_error "Re-run the full bootstrap to repair your saved state."
+      exit 1
+      ;;
+  esac
+
+  export BOOTSTRAP_NONINTERACTIVE=1
+  export AI_BOOTSTRAP_NONINTERACTIVE=1
+
+  reconstruct_selected_packages_for_tier "$AI_BOOTSTRAP_TIER"
+  SELECTED_TIER="$AI_BOOTSTRAP_TIER"
+  OPENCODE_CONFIG_DIR="$HOME/.config/opencode"
+  WORKSPACE_PATH="$AI_BOOTSTRAP_WORKSPACE"
+  BREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
+  export SELECTED_TIER OPENCODE_CONFIG_DIR WORKSPACE_PATH AI_BOOTSTRAP_WORKSPACE BOOTSTRAP_DIR BREW_PREFIX
+
+  existing_model=""
+  if [ -f "$OPENCODE_CONFIG_DIR/opencode.json" ]; then
+    existing_model=$(jq -r '.model // empty' "$OPENCODE_CONFIG_DIR/opencode.json" 2>/dev/null || true)
+  fi
+
+  log_info "Updating OpenCode assets and helper scripts..."
+  opencode_deploy_assets "${BOOTSTRAP_DIR}/opencode" "$OPENCODE_CONFIG_DIR"
+  opencode_deploy_scripts "${BOOTSTRAP_DIR}/scripts" "$AI_BOOTSTRAP_WORKSPACE/scripts"
+  opencode_render_config \
+    "${BOOTSTRAP_DIR}/opencode/opencode.json.template" \
+    "$OPENCODE_CONFIG_DIR/opencode.json" \
+    "$existing_model"
+
+  if [ -f "${BOOTSTRAP_DIR}/modules/10-shell-config.sh" ]; then
+    # shellcheck source=modules/10-shell-config.sh
+    source "${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
+  else
+    log_error "modules/10-shell-config.sh not found at ${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
+    exit 1
+  fi
+
+  if launcher_needs_rebuild; then
+    launcher_build >/dev/null
+    log_installed "Just Vibes.app refreshed"
+  else
+    log_skip "Just Vibes.app is already current"
+  fi
+
+  state_write "$state_path" "$AI_BOOTSTRAP_WORKSPACE" "$AI_BOOTSTRAP_TIER" "$BOOTSTRAP_DIR"
+  log_installed "Bootstrap assets updated. Quit and reopen Just Vibes to use the latest OpenCode configuration."
+  exit 0
+fi
+
 # ── List-modules fast path ────────────────────────────────────────────
 # Print canonical module names without reading state or touching the user's
 # machine. This must run before preflight and all installer modules.
@@ -693,7 +784,7 @@ fi
 # call layers tier/version/timestamps on top and preserves first-run-at
 # across re-runs.
 state_path="$HOME/.config/ai-bootstrap/state.sh"
-if state_write "$state_path" "$WORKSPACE_PATH" "$SELECTED_TIER"; then
+if state_write "$state_path" "$WORKSPACE_PATH" "$SELECTED_TIER" "$BOOTSTRAP_DIR"; then
   log_installed "State saved to $state_path"
 else
   log_warn "Could not update state file at $state_path"
