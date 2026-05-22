@@ -201,6 +201,8 @@ _stripped() {
 # §8.7.8 Definition of Done.
 
 @test "launch.applescript: on reopen with missing pidfile invokes the helper" {
+  [[ -n "${CI:-}" ]] && skip "requires macOS GUI session for AppleEvent tests"
+
   # Skip when osacompile or osascript isn't on PATH (non-mac runner).
   command -v osacompile >/dev/null 2>&1 || skip "osacompile not available"
   command -v osascript >/dev/null 2>&1 || skip "osascript not available"
@@ -294,6 +296,8 @@ EOF
 }
 
 @test "launch.applescript: on quit kills tracked PID and removes pidfile" {
+  [[ -n "${CI:-}" ]] && skip "requires macOS GUI session for AppleEvent tests"
+
   command -v osacompile >/dev/null 2>&1 || skip "osacompile not available"
   command -v osascript >/dev/null 2>&1 || skip "osascript not available"
 
