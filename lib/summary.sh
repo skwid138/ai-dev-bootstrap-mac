@@ -10,7 +10,7 @@
 #   $1: workspace — configured workspace path
 #   $2: tier      — selected install tier
 #   $3: brewfile  — generated Brewfile path
-#   $4: launcher  — generated Just Vibes.app path
+#   $4: launcher  — generated JustVibes.app path
 #
 # Writes a human-readable summary + next steps to stdout. Returns 0.
 summary_print() {
@@ -31,7 +31,7 @@ summary_print() {
   echo "    Launcher:  ${launcher:-"(not generated)"}"
   echo ""
   echo "  Next steps:"
-  echo "    1. Quit and reopen Just Vibes, or open a new terminal window."
+  echo "    1. Quit and reopen JustVibes, or open a new terminal window."
   echo "    2. Try running: opencode"
   echo "    3. Start building something! 🎉"
   echo "       (If you must keep this terminal open, run: source ~/.zshenv ~/.zprofile ~/.zshrc)"
@@ -45,7 +45,7 @@ summary_print() {
 #   $1: workspace — configured workspace path
 #   $2: tier      — selected install tier
 #   $3: brewfile  — generated Brewfile path
-#   $4: launcher  — generated Just Vibes.app path
+#   $4: launcher  — generated JustVibes.app path
 #   $@: failures  — friendly names for failed modules/tools
 #
 # Writes a failure-oriented summary + recovery steps to stdout. Returns 0;

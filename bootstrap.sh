@@ -215,15 +215,19 @@ if [ -n "${BOOTSTRAP_UPDATE:-}" ]; then
     exit 1
   fi
 
+  launcher_dest=$(launcher_resolve_dest)
   if launcher_needs_rebuild; then
     launcher_build >/dev/null
-    log_installed "Just Vibes.app refreshed"
+    log_installed "JustVibes.app refreshed"
   else
-    log_skip "Just Vibes.app is already current"
+    if [ -r "$launcher_dest/JustVibes.app/Contents/Info.plist" ]; then
+      launcher_cleanup_legacy "$launcher_dest"
+    fi
+    log_skip "JustVibes.app is already current"
   fi
 
   state_write "$state_path" "$AI_BOOTSTRAP_WORKSPACE" "$AI_BOOTSTRAP_TIER" "$BOOTSTRAP_DIR"
-  log_installed "Bootstrap assets updated. Quit and reopen Just Vibes to use the latest OpenCode configuration."
+  log_installed "Bootstrap assets updated. Quit and reopen JustVibes to use the latest OpenCode configuration."
   exit 0
 fi
 
@@ -309,7 +313,7 @@ fi
 
 # ── Launcher-only fast path ───────────────────────────────────────────
 # Skip preflight, Phase 0, tier selection, workspace prompt, and all
-# modules. Just rebuild ~/Applications/Just Vibes.app and exit. Useful
+# modules. Just rebuild ~/Applications/JustVibes.app and exit. Useful
 # when:
 #   * The user accidentally deleted their launcher and wants it back.
 #   * A dev is iterating on launcher/launch.sh and wants a fast rebuild
@@ -323,7 +327,7 @@ fi
 if [ -n "${BOOTSTRAP_LAUNCHER_ONLY:-}" ]; then
   build_script="${BOOTSTRAP_DIR}/launcher/build.sh"
   dest_dir=$(launcher_resolve_dest)
-  app_path="$dest_dir/Just Vibes.app"
+  app_path="$dest_dir/JustVibes.app"
 
   if [ -n "${BOOTSTRAP_DRY_RUN:-}" ]; then
     echo ""
@@ -341,7 +345,7 @@ if [ -n "${BOOTSTRAP_LAUNCHER_ONLY:-}" ]; then
 
   log_info "Launcher-only mode: rebuilding $app_path"
   if launcher_install "$build_script" "$dest_dir" >/dev/null; then
-    log_installed "Just Vibes.app rebuilt at $app_path"
+    log_installed "JustVibes.app rebuilt at $app_path"
     # Friendly heads-up if we landed in ~/Applications instead of the
     # standard /Applications. This only happens on locked-down Macs;
     # the message tells the user where to find it without requiring
@@ -447,7 +451,7 @@ if [ -n "${BOOTSTRAP_REFRESH_PATHS:-}" ]; then
   if [ -f "${BOOTSTRAP_DIR}/modules/10-shell-config.sh" ]; then
     # shellcheck source=modules/10-shell-config.sh
     source "${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
-    log_installed "Shell config refreshed. Quit and reopen Just Vibes, or open a new terminal window. (If you must keep this terminal, run: source ~/.zshenv ~/.zprofile ~/.zshrc)"
+    log_installed "Shell config refreshed. Quit and reopen JustVibes, or open a new terminal window. (If you must keep this terminal, run: source ~/.zshenv ~/.zprofile ~/.zshrc)"
     exit 0
   else
     log_error "modules/10-shell-config.sh not found at ${BOOTSTRAP_DIR}/modules/10-shell-config.sh"
@@ -793,7 +797,7 @@ fi
 if [ -z "${BOOTSTRAP_DRY_RUN:-}" ]; then
   summary_launcher_path=""
   if [ "${launcher_result:-}" = "installed" ] && [ -n "${LAUNCHER_DEST:-}" ]; then
-    summary_launcher_path="${LAUNCHER_DEST:-}/Just Vibes.app"
+    summary_launcher_path="${LAUNCHER_DEST:-}/JustVibes.app"
   fi
 
   if [ ${#RESULTS_FAILED[@]} -gt 0 ]; then

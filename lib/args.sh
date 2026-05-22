@@ -8,7 +8,7 @@
 #                     (--tier=recommended, workspace=~/code) with a loud
 #                     log line so the user knows what was assumed. Useful
 #                     for CI smoke tests and unattended re-runs.
-#   --launcher-only   Rebuild ~/Applications/Just Vibes.app and exit.
+#   --launcher-only   Rebuild ~/Applications/JustVibes.app and exit.
 #                     Skips preflight, Phase 0, tier selection, workspace
 #                     prompt, and all installer modules. Useful for
 #                     recovering from an accidentally-deleted launcher,
@@ -16,7 +16,7 @@
 #                     manually testing the .app bundle without committing
 #                     to a full bootstrap run. Implies --non-interactive
 #                     (no prompts to ask). Composes with --dry-run
-#                     ("would rebuild ~/Applications/Just Vibes.app").
+#                     ("would rebuild ~/Applications/JustVibes.app").
 #   --check-paths     Read-only staleness check on the baked Homebrew
 #                     prefix in ~/.config/ai-bootstrap/shell/env/paths.zsh.
 #                     Exits 0 (fresh) / 1 (stale) / 2 (error). Designed
@@ -34,7 +34,7 @@
 #   --update          Fast, non-interactive managed-asset refresh. Reads the
 #                     existing state.sh, refreshes OpenCode assets/scripts,
 #                     re-renders opencode.json, re-runs shell config, rebuilds
-#                     Just Vibes only if launcher sources changed, and exits.
+#                     JustVibes only if launcher sources changed, and exits.
 #   --list-modules    Print canonical module names, one per line, and exit.
 #                     Implies --non-interactive.
 #   --module <name>   Run only one named module. Standard modules require a
@@ -63,7 +63,7 @@ Usage:
   ./bootstrap.sh                    Run the interactive installer
   ./bootstrap.sh --dry-run          Show the install plan and exit (safe)
   ./bootstrap.sh --non-interactive  Run with defaults, skip all prompts
-  ./bootstrap.sh --launcher-only    (Re)build ~/Applications/Just Vibes.app
+  ./bootstrap.sh --launcher-only    (Re)build ~/Applications/JustVibes.app
                                     and exit. Useful if the launcher was
                                     deleted, or to test the .app bundle
                                     without a full bootstrap run.
@@ -79,7 +79,7 @@ Usage:
                                      --check-paths reports stale.
   ./bootstrap.sh --update           Refresh managed OpenCode assets, helper
                                      scripts, rendered config, shell config,
-                                     and Just Vibes if needed. No prompts.
+                                     and JustVibes if needed. No prompts.
   ./bootstrap.sh --list-modules     Show module names that can be used with
                                     --module, one per line.
   ./bootstrap.sh --module <name>    Run one module by name from a previous

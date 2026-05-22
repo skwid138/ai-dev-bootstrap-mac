@@ -9,7 +9,7 @@
 #   - MUST NOT print warnings, version checks, or staleness nags.
 #   - Sentinel-guarded against double-source.
 #
-# Why this matters: subshells launched by the Just Vibes launcher, by
+# Why this matters: subshells launched by the JustVibes launcher, by
 # opencode tool calls, and by GUI integrations inherit this PATH. Output
 # here pollutes script stdout (e.g. `zsh -c 'echo $X' | tool` breaks).
 

@@ -1,12 +1,13 @@
 #!/bin/bash
-# Just Vibes launcher install helpers.
+# JustVibes launcher install helpers.
 #
 # Three responsibilities, factored out of modules/03-terminal.sh so each is
 # independently testable with bats:
 #
 #   launcher_resolve_dest — pick install dir: /Applications or ~/Applications.
 #   launcher_install      — build the .app and place it in the dest dir.
-#   launcher_uninstall    — remove the .app from a given dir.
+#   launcher_cleanup_legacy — remove old "Just Vibes.app" bundles we own.
+#   launcher_uninstall      — remove the .app from a given dir.
 #
 # Design choices (see ANALYSIS_AND_PLAN.md §E for full reasoning):
 #
@@ -44,7 +45,7 @@ launcher_needs_rebuild() {
   local dest_dir app_path checksum_file current_checksum saved_checksum
 
   dest_dir=$(launcher_resolve_dest)
-  app_path="$dest_dir/Just Vibes.app"
+  app_path="$dest_dir/JustVibes.app"
   checksum_file=$(launcher_checksum_file)
 
   [ -d "$app_path" ] || return 0
@@ -66,7 +67,7 @@ launcher_checksum_save() {
 }
 
 # ── launcher_resolve_dest ───────────────────────────────────────────────────
-# Pick the install directory for Just Vibes.app. Prefers /Applications if
+# Pick the install directory for JustVibes.app. Prefers /Applications if
 # writable (most users on standard Macs); falls back to ~/Applications
 # otherwise.
 #
@@ -74,12 +75,12 @@ launcher_checksum_save() {
 # Stdout: absolute path to install dir.
 # Returns: 0 always.
 #
-# Override via JUST_VIBES_DEST_DIR_OVERRIDE for tests (the resolution is
+# Override via JUSTVIBES_DEST_DIR_OVERRIDE for tests (the resolution is
 # what we want to test, but real $HOME/Applications and /Applications
 # can't be safely written to from CI/test sandboxes).
 launcher_resolve_dest() {
-  if [ -n "${JUST_VIBES_DEST_DIR_OVERRIDE:-}" ]; then
-    echo "$JUST_VIBES_DEST_DIR_OVERRIDE"
+  if [ -n "${JUSTVIBES_DEST_DIR_OVERRIDE:-}" ]; then
+    echo "$JUSTVIBES_DEST_DIR_OVERRIDE"
     return 0
   fi
 
@@ -104,6 +105,7 @@ launcher_resolve_dest() {
 launcher_install() {
   local build_script="$1"
   local dest_dir="$2"
+  local app_path="$dest_dir/JustVibes.app"
 
   if [ ! -x "$build_script" ]; then
     echo "launcher_install: build script not found or not executable: $build_script" >&2
@@ -120,6 +122,13 @@ launcher_install() {
     return 1
   fi
 
+  if [ ! -r "$app_path/Contents/Info.plist" ]; then
+    echo "launcher_install: built app is missing readable Info.plist: $app_path" >&2
+    return 1
+  fi
+
+  launcher_cleanup_legacy "$dest_dir"
+
   if ! launcher_checksum_save; then
     echo "launcher_install: failed to save launcher checksum" >&2
     return 1
@@ -135,6 +144,71 @@ launcher_build() {
   launcher_install "${BOOTSTRAP_DIR}/launcher/build.sh" "$dest_dir"
 }
 
+# ── launcher_cleanup_legacy ────────────────────────────────────────────────
+# Remove the pre-rename "Just Vibes.app" bundle after JustVibes.app has been
+# installed or verified. The ownership guard ensures we only delete bundles
+# with this bootstrap's CFBundleIdentifier.
+#
+# Args:
+#   $1: dest_dir — resolved destination directory containing JustVibes.app
+#
+# Returns: 0 always; cleanup and LaunchServices registration are best-effort.
+launcher_cleanup_legacy() {
+  local dest_dir="$1"
+  local -a search_dirs unique_dirs
+  local d seen_dir duplicate dir old_app old_id new_app lsregister
+
+  search_dirs=("$dest_dir")
+  if [ -z "${JUSTVIBES_DEST_DIR_OVERRIDE:-}" ]; then
+    [ "$dest_dir" != "$HOME/Applications" ] && search_dirs+=("$HOME/Applications")
+    [ "$dest_dir" != "/Applications" ] && search_dirs+=("/Applications")
+  fi
+
+  unique_dirs=()
+  for d in "${search_dirs[@]}"; do
+    duplicate=0
+    if [ "${#unique_dirs[@]}" -gt 0 ]; then
+      for seen_dir in "${unique_dirs[@]}"; do
+        if [ "$seen_dir" = "$d" ]; then
+          duplicate=1
+          break
+        fi
+      done
+    fi
+    [ "$duplicate" -eq 1 ] && continue
+    unique_dirs+=("$d")
+  done
+
+  for dir in "${unique_dirs[@]}"; do
+    old_app="$dir/Just Vibes.app"
+    [ -d "$old_app" ] || continue
+
+    old_id=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" "$old_app/Contents/Info.plist" 2>/dev/null) || continue
+    [ "$old_id" = "dev.aibootstrap.justvibes" ] || continue
+
+    if [ -z "${JUSTVIBES_DEST_DIR_OVERRIDE:-}" ]; then
+      lsregister="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+      "$lsregister" -u "$old_app" 2>/dev/null || true
+    fi
+
+    if ! rm -rf "$old_app" 2>/dev/null; then
+      if declare -F log_warn >/dev/null 2>&1; then
+        log_warn "Could not remove legacy app: $old_app"
+      else
+        echo "launcher_cleanup_legacy: could not remove legacy app: $old_app" >&2
+      fi
+    fi
+  done
+
+  if [ -z "${JUSTVIBES_DEST_DIR_OVERRIDE:-}" ]; then
+    new_app="$dest_dir/JustVibes.app"
+    lsregister="/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister"
+    "$lsregister" "$new_app" 2>/dev/null || true
+  fi
+
+  return 0
+}
+
 # ── launcher_uninstall ──────────────────────────────────────────────────────
 # Args:
 #   $1: dest_dir — directory the .app was installed into
@@ -145,7 +219,7 @@ launcher_build() {
 #   1  if rm fails
 launcher_uninstall() {
   local dest_dir="$1"
-  local bundle="$dest_dir/Just Vibes.app"
+  local bundle="$dest_dir/JustVibes.app"
 
   if [ ! -d "$bundle" ]; then
     echo "absent"
