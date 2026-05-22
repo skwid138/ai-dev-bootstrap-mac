@@ -256,6 +256,71 @@ run_module() {
   '
 }
 
+load_tailscale_magicdns_function() {
+  eval "$(
+    awk '
+      /^tailscale_magicdns_enabled\(\) \{/ { in_function = 1 }
+      in_function { print }
+      in_function && /^}/ { exit }
+    ' "$REPO_ROOT/modules/14-tailscale.sh"
+  )"
+}
+
+@test "MagicDNS detection ignores unrelated disabled DNS guidance" {
+  load_tailscale_magicdns_function
+  dns_status=$(cat <<'EOF'
+Tailscale DNS status:
+  MagicDNS: enabled tailnet-wide (suffix = tail957397.ts.net)
+  Nameservers: 100.100.100.100
+  Split DNS:
+    - corp.example.com -> 10.0.0.53
+
+If DNS resolution is not working, check if 'Override Local DNS' is disabled in the admin console.
+EOF
+)
+
+  run tailscale_magicdns_enabled "$dns_status"
+
+  [ "$status" -eq 0 ]
+}
+
+@test "MagicDNS detection rejects explicitly disabled status" {
+  load_tailscale_magicdns_function
+  dns_status=$(cat <<'EOF'
+Tailscale DNS status:
+  MagicDNS: disabled
+  Nameservers: 100.100.100.100
+EOF
+)
+
+  run tailscale_magicdns_enabled "$dns_status"
+
+  [ "$status" -eq 1 ]
+}
+
+@test "MagicDNS detection rejects search domains without MagicDNS line" {
+  load_tailscale_magicdns_function
+  dns_status=$(cat <<'EOF'
+Tailscale DNS status:
+  Search Domains:
+    - tail957397.ts.net
+  Nameservers: 100.100.100.100
+EOF
+)
+
+  run tailscale_magicdns_enabled "$dns_status"
+
+  [ "$status" -eq 1 ]
+}
+
+@test "MagicDNS detection rejects empty output" {
+  load_tailscale_magicdns_function
+
+  run tailscale_magicdns_enabled ""
+
+  [ "$status" -eq 1 ]
+}
+
 @test "missing gum exits with error" {
   rm -f "$SANDBOX/mocks/gum"
 

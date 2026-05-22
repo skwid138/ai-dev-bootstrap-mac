@@ -264,14 +264,17 @@ tailscale_magicdns_enabled() {
   local output="$1"
   [ -n "$output" ] || return 1
 
-  if echo "$output" | grep -Eiq 'disabled|not enabled|off'; then
-    return 1
-  fi
-
-  if echo "$output" | grep -Eiq 'MagicDNS:[[:space:]]*enabled|Search Domains|\.ts\.net|\.beta\.tailscale\.net'; then
+  # Authoritative positive — MagicDNS line says enabled
+  if echo "$output" | grep -Eiq 'MagicDNS:[[:space:]]*enabled'; then
     return 0
   fi
 
+  # Authoritative negative — MagicDNS line says disabled/off
+  if echo "$output" | grep -Eiq 'MagicDNS:[[:space:]]*(disabled|not enabled|off)'; then
+    return 1
+  fi
+
+  # No MagicDNS line found — treat as unknown/disabled
   return 1
 }
 
