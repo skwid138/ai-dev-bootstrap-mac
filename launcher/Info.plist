@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  Just Vibes.app curated Info.plist (Branch F — AppleScript-applet host).
+  JustVibes.app curated Info.plist (Branch F — AppleScript-applet host).
 
-  This plist is written into Just Vibes.app/Contents/Info.plist by
+  This plist is written into JustVibes.app/Contents/Info.plist by
   launcher/build.sh AFTER osacompile generates the bundle skeleton. The
   osacompile-generated plist would otherwise show the bundle as "applet"
   in Finder/Dock/Cmd-Tab; we override every relevant identity key here.
@@ -60,9 +60,9 @@
 <plist version="1.0">
 <dict>
   <key>CFBundleName</key>
-  <string>Just Vibes</string>
+  <string>JustVibes</string>
   <key>CFBundleDisplayName</key>
-  <string>Just Vibes</string>
+  <string>JustVibes</string>
   <key>CFBundleIdentifier</key>
   <string>dev.aibootstrap.justvibes</string>
   <key>CFBundleVersion</key>

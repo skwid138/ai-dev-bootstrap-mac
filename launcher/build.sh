@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Assembles a "Just Vibes.app" macOS app bundle from the source files in this
+# Assembles a "JustVibes.app" macOS app bundle from the source files in this
 # directory. Branch F (launcher_improvement_plan.md §8): the bundle is built
 # by `osacompile` from launch.applescript, then post-processed to swap in
 # our curated Info.plist, piggy-bank icon, and the bash helper script that
@@ -8,7 +8,7 @@
 #
 # Bundle layout produced:
 #
-#   Just Vibes.app/
+#   JustVibes.app/
 #     Contents/
 #       Info.plist                          (curated; from launcher/Info.plist)
 #       MacOS/applet                        (AppleScript runtime, from osacompile)
@@ -45,7 +45,7 @@
 #
 # Usage:  launcher/build.sh <output-dir>
 #
-# The output dir will contain "Just Vibes.app". Any pre-existing bundle of
+# The output dir will contain "JustVibes.app". Any pre-existing bundle of
 # that name is replaced atomically.
 
 set -euo pipefail
@@ -89,7 +89,7 @@ mkdir -p "$dest_dir"
 staging="$(mktemp -d)"
 trap 'rm -rf "$staging"' EXIT
 
-bundle="$staging/Just Vibes.app"
+bundle="$staging/JustVibes.app"
 
 # 1. osacompile generates the bundle skeleton (Contents/MacOS/applet,
 #    Contents/Resources/Scripts/main.scpt, Contents/Resources/applet.icns,
@@ -158,7 +158,7 @@ rm -f "$_codesign_log"
 # 6. Atomic-ish swap. macOS doesn't have rename-replace for directories,
 #    so we delete + move; the window is small and the alternative
 #    (in-place edit) risks leaving stale files behind.
-final="$dest_dir/Just Vibes.app"
+final="$dest_dir/JustVibes.app"
 if [[ -d "$final" ]]; then
   rm -rf "$final"
 fi

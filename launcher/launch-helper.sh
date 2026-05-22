@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
 #
-# Just Vibes launcher helper — opens Ghostty in the user's workspace and
+# JustVibes launcher helper — opens Ghostty in the user's workspace and
 # starts opencode.
 #
 # This script ships in the repo as launcher/launch-helper.sh and is copied
-# into Just Vibes.app/Contents/Resources/launch-helper.sh at build time.
-# It is invoked by the AppleScript host (Just Vibes.app/Contents/MacOS/applet,
+# into JustVibes.app/Contents/Resources/launch-helper.sh at build time.
+# It is invoked by the AppleScript host (JustVibes.app/Contents/MacOS/applet,
 # compiled from launcher/launch.applescript) via `do shell script`. The
 # AppleScript host owns the Dock tile / Cmd+Tab / Activity Monitor identity
 # (Branch F, launcher_improvement_plan.md §8); this helper is the
@@ -21,7 +21,7 @@
 # launcher/launch.sh and was the bundle's CFBundleExecutable directly.
 # That meant the bundle's process was a transient bash → exec'd open →
 # Ghostty took over the Dock identity. Branch F inserts an AppleScript
-# applet host so macOS sees a persistent "Just Vibes" process with the
+# applet host so macOS sees a persistent "JustVibes" process with the
 # piggy-bank icon. The shell logic below is unchanged from the rev-6
 # version that shipped on 086c419 — Branch F is purely an identity win,
 # not a behavioral change.
@@ -61,10 +61,10 @@
 #   (aliases, functions, $LANG, mise shims, etc.) so opencode's tool
 #   calls inherit a sane PATH and locale.
 #
-# Why we use `open -F`, conditional `-n`, and `--title=Just Vibes` (rev-8 / Phase 6.5 / Phase 6.6):
+# Why we use `open -F`, conditional `-n`, and `--title=JustVibes` (rev-8 / Phase 6.5 / Phase 6.6):
 #
 #   `-F` (see `man open`) opens the application "fresh," without
-#   restoring saved windows. Without it, clicking Just Vibes reopens
+#   restoring saved windows. Without it, clicking JustVibes reopens
 #   whatever windows/tabs/panes the user had when Ghostty was last
 #   quit — macOS app-restoration fires through `open -na` and Ghostty
 #   (with default `window-save-state = default`) cooperates. That
@@ -72,9 +72,9 @@
 #   launcher's target audience. `-F` is per-invocation: it does NOT
 #   modify the user's ~/.config/ghostty/config and does NOT affect
 #   Spotlight/Dock/manual `open -a` launches of Ghostty. The accepted
-#   trade-off is that manually-added tabs in a Just Vibes session do
+#   trade-off is that manually-added tabs in a JustVibes session do
 #   not persist across `Cmd+Q` and re-launch (see zsh_init_plan.md
-#   §3.10). `--title=Just Vibes` sets the spawned window's title bar
+#   §3.10). `--title=JustVibes` sets the spawned window's title bar
 #   so the launcher origin is visually identifiable.
 #
 #   `-n` is **conditional** on Ghostty's running state at launch time:
@@ -105,7 +105,7 @@
 #   `osascript` binary already used for the existence check below).
 #   Reuses `OSASCRIPT_BIN` so tests can substitute a mock. There is a
 #   ~200ms TOCTOU window between the check and `open`; in practice this
-#   only matters if the user double-clicks Just Vibes.app twice within
+#   only matters if the user double-clicks JustVibes.app twice within
 #   200ms of a fresh login, which collapses to a single window (matching
 #   typical Finder UX).
 #
@@ -125,9 +125,9 @@ set -u
 
 HELPER_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-if [[ -n "${JUST_VIBES_STATE_VALIDATION_LIB:-}" && -f "$JUST_VIBES_STATE_VALIDATION_LIB" ]]; then
+if [[ -n "${JUSTVIBES_STATE_VALIDATION_LIB:-}" && -f "$JUSTVIBES_STATE_VALIDATION_LIB" ]]; then
   # shellcheck disable=SC1090
-  source "$JUST_VIBES_STATE_VALIDATION_LIB"
+  source "$JUSTVIBES_STATE_VALIDATION_LIB"
 elif [[ -f "$HELPER_DIR/state_source_validation.sh" ]]; then
   # Bundled app path: build.sh copies the shared validator beside this helper.
   # shellcheck disable=SC1091
@@ -139,22 +139,22 @@ elif [[ -f "$HELPER_DIR/../lib/state_source_validation.sh" ]]; then
 fi
 
 # Defaults; overridable via env (mainly for tests).
-LAUNCH_OPENCODE="${JUST_VIBES_LAUNCH_OPENCODE:-1}"
+LAUNCH_OPENCODE="${JUSTVIBES_LAUNCH_OPENCODE:-1}"
 STATE_FILE="${AI_BOOTSTRAP_STATE_FILE:-$HOME/.config/ai-bootstrap/state.sh}"
-GHOSTTY_APP="${JUST_VIBES_GHOSTTY_APP:-Ghostty.app}"
-OPEN_BIN="${JUST_VIBES_OPEN_BIN:-/usr/bin/open}"
-OSASCRIPT_BIN="${JUST_VIBES_OSASCRIPT_BIN:-/usr/bin/osascript}"
+GHOSTTY_APP="${JUSTVIBES_GHOSTTY_APP:-Ghostty.app}"
+OPEN_BIN="${JUSTVIBES_OPEN_BIN:-/usr/bin/open}"
+OSASCRIPT_BIN="${JUSTVIBES_OSASCRIPT_BIN:-/usr/bin/osascript}"
 
 # Where to look for the Ghostty bundle, in priority order. Standard macOS
-# install dirs first; overridable via JUST_VIBES_GHOSTTY_SEARCH_PATHS
+# install dirs first; overridable via JUSTVIBES_GHOSTTY_SEARCH_PATHS
 # (colon-separated parent dirs) for tests / per-user overrides.
-GHOSTTY_SEARCH_PATHS="${JUST_VIBES_GHOSTTY_SEARCH_PATHS:-/Applications:$HOME/Applications}"
+GHOSTTY_SEARCH_PATHS="${JUSTVIBES_GHOSTTY_SEARCH_PATHS:-/Applications:$HOME/Applications}"
 
 # Where to look for opencode, in priority order. Apple Silicon brew, Intel
 # brew, opencode's own installer fallback, then PATH (in case the user
-# installed it somewhere unusual). Overridable via JUST_VIBES_OPENCODE_PATHS
+# installed it somewhere unusual). Overridable via JUSTVIBES_OPENCODE_PATHS
 # (colon-separated) for tests.
-OPENCODE_PATHS="${JUST_VIBES_OPENCODE_PATHS:-/opt/homebrew/bin/opencode:/usr/local/bin/opencode:$HOME/.local/bin/opencode}"
+OPENCODE_PATHS="${JUSTVIBES_OPENCODE_PATHS:-/opt/homebrew/bin/opencode:/usr/local/bin/opencode:$HOME/.local/bin/opencode}"
 
 # Resolve opencode's absolute path. Returns 0 + echoes path on success;
 # returns 1 + echoes nothing if not found.
@@ -211,7 +211,7 @@ for _dir in "${_search_dirs[@]}"; do
   fi
 done
 if [[ "$ghostty_found" -eq 0 ]]; then
-  "$OSASCRIPT_BIN" -e 'display alert "Just Vibes" message "Ghostty is not installed. Re-run the bootstrap installer to set it up." as critical' >/dev/null 2>&1 || true
+  "$OSASCRIPT_BIN" -e 'display alert "JustVibes" message "Ghostty is not installed. Re-run the bootstrap installer to set it up." as critical' >/dev/null 2>&1 || true
   exit 1
 fi
 
@@ -221,7 +221,7 @@ fi
 opencode_bin=""
 if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
   if ! opencode_bin=$(resolve_opencode); then
-    "$OSASCRIPT_BIN" -e 'display alert "Just Vibes" message "OpenCode is not installed. Re-run the bootstrap installer to set it up." as critical' >/dev/null 2>&1 || true
+    "$OSASCRIPT_BIN" -e 'display alert "JustVibes" message "OpenCode is not installed. Re-run the bootstrap installer to set it up." as critical' >/dev/null 2>&1 || true
     exit 1
   fi
 fi
@@ -248,9 +248,9 @@ if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
 fi
 
 if [[ -n "$n_flag" ]]; then
-  args=("$n_flag" -Fa "$GHOSTTY_APP" --args "--title=Just Vibes" "--working-directory=$workspace")
+  args=("$n_flag" -Fa "$GHOSTTY_APP" --args "--title=JustVibes" "--working-directory=$workspace")
 else
-  args=(-Fa "$GHOSTTY_APP" --args "--title=Just Vibes" "--working-directory=$workspace")
+  args=(-Fa "$GHOSTTY_APP" --args "--title=JustVibes" "--working-directory=$workspace")
 fi
 if [[ "$LAUNCH_OPENCODE" == "1" ]]; then
   # See header comment for why --command= replaces -e.
@@ -269,8 +269,8 @@ open_rc=$?
 # After `open` returns, poll for up to 2s for the most recent ghostty
 # process whose argv contains both `Ghostty.app/Contents/MacOS/ghostty`
 # (the canonical Mach-O path — only Ghostty's own binary runs from
-# there) AND `--title=Just Vibes` (so we don't pick up an unrelated
-# user-launched ghostty). Write the PID to $TMPDIR/just-vibes/ghostty.pid
+# there) AND `--title=JustVibes` (so we don't pick up an unrelated
+# user-launched ghostty). Write the PID to $TMPDIR/justvibes/ghostty.pid
 # so `on reopen` in launch.applescript can resolve it.
 #
 # Failure to capture is non-fatal: the AppleScript reopen handler reads
@@ -279,15 +279,15 @@ open_rc=$?
 # never appears (e.g. crashed mid-launch); 250ms is the typical
 # real-world time for the process to show up.
 #
-# Gated behind JUST_VIBES_TRACK_GHOSTTY_PID so the feature can be
+# Gated behind JUSTVIBES_TRACK_GHOSTTY_PID so the feature can be
 # disabled without rebuilding the bundle (§8.7.6 rollback / off-switch).
-if [[ "${JUST_VIBES_TRACK_GHOSTTY_PID:-1}" = "1" ]]; then
-  _pid_dir="${TMPDIR:-/tmp}/just-vibes"
+if [[ "${JUSTVIBES_TRACK_GHOSTTY_PID:-1}" = "1" ]]; then
+  _pid_dir="${TMPDIR:-/tmp}/justvibes"
   _pid_file="$_pid_dir/ghostty.pid"
   _deadline=$(($(date +%s) + 2))
   _ghostty_pid=""
   while [ "$(date +%s)" -lt "$_deadline" ]; do
-    _ghostty_pid="$(pgrep -nf "Ghostty.app/Contents/MacOS/ghostty .*--title=Just Vibes" 2>/dev/null || true)"
+    _ghostty_pid="$(pgrep -nf "Ghostty.app/Contents/MacOS/ghostty .*--title=JustVibes" 2>/dev/null || true)"
     if [[ -n "$_ghostty_pid" ]]; then
       break
     fi
