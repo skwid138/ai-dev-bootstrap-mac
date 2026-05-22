@@ -99,6 +99,7 @@ jobs:
   bats:
     name: Bats Tests
     runs-on: macos-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
 
