@@ -1,7 +1,7 @@
 #!/bin/bash
 # Argument parsing for bootstrap.sh.
 #
-# Seven flags supported:
+# Eight flags supported:
 #   --dry-run         Print the install plan and exit. Side-effect-free:
 #                     no brew, no file writes, no module sourcing.
 #   --non-interactive Skip all prompts. Falls back to defaults
@@ -31,6 +31,10 @@
 #                     or if AI_BOOTSTRAP_TIER='custom' (we can't
 #                     reconstruct the custom package list from state.sh
 #                     alone — re-run full bootstrap instead).
+#   --update          Fast, non-interactive managed-asset refresh. Reads the
+#                     existing state.sh, refreshes OpenCode assets/scripts,
+#                     re-renders opencode.json, re-runs shell config, rebuilds
+#                     Just Vibes only if launcher sources changed, and exits.
 #   --list-modules    Print canonical module names, one per line, and exit.
 #                     Implies --non-interactive.
 #   --module <name>   Run only one named module. Standard modules require a
@@ -70,9 +74,12 @@ Usage:
                                     suddenly stops working after a brew or
                                     macOS upgrade.
   ./bootstrap.sh --refresh-paths    Re-bake the Homebrew prefix into your
-                                    shell config (re-runs the shell-config
-                                    module only). ~1-2 seconds. Run after
-                                    --check-paths reports stale.
+                                     shell config (re-runs the shell-config
+                                     module only). ~1-2 seconds. Run after
+                                     --check-paths reports stale.
+  ./bootstrap.sh --update           Refresh managed OpenCode assets, helper
+                                     scripts, rendered config, shell config,
+                                     and Just Vibes if needed. No prompts.
   ./bootstrap.sh --list-modules     Show module names that can be used with
                                     --module, one per line.
   ./bootstrap.sh --module <name>    Run one module by name from a previous
@@ -101,6 +108,7 @@ EOF
 #   BOOTSTRAP_LAUNCHER_ONLY    ="1" if --launcher-only was passed
 #   BOOTSTRAP_CHECK_PATHS      ="1" if --check-paths was passed
 #   BOOTSTRAP_REFRESH_PATHS    ="1" if --refresh-paths was passed
+#   BOOTSTRAP_UPDATE           ="1" if --update was passed
 #   BOOTSTRAP_LIST_MODULES     ="1" if --list-modules was passed
 #   BOOTSTRAP_MODULE_ONLY      = module name if --module <name> was passed
 #
@@ -158,6 +166,14 @@ args_parse() {
         export BOOTSTRAP_REFRESH_PATHS=1
         # Implies non-interactive — refresh re-runs module 10 with the
         # tier already persisted in state.sh; nothing to prompt for.
+        export BOOTSTRAP_NONINTERACTIVE=1
+        export AI_BOOTSTRAP_NONINTERACTIVE=1
+        shift
+        ;;
+      --update)
+        export BOOTSTRAP_UPDATE=1
+        # Update is a zero-question maintenance path driven from persisted
+        # state; prompts would defeat its purpose.
         export BOOTSTRAP_NONINTERACTIVE=1
         export AI_BOOTSTRAP_NONINTERACTIVE=1
         shift
