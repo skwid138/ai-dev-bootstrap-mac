@@ -5,6 +5,9 @@
 
 bats_require_minimum_version 1.5.0
 
+# shellcheck source=helpers/mock_osacompile.bash
+source "${BATS_TEST_DIRNAME}/helpers/mock_osacompile.bash"
+
 setup() {
   REPO_ROOT="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
   export REPO_ROOT
@@ -18,6 +21,7 @@ setup() {
 
   MOCKS_DIR="$BATS_TEST_TMPDIR/mocks"
   mkdir -p "$MOCKS_DIR"
+  create_osacompile_mock "$MOCKS_DIR"
   cat >"$MOCKS_DIR/brew" <<'EOF'
 #!/usr/bin/env bash
 case "${1:-}" in

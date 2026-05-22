@@ -23,6 +23,9 @@
 
 bats_require_minimum_version 1.5.0
 
+# shellcheck source=helpers/mock_osacompile.bash
+source "${BATS_TEST_DIRNAME}/helpers/mock_osacompile.bash"
+
 setup() {
   BOOTSTRAP_DIR="$(cd "$(dirname "$BATS_TEST_FILENAME")/.." && pwd)"
   export BOOTSTRAP_DIR
@@ -30,6 +33,11 @@ setup() {
   source "${BOOTSTRAP_DIR}/lib/launcher.sh"
 
   SANDBOX="$(mktemp -d)"
+  MOCKS_DIR="$SANDBOX/mocks"
+  mkdir -p "$MOCKS_DIR"
+  create_osacompile_mock "$MOCKS_DIR"
+  export PATH="$MOCKS_DIR:$PATH"
+
   MOCK_LOG="$SANDBOX/mock.log"
   : >"$MOCK_LOG"
   export MOCK_LOG
