@@ -10,10 +10,9 @@
 #
 # Design choices (see ANALYSIS_AND_PLAN.md §E for full reasoning):
 #
-#   * Always rebuild on bootstrap re-run. The .app is small (~150 KB) and
-#     building is fast (~50 ms). Skipping a rebuild risks the user running
-#     a stale launcher after we ship launch.sh changes — way worse than
-#     repeating 50 ms of work.
+#   * Rebuild only when needed. The launcher source is checksummed, and the
+#     saved checksum is compared on bootstrap re-run so unchanged bundles are
+#     left in place while launch.sh changes still trigger a safe rebuild.
 #
 #   * Prefer /Applications, fall back to ~/Applications. Most users *can*
 #     write to /Applications without sudo (it's group-writable for `admin`,
@@ -24,8 +23,9 @@
 #     back to ~/Applications on machines where /Applications is read-only
 #     (corp-managed Macs, non-admin user accounts).
 #
-#   * No "skipped" path. Unlike ghostty/AGENTS.md, the launcher bundle
-#     contains zero user-editable content. Rebuilding is always safe.
+#   * A checksum match is safe to skip. Unlike ghostty/AGENTS.md, the launcher
+#     bundle contains zero user-editable content; checksum drift triggers the
+#     rebuild path instead of preserving a stale bundle.
 
 launcher_checksum_file() {
   echo "$HOME/.config/ai-bootstrap/launcher-checksum"

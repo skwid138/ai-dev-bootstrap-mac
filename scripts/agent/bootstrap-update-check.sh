@@ -5,6 +5,14 @@
 
 set -euo pipefail
 
+# Accept --json for forward compatibility (output is always JSON).
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --json) shift ;;
+    *) shift ;;
+  esac
+done
+
 json_error() {
   local message="$1"
   if command -v jq >/dev/null 2>&1; then
