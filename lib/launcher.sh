@@ -27,6 +27,44 @@
 #   * No "skipped" path. Unlike ghostty/AGENTS.md, the launcher bundle
 #     contains zero user-editable content. Rebuilding is always safe.
 
+launcher_checksum_file() {
+  echo "$HOME/.config/ai-bootstrap/launcher-checksum"
+}
+
+launcher_checksum_compute() {
+  local root="${BOOTSTRAP_DIR:-$(pwd)}"
+
+  (
+    cd "$root" || exit 1
+    find launcher/ -type f -not -name '.DS_Store' | sort | xargs shasum | shasum | awk '{print $1}'
+  )
+}
+
+launcher_needs_rebuild() {
+  local dest_dir app_path checksum_file current_checksum saved_checksum
+
+  dest_dir=$(launcher_resolve_dest)
+  app_path="$dest_dir/Just Vibes.app"
+  checksum_file=$(launcher_checksum_file)
+
+  [ -d "$app_path" ] || return 0
+  [ -f "$checksum_file" ] || return 0
+
+  current_checksum=$(launcher_checksum_compute) || return 0
+  saved_checksum=$(cat "$checksum_file" 2>/dev/null || true)
+
+  [ "$current_checksum" != "$saved_checksum" ]
+}
+
+launcher_checksum_save() {
+  local checksum_file checksum_dir
+
+  checksum_file=$(launcher_checksum_file)
+  checksum_dir=$(dirname "$checksum_file")
+  mkdir -p "$checksum_dir" || return 1
+  launcher_checksum_compute >"$checksum_file"
+}
+
 # ── launcher_resolve_dest ───────────────────────────────────────────────────
 # Pick the install directory for Just Vibes.app. Prefers /Applications if
 # writable (most users on standard Macs); falls back to ~/Applications
@@ -82,8 +120,19 @@ launcher_install() {
     return 1
   fi
 
+  if ! launcher_checksum_save; then
+    echo "launcher_install: failed to save launcher checksum" >&2
+    return 1
+  fi
+
   echo "installed"
   return 0
+}
+
+launcher_build() {
+  local dest_dir
+  dest_dir=$(launcher_resolve_dest)
+  launcher_install "${BOOTSTRAP_DIR}/launcher/build.sh" "$dest_dir"
 }
 
 # ── launcher_uninstall ──────────────────────────────────────────────────────
