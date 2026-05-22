@@ -9,7 +9,7 @@ Trigger phrases include:
 - "update my tools"
 - "get the latest skills"
 - "update OpenCode"
-- "update Just Vibes"
+- "update JustVibes"
 - "are there new commands?"
 
 Say: "I can check that with `/check-updates`." Then run or suggest that command.

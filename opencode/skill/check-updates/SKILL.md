@@ -1,6 +1,6 @@
 ---
 name: check-updates
-description: "Check whether ai-dev-bootstrap-mac has updates and guide safe application. Use when the user says 'check for updates', 'am I up to date', 'update my tools', 'get latest skills', or asks whether OpenCode/Just Vibes/bootstrap assets are current."
+description: "Check whether ai-dev-bootstrap-mac has updates and guide safe application. Use when the user says 'check for updates', 'am I up to date', 'update my tools', 'get latest skills', or asks whether OpenCode/JustVibes/bootstrap assets are current."
 ---
 
 # Check Updates
@@ -26,7 +26,7 @@ $AI_BOOTSTRAP_WORKSPACE/scripts/agent/bootstrap-update-check.sh --json
    - `commands` → slash commands
    - `scripts` → helper scripts
    - `config` → OpenCode/bootstrap configuration
-   - `launcher` → Just Vibes launcher
+   - `launcher` → JustVibes launcher
    - `other` → project documentation or maintenance files
 
 3. **If current** — If `up_to_date` is `true`, say the tools are up to date. No further action is needed.
@@ -47,7 +47,7 @@ $AI_BOOTSTRAP_WORKSPACE/scripts/agent/bootstrap-update-check.sh --json
 
    This command should trigger normal permission approval. Do not bypass it.
 
-7. **After applying** — Tell the user to quit and reopen Just Vibes so OpenCode reloads the latest skills, commands, instructions, and permissions.
+7. **After applying** — Tell the user to quit and reopen JustVibes so OpenCode reloads the latest skills, commands, instructions, and permissions.
 
 ## Rules
 

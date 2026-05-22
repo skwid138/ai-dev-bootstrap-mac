@@ -45,7 +45,7 @@ _Avoid_: config file, settings
 **Workspace**:
 The user's chosen project directory (default `~/code`). Cannot contain spaces or single quotes. Stored in the state file.
 
-**Just Vibes**:
+**JustVibes**:
 The `.app` launcher that opens Ghostty + OpenCode in one click. Built by `launcher/build.sh`, installed to `/Applications` or `~/Applications`.
 _Avoid_: the app, launcher app
 
@@ -74,7 +74,7 @@ _Avoid_: flag file, marker
 
 - A **Tier** determines which **Modules** run and which packages are installed.
 - **Phase 0** modules must succeed before **Phase 1+** modules execute.
-- The **State file** is written by the installer and consumed by **Just Vibes** and shell config.
+- The **State file** is written by the installer and consumed by **JustVibes** and shell config.
 - **Curated assets** are managed by a manifest; **opencode.json** is rendered separately.
 - **Helper scripts** are optional; declining the overwrite prompt preserves existing scripts without removing curated assets.
 - **Add-on modules** are excluded from **Tier** expansion; they run only via explicit `--module` flag.
@@ -91,4 +91,4 @@ _Avoid_: flag file, marker
 ## Flagged ambiguities
 
 - "config" was used to mean both **opencode.json** (rendered settings) and **curated assets** (agent/skill/command/instruction dirs) — resolved: these are distinct concepts with different update mechanisms.
-- "launcher" was used to mean both the **Just Vibes** `.app` bundle and the `launcher/` source directory — resolved: "Just Vibes" for the installed app, "launcher/" for the build source.
+- "launcher" was used to mean both the **JustVibes** `.app` bundle and the `launcher/` source directory — resolved: "JustVibes" for the installed app, "launcher/" for the build source.

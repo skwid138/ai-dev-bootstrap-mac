@@ -134,25 +134,25 @@ You can approve, push back, or change direction at any step. Destructive command
 
 If you want the deep technical details of how this is wired up, see [`opencode/README.md`](opencode/README.md) inside this repo.
 
-## 🐷 Just Vibes Launcher
+## 🐷 JustVibes Launcher
 
-If you install the **Recommended** tier (or higher), the bootstrap drops a one‑click app called **Just Vibes** into your `~/Applications` folder.
+If you install the **Recommended** tier (or higher), the bootstrap drops a one‑click app called **JustVibes** into your `~/Applications` folder.
 
 Open it from Spotlight, Launchpad, or Finder — drag it to your Dock for one‑click access. It opens Ghostty in your saved workspace folder and starts OpenCode automatically. No commands to remember.
 
-> **Fresh every time.** Just Vibes always opens a single window with a single tab running OpenCode, regardless of what Ghostty had open last time. macOS would normally restore your previous Ghostty windows on launch; Just Vibes suppresses that just for itself so the experience stays predictable. One side effect: if you open extra tabs inside a Just Vibes window and then quit Ghostty (`Cmd+Q`), those extra tabs won't come back the next time you click Just Vibes. Manual Spotlight/Dock launches of Ghostty are unaffected — they restore normally.
+> **Fresh every time.** JustVibes always opens a single window with a single tab running OpenCode, regardless of what Ghostty had open last time. macOS would normally restore your previous Ghostty windows on launch; JustVibes suppresses that just for itself so the experience stays predictable. One side effect: if you open extra tabs inside a JustVibes window and then quit Ghostty (`Cmd+Q`), those extra tabs won't come back the next time you click JustVibes. Manual Spotlight/Dock launches of Ghostty are unaffected — they restore normally.
 
-> **Branded identity, two things to quit.** Just Vibes shows up as **Just Vibes** (with a piggy-bank icon) in your Dock, Cmd-Tab switcher, and Activity Monitor — distinct from Ghostty. The launcher and the terminal are two separate processes by design: this is what lets the launcher have its own identity. The trade-off is that quitting Just Vibes (`Cmd+Q` from its Cmd-Tab card or right-click → Quit on the Dock tile) does **not** quit the Ghostty window it spawned, and vice versa. Quit them separately.
+> **Branded identity, two things to quit.** JustVibes shows up as **JustVibes** (with a piggy-bank icon) in your Dock, Cmd-Tab switcher, and Activity Monitor — distinct from Ghostty. The launcher and the terminal are two separate processes by design: this is what lets the launcher have its own identity. The trade-off is that quitting JustVibes (`Cmd+Q` from its Cmd-Tab card or right-click → Quit on the Dock tile) does **not** quit the Ghostty window it spawned, and vice versa. Quit them separately.
 
-> **Cmd-Tab focuses the terminal.** When Just Vibes is already running, Cmd-Tabbing to its card (or clicking its Dock tile) brings the most recently spawned Ghostty terminal window forward — no need to Cmd-Tab past Just Vibes to find Ghostty's card. The first time this happens after install, macOS may show a one-time **Accessibility** prompt asking to allow Just Vibes to control "System Events"; click **Allow**. Saying no is fine — Cmd-Tabbing to Just Vibes will just launch a fresh terminal instead of focusing the existing one.
+> **Cmd-Tab focuses the terminal.** When JustVibes is already running, Cmd-Tabbing to its card (or clicking its Dock tile) brings the most recently spawned Ghostty terminal window forward — no need to Cmd-Tab past JustVibes to find Ghostty's card. The first time this happens after install, macOS may show a one-time **Accessibility** prompt asking to allow JustVibes to control "System Events"; click **Allow**. Saying no is fine — Cmd-Tabbing to JustVibes will just launch a fresh terminal instead of focusing the existing one.
 >
 > Want to disable PID tracking entirely (and always get a fresh terminal on Cmd-Tab)? Set this in your shell:
 >
 > ```bash
-> export JUST_VIBES_TRACK_GHOSTTY_PID=0
+> export JUSTVIBES_TRACK_GHOSTTY_PID=0
 > ```
 
-> Want a plain shell instead? Open **Terminal** or **Ghostty** directly. Just Vibes is purely a convenience launcher; it doesn't change anything else on your system.
+> Want a plain shell instead? Open **Terminal** or **Ghostty** directly. JustVibes is purely a convenience launcher; it doesn't change anything else on your system.
 
 ## 🐚 Shell Configuration
 
@@ -199,7 +199,7 @@ security delete-generic-password -s 'opencode-api-key' -a "$USER" 2>/dev/null
 security add-generic-password -s 'opencode-api-key' -a "$USER" -w "$(pbpaste)"
 ```
 
-The key will be loaded automatically on your next terminal session or Just Vibes launch. Using `pbpaste` keeps the key out of your shell history.
+The key will be loaded automatically on your next terminal session or JustVibes launch. Using `pbpaste` keeps the key out of your shell history.
 
 ## 🛠 Troubleshooting
 
@@ -225,13 +225,13 @@ Safe to run again anytime. The installer skips what you already have and can add
 
 ## ⬆️ Updating
 
-To get the latest AI skills, commands, helper scripts, OpenCode settings, and Just Vibes launcher updates without repeating the full installer prompts, run:
+To get the latest AI skills, commands, helper scripts, OpenCode settings, and JustVibes launcher updates without repeating the full installer prompts, run:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/skwid138/ai-dev-bootstrap-mac/main/install.sh)" -s -- --update
 ```
 
-The update path uses your saved tier and workspace. It refreshes managed OpenCode assets, overwrites helper scripts, preserves your current OpenCode model setting, re-runs the shell configuration module, and rebuilds Just Vibes only when the launcher files changed. Module 10 may install shell config dependencies like zplug if selected in your tier.
+The update path uses your saved tier and workspace. It refreshes managed OpenCode assets, overwrites helper scripts, preserves your current OpenCode model setting, re-runs the shell configuration module, and rebuilds JustVibes only when the launcher files changed. Module 10 may install shell config dependencies like zplug if selected in your tier.
 
 Inside OpenCode, you can also ask “am I up to date?” or run:
 
@@ -239,7 +239,7 @@ Inside OpenCode, you can also ask “am I up to date?” or run:
 /check-updates
 ```
 
-After an update, quit and reopen Just Vibes so OpenCode loads the latest skills, commands, and instructions.
+After an update, quit and reopen JustVibes so OpenCode loads the latest skills, commands, and instructions.
 
 ## 🧪 Running Tests
 
@@ -258,7 +258,7 @@ ai-dev-bootstrap-mac/
 ├── config/               # Package definitions and tier mappings
 ├── dotfiles/             # Modular zsh configuration files
 ├── ghostty/              # Ghostty terminal config and themes
-├── launcher/             # Just Vibes app bundle and build scripts
+├── launcher/             # JustVibes app bundle and build scripts
 ├── opencode/             # OpenCode AI config (agents, skills, commands)
 ├── scripts/              # Helper scripts for OpenCode self-maintenance
 ├── tests/                # Bats test suite
@@ -268,7 +268,7 @@ ai-dev-bootstrap-mac/
 
 ## 🎨 Credits
 
-- Just Vibes app icon: [Lucide](https://lucide.dev) `piggy-bank` (ISC License). See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
+- JustVibes app icon: [Lucide](https://lucide.dev) `piggy-bank` (ISC License). See [`THIRD_PARTY_LICENSES.md`](THIRD_PARTY_LICENSES.md).
 
 ## 📄 License
 
