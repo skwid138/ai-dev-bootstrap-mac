@@ -200,6 +200,24 @@ run_script() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"Error: invalid profile JSON"* ]]
   cmp "$before" "$CONFIG"
+  local backups=( "$CONFIG".bak.*.* )
+  [[ ${#backups[@]} -eq 0 || ! -e "${backups[0]}" ]]
+}
+
+@test "set-models atomic write: missing tier key in valid profile exits with error" {
+  stage_script_fixture
+  write_config
+  write_state ""
+  before="$SANDBOX/before.json"
+  cp "$CONFIG" "$before"
+  printf '{"default": {"gandalf": {"model": "x"}}}\n' >"$PROFILE"
+
+  run_script eco
+  [ "$status" -eq 1 ]
+  [[ "$output" == *"tier 'eco' not found"* ]]
+  cmp "$before" "$CONFIG"
+  local backups=( "$CONFIG".bak.*.* )
+  [[ ${#backups[@]} -eq 0 || ! -e "${backups[0]}" ]]
 }
 
 @test "set-models idempotent: applying the same tier twice produces identical config" {
@@ -223,9 +241,22 @@ run_script() {
   run_script default
   [ "$status" -eq 0 ]
 
-  backups=("$CONFIG".bak.*)
+  backups=("$CONFIG".bak.*.*)
   [ "${#backups[@]}" -eq 1 ]
-  [[ "${backups[0]}" =~ opencode\.json\.bak\.[0-9]{8}-[0-9]{6}$ ]]
+  [[ "${backups[0]}" =~ opencode\.json\.bak\.[0-9]{8}-[0-9]{6}\.[0-9]+$ ]]
+  [ "$(jq -r '.model' "${backups[0]}")" = "old/root-model" ]
+}
+
+@test "set-models reset creates backup" {
+  write_config
+  write_state "default"
+
+  run_script reset
+  [ "$status" -eq 0 ]
+
+  local backups=( "$CONFIG".bak.*.* )
+  [ "${#backups[@]}" -eq 1 ]
+  [ -e "${backups[0]}" ]
   [ "$(jq -r '.model' "${backups[0]}")" = "old/root-model" ]
 }
 
@@ -264,8 +295,8 @@ run_script() {
   [ "$status" -ne 0 ]
   [[ "$output" == *"Usage: set-models.sh [default|eco|reset]"* ]]
   cmp "$before" "$CONFIG"
-  backups=("$CONFIG".bak.*)
-  [ ! -e "${backups[0]}" ]
+  local backups=( "$CONFIG".bak.*.* )
+  [[ ${#backups[@]} -eq 0 || ! -e "${backups[0]}" ]]
 }
 
 @test "set-models missing jq: prints a clear error and exits non-zero" {
