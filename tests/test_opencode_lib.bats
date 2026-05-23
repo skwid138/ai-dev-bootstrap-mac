@@ -8,6 +8,8 @@
 # jq to be on PATH for the render_config tests, which is fine — jq is
 # an Essential bootstrap package and is already installed in CI).
 
+bats_require_minimum_version 1.5.0
+
 setup() {
   source "${BATS_TEST_DIRNAME}/test_helper.sh"
   setup_test_env
@@ -223,6 +225,48 @@ teardown() {
 @test "opencode_deploy_if_missing: errors when source missing" {
   run opencode_deploy_if_missing "$SANDBOX/nope.jsonc" "$SANDBOX/dest/dcp.jsonc"
   [ "$status" -ne 0 ]
+}
+
+# ── opencode_deploy_with_backup ──────────────────────────────────────────────
+
+@test "opencode_deploy_with_backup: installs when destination parent is missing" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/config/tui.json"
+  echo '{ "plugin": [] }' >"$src"
+
+  run opencode_deploy_with_backup "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "installed" ]
+  [ -f "$dest" ]
+  run cat "$dest"
+  [ "$output" = '{ "plugin": [] }' ]
+}
+
+@test "opencode_deploy_with_backup: overwrites existing destination and creates backup" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  echo "NEW" >"$src"
+  mkdir -p "$(dirname "$dest")"
+  echo "OLD" >"$dest"
+
+  run opencode_deploy_with_backup "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "updated" ]
+
+  backups=("$SANDBOX"/dest/tui.json.bak.*)
+  [ "${#backups[@]}" -eq 1 ]
+  [ -f "${backups[0]}" ]
+  run cat "${backups[0]}"
+  [ "$output" = "OLD" ]
+  run cat "$dest"
+  [ "$output" = "NEW" ]
+}
+
+@test "opencode_deploy_with_backup: errors when source missing" {
+  run --separate-stderr opencode_deploy_with_backup "$SANDBOX/nope.json" "$SANDBOX/dest/tui.json"
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+  [[ "$stderr" == *"source not found"* ]]
 }
 
 # ── opencode_render_config ───────────────────────────────────────────────────

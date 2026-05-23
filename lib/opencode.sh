@@ -211,6 +211,52 @@ opencode_deploy_if_missing() {
   echo "installed"
 }
 
+# ── opencode_deploy_with_backup ──────────────────────────────────────────────
+# Deploy an OpenCode support config file, backing up an existing destination.
+#
+# Some OpenCode support files are bootstrap-managed but still user-visible, so
+# re-bootstrap should refresh them while leaving an undo copy beside the file.
+#
+# Args:
+#   $1: source template path
+#   $2: dest   config path
+#
+# Returns: 0 if installed or updated cleanly, 1 on error.
+# Stdout: "installed", "updated", or "" on error (machine-readable).
+opencode_deploy_with_backup() {
+  local src="$1"
+  local dest="$2"
+
+  if [ ! -f "$src" ]; then
+    echo "source not found: $src" >&2
+    return 1
+  fi
+
+  mkdir -p "$(dirname "$dest")"
+
+  if [ -f "$dest" ]; then
+    if ! cp "$dest" "$dest.bak.$(date +%Y%m%d-%H%M%S)"; then
+      echo "failed to backup: $dest" >&2
+      return 1
+    fi
+
+    if ! cp "$src" "$dest"; then
+      echo "failed to overwrite: $dest" >&2
+      return 1
+    fi
+
+    echo "updated"
+    return 0
+  fi
+
+  if ! cp "$src" "$dest"; then
+    echo "failed to install: $dest" >&2
+    return 1
+  fi
+
+  echo "installed"
+}
+
 # ── opencode_render_config ───────────────────────────────────────────────────
 # Render opencode.json from the template, optionally setting the model.
 #
