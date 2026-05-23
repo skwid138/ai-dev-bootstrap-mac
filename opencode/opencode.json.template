@@ -19,6 +19,7 @@
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/bootstrap-update-check.sh *": "allow",
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh *": "allow",
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/permission-audit.sh *": "allow",
+      "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/set-models.sh *": "allow",
       "bats *": "allow",
       "cat *": "allow",
       "diff *": "allow",
