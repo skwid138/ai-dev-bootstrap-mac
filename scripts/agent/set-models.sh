@@ -48,7 +48,10 @@ else
   state_value="$tier"
 fi
 
-jq empty "$tmp_file" 2>/dev/null || { echo "Error: transform produced invalid JSON" >&2; exit 1; }
+if ! [[ -s "$tmp_file" ]] || ! jq empty "$tmp_file" 2>/dev/null; then
+  echo "Error: transform produced invalid JSON" >&2
+  exit 1
+fi
 
 mv "$tmp_file" "$CONFIG"
 

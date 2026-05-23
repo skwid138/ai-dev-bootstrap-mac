@@ -55,6 +55,12 @@ EOF
   fi
 }
 
+write_profile() {
+  if [ "$PROFILE" != "${BOOTSTRAP_DIR}/scripts/model-profiles.json" ]; then
+    cp "${BOOTSTRAP_DIR}/scripts/model-profiles.json" "$PROFILE"
+  fi
+}
+
 stage_script_fixture() {
   local root="$SANDBOX/workspace/scripts"
   mkdir -p "$root/agent"
@@ -218,6 +224,30 @@ run_script() {
   cmp "$before" "$CONFIG"
   local backups=( "$CONFIG".bak.*.* )
   [[ ${#backups[@]} -eq 0 || ! -e "${backups[0]}" ]]
+}
+
+@test "set-models output validation: empty transform output is rejected" {
+  stage_script_fixture
+  write_config
+  write_state ""
+  write_profile
+
+  local real_jq
+  real_jq="$(command -v jq)"
+  local fake_bin="$SANDBOX/fake_bin"
+  mkdir -p "$fake_bin"
+
+  # Fake jq: transform calls produce no output; all other calls delegate to real jq
+  printf '#!/bin/bash\nif [[ "$*" == *--slurpfile* ]] || [[ "$*" == *del\\(* ]]; then true; else exec "%s" "$@"; fi\n' "$real_jq" >"$fake_bin/jq"
+  chmod +x "$fake_bin/jq"
+
+  local before="$SANDBOX/before.json"
+  cp "$CONFIG" "$before"
+
+  PATH="$fake_bin:$PATH" run_script default
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"transform produced invalid JSON"* ]]
+  cmp "$before" "$CONFIG"
 }
 
 @test "set-models idempotent: applying the same tier twice produces identical config" {
