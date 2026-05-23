@@ -145,6 +145,14 @@ EOF
     fi
   fi
 
+  # Curated model profile — set by scripts/agent/set-models.sh, preserved here
+  # so the skill can detect post-re-run state.
+  if ! printf "export AI_BOOTSTRAP_CURATED_MODELS=''\n" >>"$tmp_file"; then
+    rm -f "$tmp_file"
+    echo "state_write: failed to write AI_BOOTSTRAP_CURATED_MODELS to $tmp_file" >&2
+    return 1
+  fi
+
   if ! mv "$tmp_file" "$state_file"; then
     rm -f "$tmp_file"
     echo "state_write: failed to replace $state_file" >&2

@@ -48,12 +48,14 @@ teardown() {
     echo "VER=$AI_BOOTSTRAP_VERSION"
     echo "FIRST=$AI_BOOTSTRAP_FIRST_RUN_AT"
     echo "LAST=$AI_BOOTSTRAP_LAST_RUN_AT"
+    echo "CURATED=${AI_BOOTSTRAP_CURATED_MODELS-__unset__}"
   )
   [[ "$values" == *"WS=$SANDBOX/code"* ]]
   [[ "$values" == *"TIER=recommended"* ]]
   [[ "$values" == *"VER=2.0.0-dev"* ]]
   [[ "$values" == *"FIRST=2026-05-01T00:00:00Z"* ]]
   [[ "$values" == *"LAST=2026-05-01T00:00:00Z"* ]]
+  [[ "$values" == *"CURATED="* ]]
 }
 
 @test "state_write: writes AI_BOOTSTRAP_DIR when bootstrap dir is provided" {
