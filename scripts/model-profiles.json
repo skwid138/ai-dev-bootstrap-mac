@@ -1,0 +1,26 @@
+{
+  "default": {
+    "model": "opencode-go/kimi-k2.6",
+    "small_model": "opencode-go/deepseek-v4-flash",
+    "agent": {
+      "gandalf": { "model": "opencode-go/kimi-k2.6", "thinking": { "type": "enabled" } },
+      "aragorn": { "model": "opencode-go/minimax-m2.5" },
+      "saruman": { "model": "opencode-go/minimax-m2.7" },
+      "legolas": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "enabled" }, "reasoningEffort": "high" },
+      "radagast": { "model": "opencode-go/qwen3.6-plus", "enable_thinking": true },
+      "compaction": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "disabled" } }
+    }
+  },
+  "eco": {
+    "model": "opencode-go/deepseek-v4-flash",
+    "small_model": "opencode-go/deepseek-v4-flash",
+    "agent": {
+      "gandalf": { "model": "opencode-go/kimi-k2.6", "thinking": { "type": "enabled" } },
+      "aragorn": { "model": "opencode-go/minimax-m2.5" },
+      "saruman": { "model": "opencode-go/minimax-m2.7" },
+      "legolas": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "disabled" } },
+      "radagast": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "enabled" }, "reasoningEffort": "high" },
+      "compaction": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "disabled" } }
+    }
+  }
+}
