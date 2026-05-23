@@ -16,18 +16,25 @@ fi
 command -v jq >/dev/null 2>&1 || { echo "Error: jq is required" >&2; exit 1; }
 [[ -f "$CONFIG" ]] || { echo "Error: $CONFIG not found" >&2; exit 1; }
 
-cp "$CONFIG" "$CONFIG.bak.$(date +%Y%m%d-%H%M%S)"
+if [[ "$tier" != "reset" ]]; then
+  [[ -f "$PROFILE" ]] || { echo "Error: $PROFILE not found" >&2; exit 1; }
+  jq empty "$PROFILE" 2>/dev/null || { echo "Error: invalid profile JSON" >&2; exit 1; }
+  jq -e --arg t "$tier" 'has($t)' "$PROFILE" >/dev/null 2>&1 \
+    || { echo "Error: tier '$tier' not found in profile" >&2; exit 1; }
+fi
 
 tmp_file="${CONFIG}.tmp.$$"
+trap 'rm -f "$tmp_file"' EXIT
+
+cp "$CONFIG" "$CONFIG.bak.$(date +%Y%m%d-%H%M%S).$$" \
+  || { echo "Error: failed to create backup" >&2; exit 1; }
+
 state_value=""
 
 if [[ "$tier" == "reset" ]]; then
   jq 'del(.model, .small_model, .agent.gandalf, .agent.aragorn, .agent.saruman, .agent.legolas, .agent.radagast, .agent.compaction)' \
     "$CONFIG" >"$tmp_file"
 else
-  [[ -f "$PROFILE" ]] || { echo "Error: $PROFILE not found" >&2; exit 1; }
-  jq empty "$PROFILE" 2>/dev/null || { echo "Error: invalid profile JSON" >&2; exit 1; }
-
   jq --slurpfile profile "$PROFILE" --arg tier "$tier" '
     .model = $profile[0][$tier].model |
     .small_model = $profile[0][$tier].small_model |
@@ -41,7 +48,7 @@ else
   state_value="$tier"
 fi
 
-jq empty "$tmp_file" 2>/dev/null || { rm -f "$tmp_file"; echo "Error: output validation failed" >&2; exit 1; }
+jq empty "$tmp_file" 2>/dev/null || { echo "Error: transform produced invalid JSON" >&2; exit 1; }
 
 mv "$tmp_file" "$CONFIG"
 
