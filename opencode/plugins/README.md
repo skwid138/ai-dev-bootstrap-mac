@@ -49,9 +49,11 @@ OpenCode there so your normal config is not changed.
 
 ## Editing the ASCII art
 
-The logo source comments link to the exact TAAG font generator used for the
-art. Regenerate with Big Mono 9, then paste the rows into the JSX strings.
-Keep row widths aligned so the two word segments line up in the terminal.
+The logo source comments link to the TAAG generator with the Big Mono 9 font.
+The URL in the plugin comment encodes `t=Vibes` as an example; to regenerate
+`Just`, change the `t=` parameter. Paste the generated rows into the JSX
+strings. Keep row widths aligned so the two word segments line up in the
+terminal.
 
 ## Brand color split
 
