@@ -84,6 +84,23 @@ EOF
   [[ "$output" == *"no TSX plugins found in $preview_repo/opencode/plugins"* ]]
 }
 
+@test "tui-preview: fails gracefully when opencode is not on PATH" {
+  preview_repo="$TMP_DIR/preview-missing-opencode"
+  clean_path="$TMP_DIR/path-without-opencode"
+  copy_preview_repo "$preview_repo"
+
+  cat >"$preview_repo/opencode/plugins/alpha.tsx" <<'EOF'
+export default { id: "alpha" }
+EOF
+
+  mkdir -p "$clean_path"
+  ln -s "$(command -v dirname)" "$clean_path/dirname"
+
+  PATH="$clean_path" run "$(command -v bash)" "$preview_repo/scripts/tui-preview.sh"
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Missing dependency: 'opencode' is required but not found."* ]]
+}
+
 @test "tui-preview: creates isolated temp OpenCode plugin structure" {
   preview_repo="$TMP_DIR/preview-with-plugins"
   stub_dir="$TMP_DIR/stubs-with-plugins"
