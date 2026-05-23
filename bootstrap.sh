@@ -207,6 +207,15 @@ if [ -n "${BOOTSTRAP_UPDATE:-}" ]; then
     "$OPENCODE_CONFIG_DIR/opencode.json" \
     "$existing_model"
 
+  tui_config_result=$(opencode_deploy_with_backup \
+    "${BOOTSTRAP_DIR}/opencode/tui.json.template" \
+    "$OPENCODE_CONFIG_DIR/tui.json")
+  case "$tui_config_result" in
+    installed) log_installed "tui.json installed (friendly home screen enabled)" ;;
+    updated) log_info "tui.json updated (previous version backed up)" ;;
+    *) log_error "Could not install the OpenCode TUI config. Run this installer again; if it still fails, share this detail with support: $tui_config_result" ;;
+  esac
+
   if [ -f "${BOOTSTRAP_DIR}/modules/10-shell-config.sh" ]; then
     # shellcheck source=modules/10-shell-config.sh
     source "${BOOTSTRAP_DIR}/modules/10-shell-config.sh"

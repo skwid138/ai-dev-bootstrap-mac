@@ -240,6 +240,37 @@ EOF
   [[ "$module_output" == *"/connect"* ]]
 }
 
+@test "module: installs tui.json with friendly prompt and JustVibes logo plugins" {
+  export OPENCODE_TEST_MENU_SELECTION=skip
+
+  run_module
+  [ "$status" -eq 0 ]
+
+  tui_config="$HOME/.config/opencode/tui.json"
+  [ -f "$tui_config" ]
+  run jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}]]' "$tui_config"
+  [ "$status" -eq 0 ]
+  [ -f "$HOME/.config/opencode/plugins/justvibes-logo.tsx" ]
+}
+
+@test "module: overwrites existing tui.json and backs up previous version" {
+  export OPENCODE_TEST_MENU_SELECTION=skip
+  mkdir -p "$HOME/.config/opencode"
+  echo '{ "plugin": ["custom"] }' >"$HOME/.config/opencode/tui.json"
+
+  run_module
+  [ "$status" -eq 0 ]
+
+  backups=("$HOME"/.config/opencode/tui.json.bak.*)
+  [ "${#backups[@]}" -eq 1 ]
+  [ -f "${backups[0]}" ]
+  run cat "${backups[0]}"
+  [ "$output" = '{ "plugin": ["custom"] }' ]
+
+  run jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}]]' "$HOME/.config/opencode/tui.json"
+  [ "$status" -eq 0 ]
+}
+
 # ── Idempotency: rerun preserves user-edited AGENTS.md ───────────────────────
 @test "module: rerun preserves user-edited AGENTS.md, refreshes other assets" {
   export MOCK_GH_AUTHED=1

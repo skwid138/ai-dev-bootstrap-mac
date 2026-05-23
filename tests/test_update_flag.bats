@@ -93,6 +93,7 @@ save_current_launcher_checksum() {
   cat >"$HOME/.config/opencode/opencode.json" <<'EOF'
 {"model":"openai/gpt-5.2"}
 EOF
+  echo '{ "plugin": ["stale"] }' >"$HOME/.config/opencode/tui.json"
   echo "stale helper" >"$WORKSPACE/scripts/agent/opencode-deps-check.sh"
 
   run "$REPO_ROOT/bootstrap.sh" --update
@@ -103,6 +104,10 @@ EOF
   [ -f "$WORKSPACE/scripts/agent/opencode-deps-check.sh" ]
   grep -qF "Usage: opencode-deps-check" "$WORKSPACE/scripts/agent/opencode-deps-check.sh"
   [ "$(jq -r '.model' "$HOME/.config/opencode/opencode.json")" = "openai/gpt-5.2" ]
+  jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}]]' "$HOME/.config/opencode/tui.json"
+  tui_backups=("$HOME"/.config/opencode/tui.json.bak.*)
+  [ "${#tui_backups[@]}" -eq 1 ]
+  [ "$(cat "${tui_backups[0]}")" = '{ "plugin": ["stale"] }' ]
   grep -qF "$MOCK_BREW_PREFIX/bin" "$HOME/.config/ai-bootstrap/shell/env/paths.zsh"
   [ -f "$JUSTVIBES_DEST_DIR_OVERRIDE/JustVibes.app/UNCHANGED" ]
   grep -qF "export AI_BOOTSTRAP_DIR='$REPO_ROOT'" "$HOME/.config/ai-bootstrap/state.sh"

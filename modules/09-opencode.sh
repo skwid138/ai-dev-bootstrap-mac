@@ -84,13 +84,13 @@ case "$dcp_config_result" in
   *) log_error "Could not install the OpenCode auto-compress config. Run this installer again; if it still fails, share this detail with support: $dcp_config_result" ;;
 esac
 
-tui_config_result=$(opencode_deploy_if_missing \
+tui_config_result=$(opencode_deploy_with_backup \
   "${BOOTSTRAP_DIR}/opencode/tui.json.template" \
   "$OPENCODE_CONFIG_DIR/tui.json")
 
 case "$tui_config_result" in
-  installed) log_installed "tui.json installed (friendly home prompts enabled)" ;;
-  skipped) log_skip "tui.json already exists (preserving your edits)" ;;
+  installed) log_installed "tui.json installed (friendly home screen enabled)" ;;
+  updated) log_info "tui.json updated (previous version backed up)" ;;
   *) log_error "Could not install the OpenCode TUI config. Run this installer again; if it still fails, share this detail with support: $tui_config_result" ;;
 esac
 
