@@ -152,12 +152,12 @@ assert_literal_exists_after() {
 
 # ── Skills ───────────────────────────────────────────────────────────────────
 
-@test "opencode/skill: all 9 curated skills have SKILL.md" {
+@test "opencode/skill: all 10 curated skills have SKILL.md" {
   skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
-  [ "${#skills[@]}" -eq 9 ]
+  [ "${#skills[@]}" -eq 10 ]
 
   deepening_skill="improve-codebase-arch""itecture"
-  for skill in tdd bug-hunter dependency-update permission-audit diagnose grill-with-docs prototype check-updates "$deepening_skill"; do
+  for skill in tdd bug-hunter dependency-update permission-audit diagnose grill-with-docs prototype check-updates set-models "$deepening_skill"; do
     [ -f "${OPENCODE_DIR}/skill/${skill}/SKILL.md" ]
   done
 }
