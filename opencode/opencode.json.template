@@ -13,6 +13,16 @@
     ["@skwid138/opencode-council@0.1.2", {"council": {"reviewer": "saruman", "aggregator": "elrond", "models": []}}]
   ],
   "permission": {
+    "external_directory": {
+      "*": "ask",
+      "$AI_BOOTSTRAP_WORKSPACE/*": "allow",
+      "$HOME/.config/opencode/*": "allow",
+      "$HOME/.nvm/*": "allow",
+      "$HOME/.cache/*": "allow",
+      "$HOME/.local/*": "allow",
+      "/opt/homebrew/*": "allow",
+      "/tmp/*": "allow"
+    },
     "edit": { "*": "ask" },
     "write": { "*": "ask" },
     "bash": {

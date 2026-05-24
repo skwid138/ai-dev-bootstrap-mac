@@ -377,16 +377,49 @@ opencode_render_config() {
 
   mkdir -p "$(dirname "$dest")"
 
+  # Resolve workspace for permission rule substitution
+  local workspace="${AI_BOOTSTRAP_WORKSPACE:-}"
+  if [ -z "$workspace" ]; then
+    local state_file="$HOME/.config/ai-bootstrap/state.sh"
+    if [ -f "$state_file" ]; then
+      workspace=$(. "$state_file" && printf '%s' "$AI_BOOTSTRAP_WORKSPACE")
+    fi
+  fi
+  if [ -z "$workspace" ]; then
+    workspace="$HOME/code"
+  fi
+  workspace="${workspace%/}"
+
+  # Substitute $AI_BOOTSTRAP_WORKSPACE with resolved path
+  local rendered_src
+  rendered_src=$(mktemp "${TMPDIR:-/tmp}/opencode-cfg.XXXXXX") || return 1
+
+  local workspace_escaped
+  workspace_escaped=$(printf '%s' "$workspace" | sed 's/[\\\/&]/\\&/g')
+  sed "s/\\\$AI_BOOTSTRAP_WORKSPACE/${workspace_escaped}/g" "$src" >"$rendered_src" || {
+    rm -f "$rendered_src"
+    echo "opencode_render_config: sed substitution failed" >&2
+    return 1
+  }
+
   if [ -f "$dest" ]; then
     cp "$dest" "$dest.bak.$(date +%Y%m%d-%H%M%S)"
   fi
 
+  local rc=0
   if [ -n "$model" ]; then
     # Set .model to the provided string.
-    jq --arg m "$model" '.model = $m' "$src" >"$dest"
+    jq --arg m "$model" '.model = $m' "$rendered_src" >"$dest" || rc=$?
   else
     # Delete .model so opencode uses its built-in default.
-    jq 'del(.model)' "$src" >"$dest"
+    jq 'del(.model)' "$rendered_src" >"$dest" || rc=$?
+  fi
+
+  rm -f "$rendered_src"
+
+  if [ $rc -ne 0 ]; then
+    echo "opencode_render_config: jq failed processing template" >&2
+    return 1
   fi
 }
 

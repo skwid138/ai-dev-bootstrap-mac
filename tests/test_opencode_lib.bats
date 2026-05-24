@@ -660,3 +660,122 @@ _decide() {
   run opencode_decide_provider_path "yes" "garbage-string"
   [ "$status" -eq 2 ]
 }
+
+# ── opencode_render_config workspace substitution ────────────────────────────
+
+@test "opencode_render_config: substitutes workspace from AI_BOOTSTRAP_WORKSPACE" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  dest="$SANDBOX/opencode.json"
+  export AI_BOOTSTRAP_WORKSPACE="/custom/path"
+
+  run opencode_render_config "$src" "$dest" "x/y"
+  unset AI_BOOTSTRAP_WORKSPACE
+  [ "$status" -eq 0 ]
+
+  run grep -q "/custom/path/scripts/agent/" "$dest"
+  [ "$status" -eq 0 ]
+  run grep -q '\$AI_BOOTSTRAP_WORKSPACE' "$dest"
+  [ "$status" -ne 0 ]
+}
+
+@test "opencode_render_config: reads workspace from state file when env unset" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  dest="$SANDBOX/opencode.json"
+  home="$SANDBOX/home-state"
+  mkdir -p "$home/.config/ai-bootstrap"
+  cat >"$home/.config/ai-bootstrap/state.sh" <<'EOF'
+export AI_BOOTSTRAP_WORKSPACE='/state/workspace'
+EOF
+  old_home="$HOME"
+  export HOME="$home"
+  unset AI_BOOTSTRAP_WORKSPACE
+
+  run opencode_render_config "$src" "$dest" "x/y"
+  export HOME="$old_home"
+  [ "$status" -eq 0 ]
+
+  run grep -q "/state/workspace/scripts/agent/" "$dest"
+  [ "$status" -eq 0 ]
+}
+
+@test "opencode_render_config: falls back to HOME code workspace when env and state missing" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  dest="$SANDBOX/opencode.json"
+  home="$SANDBOX/home-default"
+  mkdir -p "$home"
+  old_home="$HOME"
+  export HOME="$home"
+  unset AI_BOOTSTRAP_WORKSPACE
+
+  run opencode_render_config "$src" "$dest" "x/y"
+  export HOME="$old_home"
+  [ "$status" -eq 0 ]
+
+  run grep -q "$home/code/scripts/agent/" "$dest"
+  [ "$status" -eq 0 ]
+}
+
+@test "opencode_render_config: strips trailing slash from workspace" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  dest="$SANDBOX/opencode.json"
+  export AI_BOOTSTRAP_WORKSPACE="/foo/bar/"
+
+  run opencode_render_config "$src" "$dest" "x/y"
+  unset AI_BOOTSTRAP_WORKSPACE
+  [ "$status" -eq 0 ]
+
+  run grep -q "/foo/bar/scripts/agent/" "$dest"
+  [ "$status" -eq 0 ]
+  run grep -q "/foo/bar//scripts/" "$dest"
+  [ "$status" -ne 0 ]
+}
+
+@test "opencode_render_config: rendered output is valid JSON after substitution" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  dest="$SANDBOX/opencode.json"
+  export AI_BOOTSTRAP_WORKSPACE="/json/workspace"
+
+  run opencode_render_config "$src" "$dest" "x/y"
+  unset AI_BOOTSTRAP_WORKSPACE
+  [ "$status" -eq 0 ]
+
+  run jq -e 'type == "object"' "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "true" ]
+}
+
+@test "opencode_render_config: model set and delete still work after substitution" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  dest_with_model="$SANDBOX/opencode-with-model.json"
+  dest_without_model="$SANDBOX/opencode-without-model.json"
+  export AI_BOOTSTRAP_WORKSPACE="/model/workspace"
+
+  run opencode_render_config "$src" "$dest_with_model" "github-copilot/claude-sonnet-4.5"
+  [ "$status" -eq 0 ]
+  run jq -r '.model' "$dest_with_model"
+  [ "$output" = "github-copilot/claude-sonnet-4.5" ]
+  run grep -q "/model/workspace/scripts/agent/" "$dest_with_model"
+  [ "$status" -eq 0 ]
+
+  run opencode_render_config "$src" "$dest_without_model" ""
+  unset AI_BOOTSTRAP_WORKSPACE
+  [ "$status" -eq 0 ]
+  run jq 'has("model")' "$dest_without_model"
+  [ "$output" = "false" ]
+  run grep -q "/model/workspace/scripts/agent/" "$dest_without_model"
+  [ "$status" -eq 0 ]
+}
+
+@test "opencode_render_config: external_directory includes substituted workspace allow" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  dest="$SANDBOX/opencode.json"
+  export AI_BOOTSTRAP_WORKSPACE="/external/workspace"
+
+  run opencode_render_config "$src" "$dest" "x/y"
+  unset AI_BOOTSTRAP_WORKSPACE
+  [ "$status" -eq 0 ]
+
+  run jq -e '.permission.external_directory["*"] == "ask" and .permission.external_directory["/external/workspace/*"] == "allow"' "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "true" ]
+}
