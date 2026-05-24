@@ -225,11 +225,13 @@ opencode_deploy_tui_config() (
   local src="$1"
   local dest="$2"
   local dest_dir tmp historical_json
-  local -a historical_managed_plugins=()
+  local -a historical_managed_plugins=(
+    "./plugins/home-prompt.tsx"
+    "./plugins/justvibes-logo.tsx"
+  )
 
-  # Test-only injection keeps the production historical list hardcoded and
-  # currently empty while allowing the merge behavior to be exercised before a
-  # real plugin rename/discontinuation exists.
+  # Test-only injection extends the production historical list so edge cases can
+  # be exercised without waiting for another real plugin rename/discontinuation.
   if [ "${OPENCODE_BOOTSTRAP_TEST:-0}" = "1" ] && [ -n "${OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS:-}" ]; then
     while IFS= read -r historical_plugin || [ -n "$historical_plugin" ]; do
       [ -z "$historical_plugin" ] && continue
