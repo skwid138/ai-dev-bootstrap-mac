@@ -15,6 +15,7 @@ They keep work understandable, reversible, and safe from accidental data loss.
 | Legolas | Codebase exploration and file discovery |
 | Radagast | External documentation and open source research |
 | Aragorn | Sole implementer; the only custom agent that writes files |
+| Elrond | Council aggregator; synthesizes multi-model review responses (internal to council plugin) |
 
 ---
 

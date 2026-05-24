@@ -24,7 +24,8 @@ opencode/
 │   ├── saruman.md              # adversarial reviewer
 │   ├── radagast.md             # external-research specialist
 │   ├── legolas.md              # codebase discovery specialist
-│   └── aragorn.md              # sole implementation worker
+│   ├── aragorn.md              # sole implementation worker
+│   └── elrond.md               # council aggregator
 ├── command/                    # custom slash commands
 ├── skill/                      # on-demand skill definitions
 ├── package.json                # plugin/runtime dependencies
@@ -84,6 +85,7 @@ The built-in `plan`, `build`, and `general` agents are hidden in the template co
 - `aragorn` — implementer. The only custom agent that edits or writes files.
 - `legolas` — internal codebase explorer. Finds files, call paths, tests, and project patterns.
 - `radagast` — external researcher. Checks official docs and source-backed references.
+- `elrond` — council aggregator. Structurally synthesizes multi-model review responses without issuing verdicts. Managed internally by the council plugin; not dispatched directly.
 
 This keeps the agent picker simple for users and keeps safety boundaries explicit for maintainers.
 
@@ -102,6 +104,8 @@ Verdicts:
 - **APPROVE** — safe to continue.
 - **REVISE** — fix specific issues first.
 - **REJECT** — stop and choose a different approach.
+
+When the council review plugin is configured with models, Gandalf uses `council_review` instead of a single Saruman dispatch. This sends the same review prompt to multiple models in parallel and returns a structurally aggregated synthesis. If the council is unavailable, the workflow falls back to solo Saruman.
 
 ---
 
