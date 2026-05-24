@@ -9,7 +9,8 @@
     "instruction/update-awareness.md"
   ],
   "plugin": [
-    "@tarquinen/opencode-dcp@3.1.11"
+    "@tarquinen/opencode-dcp@3.1.11",
+    ["@skwid138/opencode-council@0.1.2", {"council": {"reviewer": "saruman", "aggregator": "elrond", "models": []}}]
   ],
   "permission": {
     "edit": { "*": "ask" },
