@@ -2,6 +2,11 @@
   "default": {
     "model": "opencode-go/kimi-k2.6",
     "small_model": "opencode-go/deepseek-v4-flash",
+    "council_models": [
+      { "providerID": "opencode-go", "modelID": "deepseek-v4-pro" },
+      { "providerID": "opencode-go", "modelID": "kimi-k2.6" },
+      { "providerID": "opencode-go", "modelID": "qwen3.6-plus" }
+    ],
     "agent": {
       "gandalf": { "model": "opencode-go/kimi-k2.6", "thinking": { "type": "enabled" } },
       "aragorn": { "model": "opencode-go/minimax-m2.5" },
@@ -14,6 +19,11 @@
   "eco": {
     "model": "opencode-go/deepseek-v4-flash",
     "small_model": "opencode-go/deepseek-v4-flash",
+    "council_models": [
+      { "providerID": "opencode-go", "modelID": "deepseek-v4-flash" },
+      { "providerID": "opencode-go", "modelID": "qwen3.5-plus" },
+      { "providerID": "opencode-go", "modelID": "MiMo-V2.5" }
+    ],
     "agent": {
       "gandalf": { "model": "opencode-go/kimi-k2.6", "thinking": { "type": "enabled" } },
       "aragorn": { "model": "opencode-go/minimax-m2.5" },

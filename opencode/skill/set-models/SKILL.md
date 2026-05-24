@@ -41,6 +41,14 @@ $AI_BOOTSTRAP_WORKSPACE/scripts/agent/set-models.sh reset
 
 After it succeeds, summarize in plain language what changed and whether the user should restart OpenCode.
 
+## Council models
+
+The default and eco profiles also configure models for the council review plugin. When applied, the council will use multiple OpenCode Go models to provide independent review perspectives.
+
+After applying a profile, the council is ready to use — Gandalf will automatically prefer `council_review` over solo Saruman when the models are configured.
+
+Resetting clears the council models back to an empty list, which disables the council (the plugin will error until models are reconfigured).
+
 ## For users without OpenCode Go
 
 Do not recommend provider-specific model names. Give role-based guidance instead:

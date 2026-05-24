@@ -24,7 +24,7 @@ if [[ "$tier" != "reset" ]]; then
 fi
 
 tmp_file="${CONFIG}.tmp.$$"
-trap 'rm -f "$tmp_file"' EXIT
+trap 'rm -f "$tmp_file" "${tmp_file}.2"' EXIT
 
 cp "$CONFIG" "$CONFIG.bak.$(date +%Y%m%d-%H%M%S).$$" \
   || { echo "Error: failed to create backup" >&2; exit 1; }
@@ -34,6 +34,23 @@ state_value=""
 if [[ "$tier" == "reset" ]]; then
   jq 'del(.model, .small_model, .agent.gandalf, .agent.aragorn, .agent.saruman, .agent.legolas, .agent.radagast, .agent.compaction)' \
     "$CONFIG" >"$tmp_file"
+
+  # --- Council models reset (second pass) ---
+  if [[ -s "$tmp_file" ]]; then
+    if jq '
+      if (.plugin // [] | any(type == "array" and .[0] == "@skwid138/opencode-council@0.1.2")) then
+        .plugin |= map(
+          if type == "array" and .[0] == "@skwid138/opencode-council@0.1.2" then
+            [.[0], (.[1] | .council.models = [])]
+          else . end
+        )
+      else . end
+    ' "$tmp_file" >"${tmp_file}.2"; then
+      mv "${tmp_file}.2" "$tmp_file"
+    else
+      : >"$tmp_file"
+    fi
+  fi
 else
   jq --slurpfile profile "$PROFILE" --arg tier "$tier" '
     .model = $profile[0][$tier].model |
@@ -45,6 +62,25 @@ else
     .agent.radagast = $profile[0][$tier].agent.radagast |
     .agent.compaction = $profile[0][$tier].agent.compaction
   ' "$CONFIG" >"$tmp_file"
+
+  # --- Council models (second pass) ---
+  if [[ -s "$tmp_file" ]]; then
+    council_models="$(jq -c --arg tier "$tier" '.[$tier].council_models // []' "$PROFILE")"
+
+    if jq --argjson council_models "$council_models" '
+      if (.plugin // [] | any(type == "array" and .[0] == "@skwid138/opencode-council@0.1.2")) then
+        .plugin |= map(
+          if type == "array" and .[0] == "@skwid138/opencode-council@0.1.2" then
+            [.[0], (.[1] | .council.models = $council_models)]
+          else . end
+        )
+      else . end
+    ' "$tmp_file" >"${tmp_file}.2"; then
+      mv "${tmp_file}.2" "$tmp_file"
+    else
+      : >"$tmp_file"
+    fi
+  fi
   state_value="$tier"
 fi
 
