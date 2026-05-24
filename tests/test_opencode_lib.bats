@@ -304,6 +304,20 @@ EOF
   jq -e '.plugin | map(.[0]) == ["./plugins/home-prompt.tsx", "./plugins/justvibes-logo.tsx", "./plugins/first-user.tsx", "./plugins/second-user.tsx"]' "$dest"
 }
 
+@test "opencode_deploy_tui_config: existing config without plugin field merges cleanly" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  echo '{"theme":"dracula","custom_key":"preserved"}' >"$dest"
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "updated" ]
+  jq -e '.theme == "dracula" and .custom_key == "preserved"' "$dest"
+  jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}]]' "$dest"
+}
+
 @test "opencode_deploy_tui_config: malformed JSON is backed up and freshly installed" {
   src="$SANDBOX/tui.json"
   dest="$SANDBOX/dest/tui.json"
