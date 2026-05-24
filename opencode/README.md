@@ -15,6 +15,7 @@ This README explains why the directory looks the way it does and where to put fu
 ```text
 opencode/
 ├── opencode.json.template      # rendered by bootstrap → ~/.config/opencode/opencode.json
+├── tui.json.template           # merged by bootstrap → ~/.config/opencode/tui.json
 ├── AGENTS.md                   # short, always-on safety rules
 ├── instruction/                # small auto-loaded defaults
 │   ├── repo-context.md
@@ -28,29 +29,14 @@ opencode/
 │   └── elrond.md               # council aggregator
 ├── command/                    # custom slash commands
 ├── skill/                      # on-demand skill definitions
-├── package.json                # plugin/runtime dependencies
-├── plugins/                    # deployable plugin source copied to users
-├── plugins-dev/                # local-only plugin test infrastructure
-└── package-lock.json
+└── plugins/                    # managed placeholder directory (.gitkeep)
 ```
 
 The `template` extension on `opencode.json.template` exists because the bootstrap renders it into the final `opencode.json` on the user's machine.
 
+`tui.json.template` enables the branded OpenCode TUI prompt and logo through the published `@skwid138/opencode-tui@1.0.0` npm package. OpenCode resolves that package at runtime; this repo does not keep local TUI plugin source, npm manifests, or lockfiles for it.
+
 The repo-level `scripts/` tree is deployed separately to `$AI_BOOTSTRAP_WORKSPACE/scripts/`. Commands or skills that need deterministic shell logic should call those deployed scripts rather than embedding long shell snippets in prompts.
-
-### Plugin development files
-
-`plugins/` contains deployable plugin source and is copied to users by the installer. Keep it free of test runners, dependency manifests, lockfiles, and generated dependencies.
-
-`plugins-dev/` contains local plugin test infrastructure: tests, Vitest config, TypeScript config, `package.json`, and the generated lockfile. It is **not** deployed to users.
-
-To run plugin tests:
-
-```sh
-cd opencode/plugins-dev
-npm install
-npm test
-```
 
 ---
 
