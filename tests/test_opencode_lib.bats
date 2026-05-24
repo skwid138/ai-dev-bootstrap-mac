@@ -537,7 +537,7 @@ EOF
   [ "$output" = "chrome-devtools,context7,exa" ]
 
   run jq -r '.plugin | length' "$dest"
-  [ "$output" = "1" ]
+  [ "$output" = "2" ]
 }
 
 @test "opencode_render_config: errors when template missing" {

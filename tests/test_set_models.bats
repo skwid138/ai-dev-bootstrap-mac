@@ -43,6 +43,31 @@ write_config() {
 JSON
 }
 
+write_config_with_council() {
+  cat >"$CONFIG" <<'JSON'
+{
+  "custom": "preserve-me",
+  "model": "old/root-model",
+  "small_model": "old/small-model",
+  "plugin": [
+    "@tarquinen/opencode-dcp@3.1.11",
+    ["@skwid138/opencode-council@0.1.2", {"council": {"reviewer": "saruman", "aggregator": "elrond", "models": []}}]
+  ],
+  "agent": {
+    "plan": { "mode": "subagent", "hidden": true, "marker": "keep-plan" },
+    "build": { "mode": "subagent", "hidden": true, "marker": "keep-build" },
+    "general": { "hidden": true, "marker": "keep-general" },
+    "gandalf": { "model": "old/gandalf", "stale": true },
+    "aragorn": { "model": "old/aragorn", "stale": true },
+    "saruman": { "model": "old/saruman", "stale": true },
+    "legolas": { "model": "old/legolas", "stale": true, "enable_thinking": true },
+    "radagast": { "model": "old/radagast", "stale": true, "enable_thinking": true },
+    "compaction": { "model": "old/compaction", "stale": true }
+  }
+}
+JSON
+}
+
 write_state() {
   local curated_value="${1-__absent__}"
   cat >"$STATE_FILE" <<'EOF'
@@ -98,6 +123,18 @@ run_script() {
   [ "$(jq -r '.agent.compaction.thinking.type' "$CONFIG")" = "disabled" ]
 }
 
+@test "set-models default: applies council models to plugin tuple" {
+  write_config_with_council
+  write_state ""
+
+  run_script default
+  [ "$status" -eq 0 ]
+
+  [ "$(jq -r '.plugin[1][1].council.models | length' "$CONFIG")" = "3" ]
+  [ "$(jq -r '.plugin[1][1].council.models[0].providerID' "$CONFIG")" = "opencode-go" ]
+  [ "$(jq -r '.plugin[1][1].council.models[0].modelID' "$CONFIG")" = "deepseek-v4-pro" ]
+}
+
 @test "set-models default: no argument is the same as default" {
   write_config
   write_state ""
@@ -132,6 +169,17 @@ run_script() {
   [ "$(jq -r '.agent.compaction.thinking.type' "$CONFIG")" = "disabled" ]
 }
 
+@test "set-models eco: applies eco council models" {
+  write_config_with_council
+  write_state ""
+
+  run_script eco
+  [ "$status" -eq 0 ]
+
+  [ "$(jq -r '.plugin[1][1].council.models | length' "$CONFIG")" = "3" ]
+  [ "$(jq -r '.plugin[1][1].council.models[0].modelID' "$CONFIG")" = "deepseek-v4-flash" ]
+}
+
 @test "set-models reset: deletes root model keys and all six script-owned agent blocks" {
   write_config
   write_state "default"
@@ -146,6 +194,31 @@ run_script() {
   for agent in gandalf aragorn saruman legolas radagast compaction; do
     [ "$(jq -r --arg agent "$agent" '.agent | has($agent)' "$CONFIG")" = "false" ]
   done
+}
+
+@test "set-models reset: clears council models to empty array" {
+  write_config_with_council
+  write_state "default"
+  run_script default
+  [ "$status" -eq 0 ]
+
+  run_script reset
+  [ "$status" -eq 0 ]
+
+  [ "$(jq -r '.plugin[1][1].council.models | length' "$CONFIG")" = "0" ]
+  [ "$(jq -r '.plugin[1][1].council.reviewer' "$CONFIG")" = "saruman" ]
+}
+
+@test "set-models: council pass is no-op when plugin tuple absent" {
+  write_config
+  write_state ""
+
+  run_script default
+  [ "$status" -eq 0 ]
+
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
+  run jq -e '.plugin' "$CONFIG"
+  [ "$status" -ne 0 ]
 }
 
 @test "set-models reset: writes an empty curated-models state value" {
