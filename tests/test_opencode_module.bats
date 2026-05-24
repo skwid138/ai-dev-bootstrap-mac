@@ -240,7 +240,7 @@ EOF
   [[ "$module_output" == *"/connect"* ]]
 }
 
-@test "module: installs tui.json with friendly prompt and JustVibes logo plugins" {
+@test "module: installs tui.json with packaged TUI plugin" {
   export OPENCODE_TEST_MENU_SELECTION=skip
 
   run_module
@@ -248,9 +248,11 @@ EOF
 
   tui_config="$HOME/.config/opencode/tui.json"
   [ -f "$tui_config" ]
-  run jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}]]' "$tui_config"
+  run jq -e '.plugin == [["@skwid138/opencode-tui@1.0.0", {}]]' "$tui_config"
   [ "$status" -eq 0 ]
-  [ -f "$HOME/.config/opencode/plugins/justvibes-logo.tsx" ]
+  [ -d "$HOME/.config/opencode/plugins" ]
+  [ -f "$HOME/.config/opencode/plugins/.gitkeep" ]
+  [ ! -e "$HOME/.config/opencode/plugins/justvibes-logo.tsx" ]
 }
 
 @test "module: overwrites existing tui.json and backs up previous version" {
@@ -267,7 +269,7 @@ EOF
   run cat "${backups[0]}"
   [ "$output" = '{ "plugin": ["custom"] }' ]
 
-  run jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}]]' "$HOME/.config/opencode/tui.json"
+  run jq -e '.plugin == [["@skwid138/opencode-tui@1.0.0", {}]]' "$HOME/.config/opencode/tui.json"
   [ "$status" -eq 0 ]
 }
 

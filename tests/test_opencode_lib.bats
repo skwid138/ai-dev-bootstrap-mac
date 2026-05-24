@@ -235,8 +235,7 @@ write_tui_template() {
 {
   "$schema": "https://opencode.ai/tui.json",
   "plugin": [
-    ["./plugins/home-prompt.tsx", {}],
-    ["./plugins/justvibes-logo.tsx", {}]
+    ["@skwid138/opencode-tui@1.0.0", {}]
   ]
 }
 EOF
@@ -266,7 +265,7 @@ EOF
   "$schema": "old-schema",
   "theme": "catppuccin",
   "plugin": [
-    ["./plugins/home-prompt.tsx", {"stale": true}],
+    ["@skwid138/opencode-tui@1.0.0", {"stale": true}],
     ["./plugins/user.tsx", {"enabled": true}]
   ],
   "other": {"keep": true}
@@ -278,7 +277,7 @@ EOF
   [ "$output" = "updated" ]
   jq -e '.["$schema"] == "https://opencode.ai/tui.json"' "$dest"
   jq -e '.theme == "catppuccin" and .other.keep == true' "$dest"
-  jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}], ["./plugins/user.tsx", {"enabled": true}]]' "$dest"
+  jq -e '.plugin == [["@skwid138/opencode-tui@1.0.0", {}], ["./plugins/user.tsx", {"enabled": true}]]' "$dest"
   backups=("$SANDBOX"/dest/tui.json.bak.*)
   [ "${#backups[@]}" -eq 1 ]
   jq -e '.theme == "catppuccin"' "${backups[0]}"
@@ -301,7 +300,7 @@ EOF
   run opencode_deploy_tui_config "$src" "$dest"
   [ "$status" -eq 0 ]
   [ "$output" = "updated" ]
-  jq -e '.plugin | map(.[0]) == ["./plugins/home-prompt.tsx", "./plugins/justvibes-logo.tsx", "./plugins/first-user.tsx", "./plugins/second-user.tsx"]' "$dest"
+  jq -e '.plugin | map(.[0]) == ["@skwid138/opencode-tui@1.0.0", "./plugins/first-user.tsx", "./plugins/second-user.tsx"]' "$dest"
 }
 
 @test "opencode_deploy_tui_config: existing config without plugin field merges cleanly" {
@@ -315,7 +314,7 @@ EOF
   [ "$status" -eq 0 ]
   [ "$output" = "updated" ]
   jq -e '.theme == "dracula" and .custom_key == "preserved"' "$dest"
-  jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}]]' "$dest"
+  jq -e '.plugin == [["@skwid138/opencode-tui@1.0.0", {}]]' "$dest"
 }
 
 @test "opencode_deploy_tui_config: malformed JSON is backed up and freshly installed" {
@@ -387,7 +386,29 @@ EOF
   run opencode_deploy_tui_config "$src" "$dest"
   [ "$status" -eq 0 ]
   [ "$output" = "updated" ]
-  jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}], ["./plugins/user.tsx", {}]]' "$dest"
+  jq -e '.plugin == [["@skwid138/opencode-tui@1.0.0", {}], ["./plugins/user.tsx", {}]]' "$dest"
+}
+
+@test "opencode_deploy_tui_config: production historical plugins remove old local TUI paths" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  cat >"$dest" <<'EOF'
+{
+  "plugin": [
+    ["./plugins/home-prompt.tsx", {"stale": true}],
+    ["./plugins/justvibes-logo.tsx", {"stale": true}],
+    ["./plugins/user.tsx", {}]
+  ]
+}
+EOF
+
+  run opencode_deploy_tui_config "$src" "$dest"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "updated" ]
+  jq -e '(.plugin | map(.[0])) == ["@skwid138/opencode-tui@1.0.0", "./plugins/user.tsx"]' "$dest"
 }
 
 @test "opencode_deploy_tui_config: historical managed plugins are removed" {
@@ -411,7 +432,7 @@ EOF
 
   [ "$status" -eq 0 ]
   [ "$output" = "updated" ]
-  jq -e '(.plugin | map(.[0])) == ["./plugins/home-prompt.tsx", "./plugins/justvibes-logo.tsx", "./plugins/user.tsx"]' "$dest"
+  jq -e '(.plugin | map(.[0])) == ["@skwid138/opencode-tui@1.0.0", "./plugins/user.tsx"]' "$dest"
 }
 
 @test "opencode_deploy_tui_config: template-derived plugins are not duplicated by historical list" {
@@ -422,21 +443,21 @@ EOF
   cat >"$dest" <<'EOF'
 {
   "plugin": [
-    ["./plugins/home-prompt.tsx", {"stale": true}],
+    ["@skwid138/opencode-tui@1.0.0", {"stale": true}],
     ["./plugins/user.tsx", {}]
   ]
 }
 EOF
   export OPENCODE_BOOTSTRAP_TEST=1
-  export OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS="./plugins/home-prompt.tsx"
+  export OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS="@skwid138/opencode-tui@1.0.0"
 
   run opencode_deploy_tui_config "$src" "$dest"
   unset OPENCODE_BOOTSTRAP_TEST OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS
 
   [ "$status" -eq 0 ]
   [ "$output" = "updated" ]
-  jq -e '[.plugin[] | select(.[0] == "./plugins/home-prompt.tsx")] | length == 1' "$dest"
-  jq -e '(.plugin | map(.[0])) == ["./plugins/home-prompt.tsx", "./plugins/justvibes-logo.tsx", "./plugins/user.tsx"]' "$dest"
+  jq -e '[.plugin[] | select(.[0] == "@skwid138/opencode-tui@1.0.0")] | length == 1' "$dest"
+  jq -e '(.plugin | map(.[0])) == ["@skwid138/opencode-tui@1.0.0", "./plugins/user.tsx"]' "$dest"
 }
 
 @test "opencode_deploy_tui_config: jq merge failure leaves existing file untouched" {

@@ -99,6 +99,7 @@ EOF
   "theme": "catppuccin",
   "plugin": [
     ["./plugins/home-prompt.tsx", {"stale": true}],
+    ["./plugins/justvibes-logo.tsx", {"stale": true}],
     ["./plugins/user-plugin.tsx", {"enabled": true}]
   ]
 }
@@ -114,7 +115,7 @@ EOF
   grep -qF "Usage: opencode-deps-check" "$WORKSPACE/scripts/agent/opencode-deps-check.sh"
   [ "$(jq -r '.model' "$HOME/.config/opencode/opencode.json")" = "openai/gpt-5.2" ]
   jq -e '.theme == "catppuccin"' "$HOME/.config/opencode/tui.json"
-  jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}], ["./plugins/user-plugin.tsx", {"enabled": true}]]' "$HOME/.config/opencode/tui.json"
+  jq -e '.plugin == [["@skwid138/opencode-tui@1.0.0", {}], ["./plugins/user-plugin.tsx", {"enabled": true}]]' "$HOME/.config/opencode/tui.json"
   tui_backups=("$HOME"/.config/opencode/tui.json.bak.*)
   [ "${#tui_backups[@]}" -eq 1 ]
   jq -e '.theme == "catppuccin"' "${tui_backups[0]}"

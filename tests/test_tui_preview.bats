@@ -18,7 +18,7 @@ teardown() {
 
 copy_preview_repo() {
   local target="$1"
-  mkdir -p "$target/scripts/lib" "$target/opencode/plugins"
+  mkdir -p "$target/scripts/lib"
   cp "$SCRIPT" "$target/scripts/tui-preview.sh"
   cp "$COMMON" "$target/scripts/lib/common.sh"
   chmod +x "$target/scripts/tui-preview.sh"
@@ -36,12 +36,9 @@ set -euo pipefail
 
 {
   printf 'pwd=%s\n' "$PWD"
-  test -d .opencode/plugins
-  test -f .opencode/plugins/alpha.tsx
-  test -f .opencode/plugins/beta.tsx
   test -f .opencode/tui.json
   jq -e '.theme == "flamingo-ember"' .opencode/tui.json >/dev/null
-  jq -e '.plugin == [["./plugins/alpha.tsx", {}], ["./plugins/beta.tsx", {}]]' .opencode/tui.json >/dev/null
+  jq -e '.plugin == [["@skwid138/opencode-tui@1.0.0", {}]]' .opencode/tui.json >/dev/null
   printf 'ok\n'
 } >"$OPENCODE_STUB_LOG"
 EOF
@@ -71,27 +68,13 @@ EOF
   [ "$status" -eq 0 ]
   [[ "$output" == *"Usage: tui-preview.sh"* ]]
   [[ "$output" == *"isolated temporary directory"* ]]
-}
-
-@test "tui-preview: fails gracefully when no plugins exist" {
-  preview_repo="$TMP_DIR/preview-empty"
-  stub_dir="$TMP_DIR/stubs-empty"
-  copy_preview_repo "$preview_repo"
-  write_opencode_stub "$stub_dir" "$TMP_DIR/unused.log"
-
-  PATH="$stub_dir:$PATH" run "$preview_repo/scripts/tui-preview.sh"
-  [ "$status" -eq 1 ]
-  [[ "$output" == *"no TSX plugins found in $preview_repo/opencode/plugins"* ]]
+  [[ "$output" == *"@skwid138/opencode-tui"* ]]
 }
 
 @test "tui-preview: fails gracefully when opencode is not on PATH" {
   preview_repo="$TMP_DIR/preview-missing-opencode"
   clean_path="$TMP_DIR/path-without-opencode"
   copy_preview_repo "$preview_repo"
-
-  cat >"$preview_repo/opencode/plugins/alpha.tsx" <<'EOF'
-export default { id: "alpha" }
-EOF
 
   mkdir -p "$clean_path"
   ln -s "$(command -v dirname)" "$clean_path/dirname"
@@ -101,23 +84,16 @@ EOF
   [[ "$output" == *"Missing dependency: 'opencode' is required but not found."* ]]
 }
 
-@test "tui-preview: creates isolated temp OpenCode plugin structure" {
-  preview_repo="$TMP_DIR/preview-with-plugins"
-  stub_dir="$TMP_DIR/stubs-with-plugins"
+@test "tui-preview: creates isolated temp OpenCode config with npm plugin reference" {
+  preview_repo="$TMP_DIR/preview-with-npm-plugin"
+  stub_dir="$TMP_DIR/stubs-with-npm-plugin"
   stub_log="$TMP_DIR/opencode-stub.log"
   copy_preview_repo "$preview_repo"
   write_opencode_stub "$stub_dir" "$stub_log"
 
-  cat >"$preview_repo/opencode/plugins/alpha.tsx" <<'EOF'
-export default { id: "alpha" }
-EOF
-  cat >"$preview_repo/opencode/plugins/beta.tsx" <<'EOF'
-export default { id: "beta" }
-EOF
-
   PATH="$stub_dir:$PATH" run "$preview_repo/scripts/tui-preview.sh"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Starting OpenCode TUI preview in isolated temp directory"* ]]
+  [[ "$output" == *"Starting OpenCode TUI preview with @skwid138/opencode-tui@1.0.0 in isolated temp directory"* ]]
 
   [ -f "$stub_log" ]
   run grep -F "ok" "$stub_log"
