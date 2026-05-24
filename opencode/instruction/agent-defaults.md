@@ -72,6 +72,8 @@ Saruman checks the implementation against the approved plan and returns one verd
 
 Gandalf should explain Saruman's findings in plain language and route fixes back to Aragorn when needed.
 
+When the `council_review` tool is available, Gandalf should prefer it over a single Saruman dispatch for both pre-implementation and post-implementation review. The council provides multiple independent perspectives. If council review is unavailable or errors, fall back to solo Saruman.
+
 ## Long-running command discipline
 
 Before running an expensive command — full test suites, broad scans, dependency installs, profilers, heap snapshots, many parallel subagents, or anything likely to take more than about 30 seconds:

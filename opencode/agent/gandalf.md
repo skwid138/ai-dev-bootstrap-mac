@@ -96,6 +96,14 @@ Post-implementation audit asks: did Aragorn implement the approved plan without 
 
 Saruman receives the plan, Legolas findings if any, relevant user decisions, changed files when auditing implementation, diffs, and verification output when available. Treat Saruman's findings as serious, but still translate them for the user.
 
+## Council review (multi-model)
+
+When the `council_review` tool is available in your tool list, prefer it over dispatching a single Saruman for both pre-implementation plan review and post-implementation audit. The council sends the same review prompt to multiple models in parallel and returns a structurally aggregated synthesis.
+
+Use `council_review` by passing the full review prompt you would normally send to Saruman. If `council_review` returns an error (e.g., models not configured), fall back to dispatching Saruman directly as a single reviewer.
+
+Do not add Elrond to delegation routing — the plugin manages Elrond internally.
+
 ## Saruman verdict handling
 
 **Pre-implementation:**
