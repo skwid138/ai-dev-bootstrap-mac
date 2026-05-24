@@ -207,7 +207,7 @@ if [ -n "${BOOTSTRAP_UPDATE:-}" ]; then
     "$OPENCODE_CONFIG_DIR/opencode.json" \
     "$existing_model"
 
-  tui_config_result=$(opencode_deploy_with_backup \
+  tui_config_result=$(opencode_deploy_tui_config \
     "${BOOTSTRAP_DIR}/opencode/tui.json.template" \
     "$OPENCODE_CONFIG_DIR/tui.json")
   case "$tui_config_result" in

@@ -84,7 +84,7 @@ case "$dcp_config_result" in
   *) log_error "Could not install the OpenCode auto-compress config. Run this installer again; if it still fails, share this detail with support: $dcp_config_result" ;;
 esac
 
-tui_config_result=$(opencode_deploy_with_backup \
+tui_config_result=$(opencode_deploy_tui_config \
   "${BOOTSTRAP_DIR}/opencode/tui.json.template" \
   "$OPENCODE_CONFIG_DIR/tui.json")
 

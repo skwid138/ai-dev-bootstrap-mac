@@ -227,46 +227,250 @@ teardown() {
   [ "$status" -ne 0 ]
 }
 
-# ── opencode_deploy_with_backup ──────────────────────────────────────────────
+# ── opencode_deploy_tui_config ───────────────────────────────────────────────
 
-@test "opencode_deploy_with_backup: installs when destination parent is missing" {
+write_tui_template() {
+  local path="$1"
+  cat >"$path" <<'EOF'
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "plugin": [
+    ["./plugins/home-prompt.tsx", {}],
+    ["./plugins/justvibes-logo.tsx", {}]
+  ]
+}
+EOF
+}
+
+@test "opencode_deploy_tui_config: fresh install writes template verbatim" {
   src="$SANDBOX/tui.json"
   dest="$SANDBOX/dest/config/tui.json"
-  echo '{ "plugin": [] }' >"$src"
+  write_tui_template "$src"
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "installed" ]
+  [ -f "$dest" ]
+  cmp -s "$src" "$dest"
+  backups=("$SANDBOX"/dest/config/tui.json.bak.*)
+  [ ! -e "${backups[0]}" ]
+}
+
+@test "opencode_deploy_tui_config: existing valid config preserves theme and merges plugins" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  cat >"$dest" <<'EOF'
+{
+  "$schema": "old-schema",
+  "theme": "catppuccin",
+  "plugin": [
+    ["./plugins/home-prompt.tsx", {"stale": true}],
+    ["./plugins/user.tsx", {"enabled": true}]
+  ],
+  "other": {"keep": true}
+}
+EOF
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "updated" ]
+  jq -e '.["$schema"] == "https://opencode.ai/tui.json"' "$dest"
+  jq -e '.theme == "catppuccin" and .other.keep == true' "$dest"
+  jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}], ["./plugins/user.tsx", {"enabled": true}]]' "$dest"
+  backups=("$SANDBOX"/dest/tui.json.bak.*)
+  [ "${#backups[@]}" -eq 1 ]
+  jq -e '.theme == "catppuccin"' "${backups[0]}"
+}
+
+@test "opencode_deploy_tui_config: user plugins are preserved after managed plugins" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  cat >"$dest" <<'EOF'
+{
+  "plugin": [
+    ["./plugins/first-user.tsx", {"a": 1}],
+    ["./plugins/second-user.tsx", {"b": 2}]
+  ]
+}
+EOF
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "updated" ]
+  jq -e '.plugin | map(.[0]) == ["./plugins/home-prompt.tsx", "./plugins/justvibes-logo.tsx", "./plugins/first-user.tsx", "./plugins/second-user.tsx"]' "$dest"
+}
+
+@test "opencode_deploy_tui_config: malformed JSON is backed up and freshly installed" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  printf '{ bad json' >"$dest"
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "installed" ]
+  cmp -s "$src" "$dest"
+  backups=("$SANDBOX"/dest/tui.json.bak.*)
+  [ "${#backups[@]}" -eq 1 ]
+  run cat "${backups[0]}"
+  [ "$output" = "{ bad json" ]
+}
+
+@test "opencode_deploy_tui_config: valid non-object JSON is backed up and freshly installed" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  echo '["not", "object"]' >"$dest"
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "installed" ]
+  cmp -s "$src" "$dest"
+  backups=("$SANDBOX"/dest/tui.json.bak.*)
+  [ "${#backups[@]}" -eq 1 ]
+  jq -e '. == ["not", "object"]' "${backups[0]}"
+}
+
+@test "opencode_deploy_tui_config: non-array plugin field is backed up and freshly installed" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  echo '{"theme":"lost-on-repair","plugin":{"bad":true}}' >"$dest"
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "installed" ]
+  cmp -s "$src" "$dest"
+  jq -e 'has("theme") | not' "$dest"
+  backups=("$SANDBOX"/dest/tui.json.bak.*)
+  [ "${#backups[@]}" -eq 1 ]
+  jq -e '.theme == "lost-on-repair"' "${backups[0]}"
+}
+
+@test "opencode_deploy_tui_config: malformed plugin entries are dropped" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  cat >"$dest" <<'EOF'
+{
+  "plugin": [
+    "not-an-array",
+    [],
+    [42, {}],
+    ["./plugins/user.tsx", {}]
+  ]
+}
+EOF
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "updated" ]
+  jq -e '.plugin == [["./plugins/home-prompt.tsx", {}], ["./plugins/justvibes-logo.tsx", {}], ["./plugins/user.tsx", {}]]' "$dest"
+}
+
+@test "opencode_deploy_tui_config: historical managed plugins are removed" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  cat >"$dest" <<'EOF'
+{
+  "plugin": [
+    ["./plugins/old-managed.tsx", {"remove": true}],
+    ["./plugins/user.tsx", {}]
+  ]
+}
+EOF
+  export OPENCODE_BOOTSTRAP_TEST=1
+  export OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS="./plugins/old-managed.tsx"
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  unset OPENCODE_BOOTSTRAP_TEST OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "updated" ]
+  jq -e '(.plugin | map(.[0])) == ["./plugins/home-prompt.tsx", "./plugins/justvibes-logo.tsx", "./plugins/user.tsx"]' "$dest"
+}
+
+@test "opencode_deploy_tui_config: template-derived plugins are not duplicated by historical list" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  cat >"$dest" <<'EOF'
+{
+  "plugin": [
+    ["./plugins/home-prompt.tsx", {"stale": true}],
+    ["./plugins/user.tsx", {}]
+  ]
+}
+EOF
+  export OPENCODE_BOOTSTRAP_TEST=1
+  export OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS="./plugins/home-prompt.tsx"
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  unset OPENCODE_BOOTSTRAP_TEST OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "updated" ]
+  jq -e '[.plugin[] | select(.[0] == "./plugins/home-prompt.tsx")] | length == 1' "$dest"
+  jq -e '(.plugin | map(.[0])) == ["./plugins/home-prompt.tsx", "./plugins/justvibes-logo.tsx", "./plugins/user.tsx"]' "$dest"
+}
+
+@test "opencode_deploy_tui_config: jq merge failure leaves existing file untouched" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
+  mkdir -p "$(dirname "$dest")"
+  echo '{"theme":"keep","plugin":[["./plugins/user.tsx",{}]]}' >"$dest"
+  real_jq="$(command -v jq)"
+  mock_dir="$SANDBOX/mock-bin"
+  mkdir -p "$mock_dir"
+  cat >"$mock_dir/jq" <<EOF
+#!/usr/bin/env bash
+if [ "\${1:-}" = "--argjson" ]; then
+  exit 42
+fi
+exec "$real_jq" "\$@"
+EOF
+  chmod +x "$mock_dir/jq"
+  old_path="$PATH"
+  PATH="$mock_dir:$PATH"
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  PATH="$old_path"
+
+  [ "$status" -ne 0 ]
+  run cat "$dest"
+  [ "$output" = '{"theme":"keep","plugin":[["./plugins/user.tsx",{}]]}' ]
+  temp_files=("$SANDBOX"/dest/.tui.json.*)
+  [ ! -e "${temp_files[0]}" ]
+}
+
+@test "opencode_deploy_tui_config: errors when source missing" {
+  run --separate-stderr opencode_deploy_tui_config "$SANDBOX/nope.json" "$SANDBOX/dest/tui.json"
+  [ "$status" -eq 1 ]
+  [ -z "$output" ]
+  [[ "$stderr" == *"template not found"* ]]
+}
+
+@test "opencode_deploy_with_backup: delegates to tui config merge for compatibility" {
+  src="$SANDBOX/tui.json"
+  dest="$SANDBOX/dest/tui.json"
+  write_tui_template "$src"
 
   run opencode_deploy_with_backup "$src" "$dest"
   [ "$status" -eq 0 ]
   [ "$output" = "installed" ]
-  [ -f "$dest" ]
-  run cat "$dest"
-  [ "$output" = '{ "plugin": [] }' ]
-}
-
-@test "opencode_deploy_with_backup: overwrites existing destination and creates backup" {
-  src="$SANDBOX/tui.json"
-  dest="$SANDBOX/dest/tui.json"
-  echo "NEW" >"$src"
-  mkdir -p "$(dirname "$dest")"
-  echo "OLD" >"$dest"
-
-  run opencode_deploy_with_backup "$src" "$dest"
-  [ "$status" -eq 0 ]
-  [ "$output" = "updated" ]
-
-  backups=("$SANDBOX"/dest/tui.json.bak.*)
-  [ "${#backups[@]}" -eq 1 ]
-  [ -f "${backups[0]}" ]
-  run cat "${backups[0]}"
-  [ "$output" = "OLD" ]
-  run cat "$dest"
-  [ "$output" = "NEW" ]
-}
-
-@test "opencode_deploy_with_backup: errors when source missing" {
-  run --separate-stderr opencode_deploy_with_backup "$SANDBOX/nope.json" "$SANDBOX/dest/tui.json"
-  [ "$status" -eq 1 ]
-  [ -z "$output" ]
-  [[ "$stderr" == *"source not found"* ]]
+  cmp -s "$src" "$dest"
 }
 
 # ── opencode_render_config ───────────────────────────────────────────────────

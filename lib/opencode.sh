@@ -211,50 +211,131 @@ opencode_deploy_if_missing() {
   echo "installed"
 }
 
-# ── opencode_deploy_with_backup ──────────────────────────────────────────────
-# Deploy an OpenCode support config file, backing up an existing destination.
-#
-# Some OpenCode support files are bootstrap-managed but still user-visible, so
-# re-bootstrap should refresh them while leaving an undo copy beside the file.
+# ── opencode_deploy_tui_config ───────────────────────────────────────────────
+# Install or merge OpenCode's TUI config, preserving user top-level settings and
+# user plugin entries while keeping bootstrap-managed plugins current.
 #
 # Args:
-#   $1: source template path
-#   $2: dest   config path
+#   $1: source tui.json template path
+#   $2: dest   tui.json config   path
 #
-# Returns: 0 if installed or updated cleanly, 1 on error.
+# Returns: 0 if installed or updated cleanly, non-zero on error.
 # Stdout: "installed", "updated", or "" on error (machine-readable).
-opencode_deploy_with_backup() {
+opencode_deploy_tui_config() (
   local src="$1"
   local dest="$2"
+  local dest_dir tmp historical_json
+  local -a historical_managed_plugins=()
+
+  # Test-only injection keeps the production historical list hardcoded and
+  # currently empty while allowing the merge behavior to be exercised before a
+  # real plugin rename/discontinuation exists.
+  if [ "${OPENCODE_BOOTSTRAP_TEST:-0}" = "1" ] && [ -n "${OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS:-}" ]; then
+    while IFS= read -r historical_plugin || [ -n "$historical_plugin" ]; do
+      [ -z "$historical_plugin" ] && continue
+      historical_managed_plugins+=("$historical_plugin")
+    done <<<"$OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS"
+  fi
 
   if [ ! -f "$src" ]; then
-    echo "source not found: $src" >&2
+    echo "opencode_deploy_tui_config: template not found: $src" >&2
     return 1
   fi
 
-  mkdir -p "$(dirname "$dest")"
+  if ! command -v jq >/dev/null 2>&1; then
+    echo "opencode_deploy_tui_config: jq is required but not installed" >&2
+    return 1
+  fi
 
-  if [ -f "$dest" ]; then
-    if ! cp "$dest" "$dest.bak.$(date +%Y%m%d-%H%M%S)"; then
-      echo "failed to backup: $dest" >&2
+  if ! jq -e 'type == "object" and (.plugin | type == "array")' "$src" >/dev/null 2>&1; then
+    echo "opencode_deploy_tui_config: invalid template: $src" >&2
+    return 1
+  fi
+
+  if [ "${#historical_managed_plugins[@]}" -gt 0 ]; then
+    if ! historical_json=$(printf '%s\n' "${historical_managed_plugins[@]}" | jq -Rn '[inputs]'); then
+      echo "opencode_deploy_tui_config: failed to encode historical plugin list" >&2
       return 1
     fi
+  else
+    historical_json='[]'
+  fi
 
-    if ! cp "$src" "$dest"; then
-      echo "failed to overwrite: $dest" >&2
+  dest_dir="$(dirname "$dest")"
+  mkdir -p "$dest_dir"
+  tmp=$(mktemp "$dest_dir/.tui.json.XXXXXX") || return 1
+  trap 'rm -f "$tmp"' EXIT
+
+  if [ ! -f "$dest" ]; then
+    if ! cp "$src" "$tmp"; then
+      echo "opencode_deploy_tui_config: failed to stage install: $dest" >&2
       return 1
     fi
-
-    echo "updated"
+    if ! mv "$tmp" "$dest"; then
+      echo "opencode_deploy_tui_config: failed to install: $dest" >&2
+      return 1
+    fi
+    trap - EXIT
+    echo "installed"
     return 0
   fi
 
-  if ! cp "$src" "$dest"; then
-    echo "failed to install: $dest" >&2
+  if ! jq -e 'type == "object" and ((has("plugin") | not) or (.plugin | type == "array"))' "$dest" >/dev/null 2>&1; then
+    if ! cp "$dest" "$dest.bak.$(date +%s)"; then
+      echo "opencode_deploy_tui_config: failed to backup: $dest" >&2
+      return 1
+    fi
+    if ! cp "$src" "$tmp"; then
+      echo "opencode_deploy_tui_config: failed to stage install: $dest" >&2
+      return 1
+    fi
+    if ! mv "$tmp" "$dest"; then
+      echo "opencode_deploy_tui_config: failed to install: $dest" >&2
+      return 1
+    fi
+    trap - EXIT
+    echo "installed"
+    return 0
+  fi
+
+  if ! cp "$dest" "$dest.bak.$(date +%s)"; then
+    echo "opencode_deploy_tui_config: failed to backup: $dest" >&2
     return 1
   fi
 
-  echo "installed"
+  if ! jq --argjson historical "$historical_json" -s '
+    .[0] as $template
+    | .[1] as $existing
+    | ($template.plugin | map(select(type == "array" and length > 0 and (.[0] | type == "string")))) as $template_plugins
+    | ($template_plugins | map(.[0])) as $current_managed
+    | (($current_managed + $historical) | unique) as $managed
+    | ($existing.plugin // [] | map(select(
+        type == "array"
+        and length > 0
+        and (.[0] | type == "string")
+        and ((.[0] as $id | $managed | index($id)) | not)
+      ))) as $user_plugins
+    | $existing
+    | .["$schema"] = $template["$schema"]
+    | .plugin = ($template_plugins + $user_plugins)
+  ' "$src" "$dest" >"$tmp"; then
+    echo "opencode_deploy_tui_config: failed to merge: $dest" >&2
+    return 1
+  fi
+
+  if ! mv "$tmp" "$dest"; then
+    echo "opencode_deploy_tui_config: failed to update: $dest" >&2
+    return 1
+  fi
+
+  trap - EXIT
+  echo "updated"
+)
+
+# Backward-compatible wrapper for any out-of-tree callers that still use the
+# old full-overwrite helper name.
+opencode_deploy_with_backup() {
+  opencode_deploy_tui_config "$@"
 }
 
 # ── opencode_render_config ───────────────────────────────────────────────────
