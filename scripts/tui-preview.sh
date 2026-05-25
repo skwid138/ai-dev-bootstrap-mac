@@ -17,8 +17,13 @@ Usage: tui-preview.sh
 
 Launch OpenCode in an isolated temporary directory with the packaged
 @skwid138/opencode-tui TUI plugin enabled in .opencode/tui.json.
+
+Options:
+  --local [path]  Use local dev build instead of npm package. Default: $HOME/code/opencode-tui/dist/tui.js
 EOF
 }
+
+TUI_PLUGIN_SPEC="@skwid138/opencode-tui@1.1.0"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -26,15 +31,42 @@ while [[ $# -gt 0 ]]; do
       usage
       exit 0
       ;;
+    --local)
+      shift
+      if [[ $# -gt 0 ]] && [[ -n "$1" ]] && [[ "$1" != -* ]]; then
+        LOCAL_PATH="$1"
+        shift
+      else
+        LOCAL_PATH="$HOME/code/opencode-tui/dist/tui.js"
+      fi
+      ;;
     *)
       die_usage "unexpected argument: $1"
       ;;
   esac
 done
 
-require_cmd opencode "Install OpenCode before running the TUI preview."
+if [[ -n "${LOCAL_PATH:-}" ]]; then
+  # Reject paths with characters unsafe for JSON printf
+  if [[ "$LOCAL_PATH" == *'"'* ]] || [[ "$LOCAL_PATH" == *\\* ]]; then
+    die "Path contains unsafe characters (quotes or backslashes): $LOCAL_PATH"
+  fi
+  # Resolve relative paths to absolute
+  if [[ "$LOCAL_PATH" != /* ]]; then
+    resolved_dir="$(cd "$(dirname "$LOCAL_PATH")" 2>/dev/null && pwd)" || {
+      die "Cannot resolve path: $LOCAL_PATH (directory does not exist)"
+    }
+    LOCAL_PATH="$resolved_dir/$(basename "$LOCAL_PATH")"
+  fi
+  # Validate file exists and is readable
+  if [[ ! -f "$LOCAL_PATH" ]] || [[ ! -r "$LOCAL_PATH" ]]; then
+    printf '%s\n' "Local TUI plugin not found or not readable: $LOCAL_PATH" >&2
+    die "  Try: cd ~/code/opencode-tui && npm run build"
+  fi
+  TUI_PLUGIN_SPEC="$LOCAL_PATH"
+fi
 
-TUI_PLUGIN_SPEC="@skwid138/opencode-tui@1.0.0"
+require_cmd opencode "Install OpenCode before running the TUI preview."
 
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/opencode-tui-preview.XXXXXX")" || die "failed to create temp directory"
 trap 'rm -rf "$TMP_DIR"' EXIT
