@@ -25,8 +25,7 @@ opencode/
 │   ├── saruman.md              # adversarial reviewer
 │   ├── radagast.md             # external-research specialist
 │   ├── legolas.md              # codebase discovery specialist
-│   ├── aragorn.md              # sole implementation worker
-│   └── elrond.md               # council aggregator
+│   └── aragorn.md              # sole implementation worker
 ├── command/                    # custom slash commands
 ├── skill/                      # on-demand skill definitions
 └── plugins/                    # managed placeholder directory (.gitkeep)
@@ -71,7 +70,6 @@ The built-in `plan`, `build`, and `general` agents are hidden in the template co
 - `aragorn` — implementer. The only custom agent that edits or writes files.
 - `legolas` — internal codebase explorer. Finds files, call paths, tests, and project patterns.
 - `radagast` — external researcher. Checks official docs and source-backed references.
-- `elrond` — council aggregator. Structurally synthesizes multi-model review responses without issuing verdicts. Managed internally by the council plugin; not dispatched directly.
 
 This keeps the agent picker simple for users and keeps safety boundaries explicit for maintainers.
 
