@@ -68,11 +68,11 @@ assert_literal_exists_after() {
 
 # ── Agents ───────────────────────────────────────────────────────────────────
 
-@test "opencode/agent: all 6 curated agents exist" {
+@test "opencode/agent: all 5 curated agents exist" {
   agents=("${OPENCODE_DIR}"/agent/*.md)
-  [ "${#agents[@]}" -eq 6 ]
+  [ "${#agents[@]}" -eq 5 ]
 
-  for agent in gandalf saruman radagast aragorn legolas elrond; do
+  for agent in gandalf saruman radagast aragorn legolas; do
     [ -f "${OPENCODE_DIR}/agent/${agent}.md" ]
   done
 }
@@ -96,7 +96,7 @@ assert_literal_exists_after() {
 }
 
 @test "opencode/agent: leaf agents deny recursive task delegation" {
-  for agent in saruman legolas radagast elrond; do
+  for agent in saruman legolas radagast; do
     run grep -Eq '^  task: deny$' "${OPENCODE_DIR}/agent/${agent}.md"
     [ "$status" -eq 0 ]
   done
@@ -113,6 +113,9 @@ assert_literal_exists_after() {
 
 @test "opencode/agent: gandalf cannot edit and aragorn can edit" {
   run grep -Eq '^  edit: deny$' "${OPENCODE_DIR}/agent/gandalf.md"
+  [ "$status" -eq 0 ]
+
+  run grep -Eq '^  question: allow$' "${OPENCODE_DIR}/agent/gandalf.md"
   [ "$status" -eq 0 ]
 
   run grep -Eq '^  edit: allow$' "${OPENCODE_DIR}/agent/aragorn.md"
@@ -343,7 +346,23 @@ EOF
   run jq -r '.plugin[0]' "${OPENCODE_DIR}/opencode.json.template"
   [ "$output" = "@tarquinen/opencode-dcp@3.1.11" ]
   run jq -r '.plugin[1][0]' "${OPENCODE_DIR}/opencode.json.template"
-  [ "$output" = "@skwid138/opencode-council@0.1.2" ]
+  [ "$output" = "@skwid138/opencode-council@0.3.0" ]
+}
+
+@test "opencode.json.template: council plugin delegates aggregation internally" {
+  run jq -r '.plugin[1][1].council.reviewer' "${OPENCODE_DIR}/opencode.json.template"
+  [ "$status" -eq 0 ]
+  [ "$output" = "saruman" ]
+
+  run jq -r '.plugin[1][1].council | has("aggregator")' "${OPENCODE_DIR}/opencode.json.template"
+  [ "$status" -eq 0 ]
+  [ "$output" = "false" ]
+}
+
+@test "opencode.json.template: global questions are denied by default" {
+  run jq -r '.permission.question["*"]' "${OPENCODE_DIR}/opencode.json.template"
+  [ "$status" -eq 0 ]
+  [ "$output" = "deny" ]
 }
 
 # ── Cross-pollination guardrails ─────────────────────────────────────────────
