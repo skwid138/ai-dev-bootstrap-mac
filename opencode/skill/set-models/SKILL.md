@@ -62,10 +62,11 @@ Do not recommend provider-specific model names. Give role-based guidance instead
 
 Explain that these are characteristics to look for, not a required shopping list.
 
-## Research summary (2026-05-22)
+## Research summary (2026-05-28)
 
 - Kimi-family models use `thinking.type` to turn reasoning on or off.
 - DeepSeek V4-family models use `thinking.type`; high-effort reasoning uses the camel-case `reasoningEffort` key.
 - Qwen 3.6-family models use `enable_thinking`.
+- Qwen 3.7 Max on OpenCode Go routes through the @ai-sdk/anthropic adapter. Use Anthropic-shape reasoning config: `thinking: { type: "enabled", budgetTokens: N }`. Do NOT use `enable_thinking` or `preserve_thinking` for the OpenCode Go path.
 - MiniMax M2.5 and M2.7 do not need extra reasoning configuration for this workflow.
 - The eco profile keeps the team usable with more rate-limit headroom while preserving stronger choices for coordination, building, and review roles.
