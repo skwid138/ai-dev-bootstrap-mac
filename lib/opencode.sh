@@ -508,7 +508,7 @@ opencode_decide_provider_path() {
       printf '%s\n%s\n' "google" "google/gemini-2.5-flash"
       ;;
     opencode)
-      printf '%s\n%s\n' "opencode-go" "opencode-go/deepseek-v4-pro"
+      printf '%s\n%s\n' "opencode-go" "opencode-go/kimi-k2.6"
       ;;
     skip)
       printf '%s\n%s\n' "none" ""

@@ -154,7 +154,7 @@ run_module() {
   run ! grep -q "opencode auth login --provider opencode-go" "$MOCK_LOG"
 
   run jq -r '.model' "$HOME/.config/opencode/opencode.json"
-  [ "$output" = "opencode-go/deepseek-v4-pro" ]
+  [ "$output" = "opencode-go/kimi-k2.6" ]
 }
 
 @test "module: OpenCode Go/Zen reports Keychain write failure clearly" {
