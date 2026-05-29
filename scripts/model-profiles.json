@@ -3,12 +3,12 @@
     "model": "opencode-go/kimi-k2.6",
     "small_model": "opencode-go/deepseek-v4-flash",
     "council_models": [
-      { "providerID": "opencode-go", "modelID": "deepseek-v4-pro" },
+      { "providerID": "opencode-go", "modelID": "kimi-k2.5" },
       { "providerID": "opencode-go", "modelID": "kimi-k2.6" },
       { "providerID": "opencode-go", "modelID": "qwen3.6-plus" }
     ],
     "agent": {
-      "gandalf": { "model": "opencode-go/kimi-k2.6", "thinking": { "type": "enabled" } },
+      "gandalf": { "model": "opencode-go/qwen3.7-max", "thinking": { "type": "enabled", "budgetTokens": 8192 } },
       "aragorn": { "model": "opencode-go/minimax-m2.5" },
       "saruman": { "model": "opencode-go/minimax-m2.7" },
       "legolas": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "enabled" }, "reasoningEffort": "high" },

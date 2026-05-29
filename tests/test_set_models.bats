@@ -109,8 +109,9 @@ run_script() {
 
   [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
   [ "$(jq -r '.small_model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
-  [ "$(jq -r '.agent.gandalf.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
+  [ "$(jq -r '.agent.gandalf.model' "$CONFIG")" = "opencode-go/qwen3.7-max" ]
   [ "$(jq -r '.agent.gandalf.thinking.type' "$CONFIG")" = "enabled" ]
+  [ "$(jq -r '.agent.gandalf.thinking.budgetTokens' "$CONFIG")" = "8192" ]
   [ "$(jq -r '.agent.aragorn.model' "$CONFIG")" = "opencode-go/minimax-m2.5" ]
   [ "$(jq -r '.agent.aragorn | has("thinking")' "$CONFIG")" = "false" ]
   [ "$(jq -r '.agent.saruman.model' "$CONFIG")" = "opencode-go/minimax-m2.7" ]
@@ -132,7 +133,10 @@ run_script() {
 
   [ "$(jq -r '.plugin[1][1].council.models | length' "$CONFIG")" = "3" ]
   [ "$(jq -r '.plugin[1][1].council.models[0].providerID' "$CONFIG")" = "opencode-go" ]
-  [ "$(jq -r '.plugin[1][1].council.models[0].modelID' "$CONFIG")" = "deepseek-v4-pro" ]
+  [ "$(jq -r '.plugin[1][1].council.models[0].modelID' "$CONFIG")" = "kimi-k2.5" ]
+  [ "$(jq -r '.plugin[1][1].council.models[1].modelID' "$CONFIG")" = "kimi-k2.6" ]
+  [ "$(jq -r '.plugin[1][1].council.models[2].modelID' "$CONFIG")" = "qwen3.6-plus" ]
+  jq -e '.plugin[1][1].council.models | map(.modelID) | index("deepseek-v4-pro") == null' "$CONFIG"
 }
 
 @test "set-models default: no argument is the same as default" {
@@ -455,7 +459,9 @@ run_script() {
   grep -q 'AI_BOOTSTRAP_CURATED_MODELS' "$skill_file"
   grep -q 'scripts/agent/set-models.sh' "$skill_file"
   grep -q 'model-profiles.json' "$skill_file"
-  grep -q 'Research summary (2026-05-22)' "$skill_file"
+  grep -q 'Research summary (2026-05-28)' "$skill_file"
+  grep -Fq 'Qwen 3.7 Max on OpenCode Go routes through the @ai-sdk/anthropic adapter' "$skill_file"
+  grep -Fq 'thinking: { type: "enabled", budgetTokens: N }' "$skill_file"
 
   non_go_section="$SANDBOX/non-go-section.txt"
   awk '/^## For users without OpenCode Go/{flag=1; next} /^## /{flag=0} flag{print}' "$skill_file" >"$non_go_section"
