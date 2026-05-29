@@ -36,3 +36,5 @@ build/
 # Local OpenCode workspace/config artifacts
 /.opencode/
 /opencode/tui.json
+
+.project-plans
