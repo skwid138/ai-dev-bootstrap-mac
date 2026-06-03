@@ -25,8 +25,8 @@ $AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh --json
 
 1. **Check** — Run `$AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh --json` and parse the JSON output. It reports on:
    - `~/.config/opencode/package.json` dependencies
-   - `~/.config/opencode/opencode.json` `plugin` array entries
-   - `~/.config/opencode/opencode.json` MCP `command` arrays that reference npm packages
+   - `~/.config/opencode/opencode.jsonc` (preferred) or `opencode.json` `plugin` array entries
+   - `~/.config/opencode/opencode.jsonc` (preferred) or `opencode.json` MCP `command` arrays that reference npm packages
 
 2. **Report** — Present a concise table. For each entry show package name, current version or `unpinned`, latest version or `unknown`, status, and location.
 
@@ -39,8 +39,8 @@ $AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh --json
 
 5. **Apply** — Only after approval:
    - For `package.json` dependencies, edit the version string and run `npm install` from `~/.config/opencode/` to refresh `package-lock.json`.
-   - For `opencode.json` `plugin` entries, edit only the matching package version suffix.
-   - For `opencode.json` MCP `command` arrays, edit only the matching command token.
+   - For `opencode.jsonc`/`opencode.json` `plugin` entries, edit only the matching package version suffix in whichever file the script selected (use the reported `location`; `.jsonc` is preferred when both exist).
+   - For `opencode.jsonc`/`opencode.json` MCP `command` arrays, edit only the matching command token in whichever file the script selected.
 
 6. **Verify** — Re-run `$AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh` in human-output mode and show the updated state.
 
@@ -49,7 +49,7 @@ $AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh --json
 ## Rules
 
 - Run the script; do not reimplement its logic in agent instructions.
-- Never edit `opencode.json` without explicit user approval of the specific changes.
-- Preserve JSONC formatting and comments in `opencode.json`; use targeted string replacements instead of full-file rewrites.
+- Never edit `opencode.jsonc` or `opencode.json` without explicit user approval of the specific changes.
+- Preserve JSONC formatting and comments in the selected `opencode.jsonc`/`opencode.json`; use targeted string replacements instead of full-file rewrites.
 - Registry lookup failures are warn and continue: keep unresolved packages as `unknown`, report the warning, and do not stop solely because the registry was unavailable.
 - Never replace `@latest` or an unpinned reference with a guessed version. Only pin to a version reported by the script or explicitly provided by the user.
