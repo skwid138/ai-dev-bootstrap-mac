@@ -65,6 +65,17 @@ EOF
 EOF
 }
 
+write_jsonc_fixture_config() {
+  cat >"$TMP_CFG/opencode.jsonc" <<'EOF'
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": [
+    "fake-pkg@1.0.0",
+  ],
+}
+EOF
+}
+
 @test "scripts: opencode dependency checker exists and is executable" {
   [ -f "$SCRIPT" ]
   [ -x "$SCRIPT" ]
@@ -118,6 +129,62 @@ EOF
   run bash -c "jq -r '.deps[] | select(.package == \"@scope/tool\") | .unpinned' <<<\"\$1\"" _ "$json_output"
   [ "$status" -eq 0 ]
   [ "$output" = "true" ]
+}
+
+@test "scripts: trailing-comma opencode.jsonc does not fail JSONC validation" {
+  write_jsonc_fixture_config
+  stub_dir="$BATS_TEST_TMPDIR/stubs-jsonc-trailing"
+  write_npm_stub "$stub_dir"
+
+  PATH="$stub_dir:$PATH" run "$SCRIPT" --json --config-dir "$TMP_CFG"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"not valid JSON (after JSONC strip)"* ]]
+
+  json_output="$output"
+  echo "$json_output" | jq empty
+}
+
+@test "scripts: selects opencode.jsonc when it is the only OpenCode config" {
+  write_jsonc_fixture_config
+  stub_dir="$BATS_TEST_TMPDIR/stubs-jsonc-only"
+  write_npm_stub "$stub_dir"
+
+  PATH="$stub_dir:$PATH" run "$SCRIPT" --json --config-dir "$TMP_CFG"
+  [ "$status" -eq 0 ]
+  json_output="$output"
+
+  run bash -c "jq -r '.deps | length' <<<\"\$1\"" _ "$json_output"
+  [ "$status" -eq 0 ]
+  [ "$output" -eq 1 ]
+
+  run bash -c "jq -r '.deps[0].location' <<<\"\$1\"" _ "$json_output"
+  [ "$status" -eq 0 ]
+  [ "$output" = "opencode.jsonc:plugin" ]
+}
+
+@test "scripts: prefers opencode.jsonc over opencode.json and reports jsonc location" {
+  cat >"$TMP_CFG/opencode.json" <<'EOF'
+{
+  "$schema": "https://opencode.ai/config.json",
+  "plugin": ["another-fake-pkg@2.0.0"]
+}
+EOF
+
+  write_jsonc_fixture_config
+  stub_dir="$BATS_TEST_TMPDIR/stubs-jsonc-precedence"
+  write_npm_stub "$stub_dir"
+
+  PATH="$stub_dir:$PATH" run "$SCRIPT" --json --config-dir "$TMP_CFG"
+  [ "$status" -eq 0 ]
+  json_output="$output"
+
+  run bash -c "jq -r '.deps[] | select(.package == \"fake-pkg\") | .location' <<<\"\$1\"" _ "$json_output"
+  [ "$status" -eq 0 ]
+  [ "$output" = "opencode.jsonc:plugin" ]
+
+  run bash -c "jq -r '.deps[] | select(.package == \"another-fake-pkg\") | .package' <<<\"\$1\"" _ "$json_output"
+  [ "$status" -eq 0 ]
+  [ "$output" = "" ]
 }
 
 @test "scripts: human output with fixture produces table" {
