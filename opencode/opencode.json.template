@@ -25,7 +25,7 @@
     },
     "edit": { "*": "ask" },
     "write": { "*": "ask" },
-    "question": { "*": "deny" },
+    "question": "deny",
     "bash": {
       "*": "ask",
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/bootstrap-update-check.sh *": "allow",
