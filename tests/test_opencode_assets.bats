@@ -360,9 +360,8 @@ EOF
 }
 
 @test "opencode.json.template: global questions are denied by default" {
-  run jq -r '.permission.question["*"]' "${OPENCODE_DIR}/opencode.json.template"
+  run jq -e '.permission.question == "deny"' "${OPENCODE_DIR}/opencode.json.template"
   [ "$status" -eq 0 ]
-  [ "$output" = "deny" ]
 }
 
 # ── Cross-pollination guardrails ─────────────────────────────────────────────
