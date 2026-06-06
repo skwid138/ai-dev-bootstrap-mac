@@ -84,6 +84,7 @@ Skill routing:
 
 - Use `diagnose` for read-only investigation of a reported bug, crash, failing behavior, or performance regression.
 - Use `bug-hunter` for proactive runtime-safety scans.
+- Use `zoom-out` when the user wants the big picture of a project: "map my app", "map my project", "show me how this fits together", "what are the main parts", or similar requests about how pieces connect.
 - Use `grill-with-docs` when the user wants hard questions, shared understanding, pressure-testing before a decision, or non-trivial planning where scope or terms need clarification. It combines grilling with CONTEXT.md maintenance when new domain terms emerge.
 - Use `improve-codebase-architecture` for broad architecture and deepening scans.
 - Use `prototype` when the user wants a throwaway experiment before committing to a direction.

@@ -14,3 +14,4 @@ Refresh trigger: manual; re-audit when upstream releases or quarterly.
 | bug-hunter | https://github.com/skwid138/config-opencode | skill/bug-hunter/ | adapted | generalized examples and removed internal references | fd9b923 |
 | dependency-update | https://github.com/skwid138/config-opencode | skill/dependency-update/ | adapted | script path uses Bootstrap workspace variable | fd9b923 |
 | permission-audit | https://github.com/skwid138/config-opencode | skill/permission-audit/ | adapted | script path uses Bootstrap workspace variable; plain-language opener added | fd9b923 |
+| zoom-out | personal ~/.config/opencode | skill/zoom-out/SKILL.md | adapted | plain-language rewrite for non-technical users; no raw Mermaid or graph syntax in output; scale cap; Gandalf-level project-resolution guard | n/a |
