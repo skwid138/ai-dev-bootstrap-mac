@@ -33,7 +33,7 @@ opencode/
 
 The `template` extension on `opencode.json.template` exists because the bootstrap renders it into the final `opencode.json` on the user's machine.
 
-`tui.json.template` enables the branded OpenCode TUI prompt and logo through the published `@skwid138/opencode-tui@1.1.0` npm package. OpenCode resolves that package at runtime; this repo does not keep local TUI plugin source, npm manifests, or lockfiles for it.
+`tui.json.template` enables the branded OpenCode TUI prompt and logo through the published `@skwid138/opencode-tui@1.1.1` npm package. OpenCode resolves that package at runtime; this repo does not keep local TUI plugin source, npm manifests, or lockfiles for it.
 
 The repo-level `scripts/` tree is deployed separately to `$AI_BOOTSTRAP_WORKSPACE/scripts/`. Commands or skills that need deterministic shell logic should call those deployed scripts rather than embedding long shell snippets in prompts.
 

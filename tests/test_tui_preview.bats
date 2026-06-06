@@ -27,7 +27,7 @@ copy_preview_repo() {
 write_opencode_stub() {
   local stub_dir="$1"
   local log_file="$2"
-  local expected_plugin_spec="${3:-@skwid138/opencode-tui@1.1.0}"
+  local expected_plugin_spec="${3:-@skwid138/opencode-tui@1.1.1}"
   mkdir -p "$stub_dir"
   cat >"$stub_dir/opencode" <<'EOF'
 #!/usr/bin/env bash
@@ -97,7 +97,7 @@ EOF
 
   PATH="$stub_dir:$PATH" run "$preview_repo/scripts/tui-preview.sh"
   [ "$status" -eq 0 ]
-  [[ "$output" == *"Starting OpenCode TUI preview with @skwid138/opencode-tui@1.1.0 in isolated temp directory"* ]]
+  [[ "$output" == *"Starting OpenCode TUI preview with @skwid138/opencode-tui@1.1.1 in isolated temp directory"* ]]
 
   [ -f "$stub_log" ]
   run grep -F "ok" "$stub_log"

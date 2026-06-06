@@ -226,6 +226,7 @@ opencode_deploy_tui_config() (
   local dest="$2"
   local dest_dir tmp historical_json
   local -a historical_managed_plugins=(
+    "@skwid138/opencode-tui@1.1.0"
     "@skwid138/opencode-tui@1.0.0"
     "./plugins/home-prompt.tsx"
     "./plugins/justvibes-logo.tsx"

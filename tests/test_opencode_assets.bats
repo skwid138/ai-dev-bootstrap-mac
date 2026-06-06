@@ -344,9 +344,9 @@ EOF
   [ "$status" -eq 0 ]
   [ "$output" = "2" ]
   run jq -r '.plugin[0]' "${OPENCODE_DIR}/opencode.json.template"
-  [ "$output" = "@tarquinen/opencode-dcp@3.1.11" ]
+  [ "$output" = "@tarquinen/opencode-dcp@3.1.12" ]
   run jq -r '.plugin[1][0]' "${OPENCODE_DIR}/opencode.json.template"
-  [ "$output" = "@skwid138/opencode-council@0.3.0" ]
+  [ "$output" = "@skwid138/opencode-council@0.10.0" ]
 }
 
 @test "opencode.json.template: council plugin delegates aggregation internally" {

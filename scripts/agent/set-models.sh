@@ -38,9 +38,9 @@ if [[ "$tier" == "reset" ]]; then
   # --- Council models reset (second pass) ---
   if [[ -s "$tmp_file" ]]; then
     if jq '
-      if (.plugin // [] | any(type == "array" and .[0] == "@skwid138/opencode-council@0.3.0")) then
+      if (.plugin // [] | any(type == "array" and .[0] == "@skwid138/opencode-council@0.10.0")) then
         .plugin |= map(
-          if type == "array" and .[0] == "@skwid138/opencode-council@0.3.0" then
+          if type == "array" and .[0] == "@skwid138/opencode-council@0.10.0" then
             [.[0], (.[1] | .council.models = [])]
           else . end
         )
@@ -68,9 +68,9 @@ else
     council_models="$(jq -c --arg tier "$tier" '.[$tier].council_models // []' "$PROFILE")"
 
     if jq --argjson council_models "$council_models" '
-      if (.plugin // [] | any(type == "array" and .[0] == "@skwid138/opencode-council@0.3.0")) then
+      if (.plugin // [] | any(type == "array" and .[0] == "@skwid138/opencode-council@0.10.0")) then
         .plugin |= map(
-          if type == "array" and .[0] == "@skwid138/opencode-council@0.3.0" then
+          if type == "array" and .[0] == "@skwid138/opencode-council@0.10.0" then
             [.[0], (.[1] | .council.models = $council_models)]
           else . end
         )

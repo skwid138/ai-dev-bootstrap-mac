@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/tui.json",
   "plugin": [
-    ["@skwid138/opencode-tui@1.1.0", {}]
+    ["@skwid138/opencode-tui@1.1.1", {}]
   ]
 }

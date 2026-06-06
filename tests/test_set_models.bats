@@ -50,8 +50,8 @@ write_config_with_council() {
   "model": "old/root-model",
   "small_model": "old/small-model",
   "plugin": [
-    "@tarquinen/opencode-dcp@3.1.11",
-    ["@skwid138/opencode-council@0.3.0", {"council": {"reviewer": "saruman", "models": []}}]
+    "@tarquinen/opencode-dcp@3.1.12",
+    ["@skwid138/opencode-council@0.10.0", {"council": {"reviewer": "saruman", "models": []}}]
   ],
   "agent": {
     "plan": { "mode": "subagent", "hidden": true, "marker": "keep-plan" },

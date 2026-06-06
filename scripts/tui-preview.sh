@@ -23,7 +23,7 @@ Options:
 EOF
 }
 
-TUI_PLUGIN_SPEC="@skwid138/opencode-tui@1.1.0"
+TUI_PLUGIN_SPEC="@skwid138/opencode-tui@1.1.1"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
