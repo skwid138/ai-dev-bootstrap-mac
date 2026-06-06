@@ -1,147 +1,213 @@
 # Fix Patterns
 
 Common fix patterns organized by detector type. Always prefer the pattern that
-matches existing codebase conventions.
+matches the project you are reading.
 
 ---
 
-## NullDerefBoundary — Normalize at the boundary
+## MissingValueCrash — Check and default where data enters
 
-**Preferred: Add defaults in `transformResponse`**
+The best fix is usually near the file read, web reply, command output, or user
+input. Clean the value once so later code can stay simple.
 
-This is almost always the best fix. Normalize once at the API boundary so every
-consumer gets safe data.
+### Python
 
-```typescript
-// BEFORE — only guards `results`
-transformResponse: (response: PaginatedAssetsResponse) => ({
-  ...response,
-  results: response.results || [],
-})
+```python
+# BEFORE — assumes the reply is successful and complete
+data = requests.get(url).json()
+first_title = data["items"][0]["title"]
 
-// AFTER — guards all fields that consumers access
-transformResponse: (response: PaginatedAssetsResponse) => ({
-  ...response,
-  results: response.results || [],
-  averageAssetScores: response.averageAssetScores ?? {},
-})
+# AFTER — checks status, shape, and empty list before use
+response = requests.get(url, timeout=10)
+response.raise_for_status()
+data = response.json()
+items = data.get("items") or []
+if not items:
+    return "No items found"
+first_title = items[0].get("title", "Untitled")
 ```
 
-**Fallback: Guard at the consumer**
+### Shell
 
-When you can't modify the boundary (third-party API, shared slice), guard at
-the consumer with optional chaining or nullish coalescing:
+```bash
+# BEFORE — uses possibly-empty command output as a path
+project_dir=$(jq -r '.workspace' "$state_file")
+open "$project_dir"
 
-```typescript
-// BEFORE
-const score = tag.averageAssetScores[FeatureSetKeyMap[platform]]
-
-// AFTER
-const score = tag.averageAssetScores?.[FeatureSetKeyMap[platform]]
+# AFTER — stops with a clear message if the value is missing
+project_dir=$(jq -r '.workspace // empty' "$state_file")
+if [[ -z "$project_dir" ]]; then
+  printf '%s\n' "I could not find the workspace path."
+  exit 1
+fi
+open "$project_dir"
 ```
 
-**Anti-pattern: Scattered null checks everywhere**
+### JavaScript / HTML script
 
-Don't add `if (x != null)` checks at every consumer. This is noisy, easy to
-miss in new code, and doesn't fix the root cause.
+```javascript
+// BEFORE — assumes the web reply has a non-empty list
+const data = await response.json()
+document.querySelector("#title").textContent = data.items[0].title
+
+// AFTER — checks reply and shape before use
+if (!response.ok) throw new Error("The request failed")
+const data = await response.json()
+const items = Array.isArray(data.items) ? data.items : []
+document.querySelector("#title").textContent = items[0]?.title ?? "No title yet"
+```
 
 ---
 
-## TypeRealityMismatch — Make types honest
+## RuntimeShapeMismatch — Make runtime expectations honest
 
-**Preferred: Make the type reflect reality**
+When code expects a shape, make that expectation true at runtime or handle the
+alternate shape explicitly.
 
-```typescript
-// BEFORE — lies about the runtime shape
-interface ApiResponse {
-  averageAssetScores: FeatureSetScoreRecord
+### Python
+
+```python
+# BEFORE — returns different shapes without making callers handle them
+def load_user(path):
+    if not path.exists():
+        return None
+    return json.loads(path.read_text())
+
+name = load_user(path)["name"]
+
+# AFTER — caller handles the missing-user path
+user = load_user(path)
+if user is None:
+    return "No saved user yet"
+name = user.get("name", "Unknown")
+```
+
+### Shell
+
+```bash
+# BEFORE — helper may print nothing, caller assumes a value
+token=$(read_token)
+curl -H "Authorization: Bearer $token" "$url"
+
+# AFTER — empty output stops before making a bad request
+token=$(read_token)
+if [[ -z "$token" ]]; then
+  printf '%s\n' "I could not find the saved sign-in token."
+  exit 1
+fi
+curl -H "Authorization: Bearer $token" "$url"
+```
+
+---
+
+## GuardGap — Extend the existing safe pattern
+
+When one path already handles missing data, reuse that same pattern everywhere
+the same value is used.
+
+```python
+# BEFORE — one path guards tags, another assumes tags exists
+tags = payload.get("tags") or []
+visible_tags = [tag for tag in tags if tag.get("visible")]
+
+tag_names = [tag["name"] for tag in payload["tags"]]
+
+# AFTER — both paths use the same guarded value
+tags = payload.get("tags") or []
+visible_tags = [tag for tag in tags if tag.get("visible")]
+tag_names = [tag.get("name", "Unnamed") for tag in tags]
+```
+
+---
+
+## HiddenAssumption — Name and handle the empty case
+
+```javascript
+// BEFORE — assumes the split always has two parts
+const project = location.hash.split("/")[1]
+loadProject(project)
+
+// AFTER — handles a missing part before loading
+const project = location.hash.split("/")[1]
+if (!project) {
+  showMessage("Choose a project first")
+  return
 }
-
-// AFTER — honest about what the API actually returns
-interface ApiResponse {
-  averageAssetScores: FeatureSetScoreRecord | null
-}
+loadProject(project)
 ```
 
-Then let TypeScript enforce guards at every consumer.
+```bash
+# BEFORE — assumes grep found a match
+app_path=$(grep '^APP=' "$state_file" | cut -d= -f2-)
+open "$app_path"
 
-**Alternative: Validate and normalize at ingestion**
-
-Use a runtime validation layer (Zod, io-ts, or manual check) at the API
-boundary to guarantee the type contract:
-
-```typescript
-transformResponse: (raw: unknown) => {
-  const response = apiResponseSchema.parse(raw)
-  return response // now guaranteed to match the type
-}
+# AFTER — checks the match before use
+app_path=$(grep '^APP=' "$state_file" | cut -d= -f2-)
+if [[ -z "$app_path" ]]; then
+  printf '%s\n' "I could not find the app path."
+  exit 1
+fi
+open "$app_path"
 ```
 
 ---
 
-## GuardGap — Extend existing guards
+## AsyncFailure — Add error handling, timeout, and stale-result protection
 
-When some paths already guard a value but others don't, extend the pattern:
+### JavaScript
 
-```typescript
-// BEFORE — guard exists in one place
-if (asset.tags) {
-  asset.tags = asset.tags.filter(...)
-} else {
-  asset.tags = []
+```javascript
+// BEFORE — request failure becomes an unhandled promise rejection
+saveSettings(settings)
+
+// AFTER — user gets a clear failure path
+try {
+  await saveSettings(settings)
+  showMessage("Saved")
+} catch (error) {
+  showMessage("I could not save that. Try again in a moment.")
 }
+```
 
-// BUT — another consumer doesn't guard
-const nextTagIds = asset.tags.map((tag) => tag.id) // crashes if tags is undefined
+### Python
 
-// FIX — apply the same guard pattern
-const nextTagIds = (asset.tags ?? []).map((tag) => tag.id)
+```python
+# BEFORE — can hang forever or crash without a helpful message
+data = requests.get(url).json()
+
+# AFTER — bounded wait plus clear recovery path
+try:
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+except (requests.RequestException, ValueError):
+    return "I could not load that data right now."
+```
+
+### Shell
+
+```bash
+# BEFORE — later commands run even if download failed
+curl -o "$file" "$url"
+open "$file"
+
+# AFTER — stops before using a missing or partial file
+if ! curl -fL -o "$file" "$url"; then
+  printf '%s\n' "I could not download the file."
+  exit 1
+fi
+open "$file"
 ```
 
 ---
 
-## ImplicitAssumption — Add explicit checks
+## Fix suggestion rules
 
-```typescript
-// BEFORE — assumes array is non-empty
-const first = items[0]
-
-// AFTER — handle empty case
-const first = items[0] // may be undefined
-if (!first) return null
-
-// OR — with fallback
-const first = items.at(0) ?? defaultItem
-```
-
----
-
-## UnhandledAsync — Add error boundaries and cleanup
-
-**React component cleanup:**
-```typescript
-// BEFORE — state update after unmount
-useEffect(() => {
-  fetchData().then(setData)
-}, [])
-
-// AFTER — with cleanup
-useEffect(() => {
-  let cancelled = false
-  fetchData().then((data) => {
-    if (!cancelled) setData(data)
-  })
-  return () => { cancelled = true }
-}, [])
-```
-
-**Promise error handling:**
-```typescript
-// BEFORE
-someAsyncFn()
-
-// AFTER
-someAsyncFn().catch((error) => {
-  noticeError(error)
-})
-```
+- Prefer one guard at data intake over many scattered checks later.
+- Preserve the project's existing style and helper functions.
+- Do not hide a real failure by returning an empty value unless the user-facing
+  behavior remains correct.
+- Give a test or manual check that uses the bad value: missing key, empty list,
+  invalid JSON, failed command, timeout, or blank environment variable.
+- Keep the suggestion small enough for Aragorn to implement safely after the
+  user reviews the report.

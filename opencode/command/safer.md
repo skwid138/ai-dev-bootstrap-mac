@@ -1,45 +1,58 @@
 ---
 description: >-
-  Audit code for bugs that tests miss — null dereferences, missing guards,
-  type mismatches, and unhandled edge cases at boundaries (API responses,
-  storage, external inputs). Argument is the scope to scan: a file, a
-  directory, or a feature name. Read-only — never edits code.
+  Read-only scan for crash risks and missing safety checks in Python, shell,
+  JavaScript, and HTML script code. Argument is the file, folder, or feature to
+  check. The command reports what it read, what it could not inspect, and what
+  could fail; it never edits code.
 ---
-Use the `bug-hunter` skill to scan the specified scope for defensive coding gaps.
+Use the `bug-hunter` skill to scan the specified scope for crash risks and
+missing safety checks.
 
-**Default behavior:** Quick Scan mode — broad sweep for obvious gaps across the scoped files. Traces data flow from API boundaries through transforms into consumers, looking for unguarded access patterns that real users will hit but tests won't catch.
+**Default behavior:** Quick Scan mode — a broad sweep for obvious ways real
+files, web replies, command output, saved state, or user input could make the
+code crash or do the wrong thing.
 
 **Modes:**
 - Default (no flag): Quick Scan — broad, shallow
-- `--mode boundary`: Boundary Audit — focused on API transform completeness
-- `--mode trace`: Deep Trace — fewer findings, strongest proof chains
+- `--mode data`: Outside Data Audit — focused on code that reads or parses
+  outside data
+- `--mode trace`: Deep Trace — fewer findings, strongest evidence chains
 
 **Scope is required.** Examples:
-- `/safer src/components/` — scan a directory
-- `/safer src/api/users.ts` — deep trace on a single file
-- `/safer "checkout flow"` — natural-language feature scope (the agent picks files)
+- `/safer scripts/` — scan a folder
+- `/safer helpers/load_feed.py` — scan one file
+- `/safer web/index.html` — scan an HTML file and its script blocks
+- `/safer "checkout helper"` — natural-language feature scope; the agent picks
+  likely files
 
-## Output
+Findings are reported in plain bands:
+- **Will crash** — a normal run can stop or leave the user stuck
+- **Wrong results** — the code can finish but do the wrong thing
+- **Could break later** — not proven broken today, but missing a safety check
 
-Translate all output to plain language. Instead of technical details about what was restricted, tell the user what protection is now active in terms they understand.
-
-Findings are reported by severity (P0/P1/P2) with:
-- The exact location of the gap (file + line)
-- A proof chain showing how the bug can be reached at runtime
+Each finding includes:
+- The exact file and line
+- A short explanation showing how the bad value reaches that line
 - A one-line fix suggestion
-- A one-line test suggestion
+- A one-line test or manual check suggestion
 
-This command **does not modify code.** It produces a report. If you want to apply fixes, ask the agent to implement them after you've reviewed the report.
+The report always includes coverage: which files were read, which files were not
+inspected, and which files were skipped because they are dependencies,
+generated, or minified. A no-finding result only applies to the files that were
+actually read.
+
+This command **does not modify code.** It produces a report. If you want to
+apply fixes, ask the agent to implement them after you've reviewed the report.
 
 ## When to use this
 
-- Before shipping a feature you're not 100% confident in
-- When the user reports a crash you can't reproduce
-- After integrating a new external API
-- Periodically as a hygiene scan on the most-touched parts of the codebase
+- Before shipping a helper, script, or small app you're not confident in
+- When the user reports a crash you cannot reproduce
+- After adding a new web request, file parser, command call, or saved-state read
+- Periodically on the most-used parts of a project
 
 ## When NOT to use this
 
-- For style or formatting issues (use a linter)
-- For performance problems (different tool)
-- For security audits (different tool — though some overlap exists)
+- For style or formatting issues
+- For performance problems
+- For full security audits

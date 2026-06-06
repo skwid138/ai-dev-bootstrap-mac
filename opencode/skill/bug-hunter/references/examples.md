@@ -1,113 +1,102 @@
-# Canonical Example: The averageAssetScores Crash
+# Canonical Example: Missing Items Crash
 
-This is a real bug found by AI analysis in the client-portal creative audit
-feature. It demonstrates the exact pattern that bug-hunter is designed to catch.
+This example shows the kind of crash this skill is designed to catch in a small
+mixed project: an HTML page with JavaScript and a Python helper.
 
 ---
 
 ## The bug
 
-**Symptom:** App crashes when viewing the creative audit overview for certain
-clients.
+**Symptom:** The page crashes or stays blank when a web service returns a
+successful reply that does not include an `items` list.
 
-**Root cause:** The API sometimes returns `averageAssetScores: null` in the
-paginated assets response, but the frontend code accesses it as a non-null
-object.
-
----
-
-## Why tests didn't catch it
-
-1. **TypeScript types lie:** `PaginatedCreativeAuditAssetsResponse` defines
-   `averageAssetScores: FeatureSetScoreRecord` — non-optional, non-nullable.
-   TypeScript is satisfied.
-
-2. **Test mocks are well-formed:** Every test mock (`mockAssetTag`,
-   `mockCreativeAuditAsset`) returns complete objects with all fields populated.
-   No test exercises the "API returns null for this field" path.
-
-3. **Mutation testing can't help:** mutation testing tools mutate *existing*
-   code. There's no null guard to mutate — the bug is *missing* code. The
-   component files generated zero mutants because the crash-risk code is
-   property access in JSX that the mutators don't target.
+**Root cause:** The Python helper passes along the reply without guaranteeing an
+`items` list, and the HTML script reads the first item directly.
 
 ---
 
-## The proof chain
+## Why tests missed it
 
-### 1. Boundary
-**File:** `src/features/creativeAudit/services/api.ts:99-102`
+1. **Sample data was too neat:** The test fixture always included
+   `{"items": [{"title": "Example"}]}`.
+2. **The missing-field path was never exercised:** No test used `{}`,
+   `{"items": null}`, invalid JSON, or a failed request.
+3. **The bug is missing code:** There is no guard to mutate or assert against;
+   the unsafe path is just direct access to a value that real data may omit.
 
-```typescript
-transformResponse: (response: PaginatedCreativeAuditAssetsResponse) => ({
-  ...response,
-  results: response.results || [],  // ✅ guarded
-  // averageAssetScores: NOT guarded ❌
-})
+---
+
+## The evidence chain
+
+### 1. Outside data
+
+**File:** `helpers/load_feed.py:8-12`
+
+```python
+def load_feed(url):
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    return response.json()
 ```
 
-The transform guards `results` but NOT `averageAssetScores`. This is a
-**GuardGap** — the developer was aware that API fields need normalization
-(they guarded `results`) but missed `averageAssetScores`.
+The helper checks that the request succeeded, but it does not check whether the
+parsed JSON contains an `items` list.
 
-### 2. Transform gap
-The `averageAssetScores` field passes through `transformResponse` unchanged.
-If the API returns `null`, it stays `null`.
+### 2. Missing guard
 
-### 3. Consumer
-**File:** `src/features/creativeAudit/components/Overview/components/AssetsTable.tsx:182`
+**File:** `web/index.html:24-29`
 
-```typescript
-averageScores: paginatedAssets.averageAssetScores,
+```html
+<script>
+  const response = await fetch("/feed.json")
+  const data = await response.json()
+  document.querySelector("#title").textContent = data.items[0].title
+</script>
 ```
 
-Passed to state, then to `TagRollupRow` component.
+The script does not check `response.ok`, whether JSON parsing succeeded, whether
+`items` exists, or whether the list has at least one item.
 
-### 4. Crash site
-**File:** `src/features/creativeAudit/components/Overview/components/TagRollupRow.tsx:66`
+### 3. Failure site
 
-```typescript
-const score = averageAssetScores[FeatureSetKeyMap[platform]]
+**File:** `web/index.html:27`
+
+```javascript
+data.items[0].title
 ```
 
-When `averageAssetScores` is `null`, this throws:
-`TypeError: Cannot read properties of null (reading 'youTube')`
-
-**Second crash site:**
-**File:** `src/features/creativeAudit/components/Overview/components/TagsTable.tsx:74`
-
-```typescript
-const score = tag.averageAssetScores[FeatureSetKeyMap[platform]]
-```
-
-Same pattern — direct property access on potentially-null object.
+If the reply is `{}` or `{"items": null}`, this throws because `items` is not a
+usable list.
 
 ---
 
 ## The fix
 
-**Best fix — normalize at the boundary:**
+**Preferred fix — make the web reply safe before use:**
 
-```typescript
-transformResponse: (response: PaginatedCreativeAuditAssetsResponse) => ({
-  ...response,
-  results: response.results || [],
-  averageAssetScores: response.averageAssetScores ?? {},
-})
+```javascript
+const response = await fetch("/feed.json")
+if (!response.ok) throw new Error("Feed request failed")
+
+const data = await response.json()
+const items = Array.isArray(data.items) ? data.items : []
+document.querySelector("#title").textContent = items[0]?.title ?? "No items yet"
 ```
 
-**Alternative — guard at consumers:**
+**Alternative fix — make the helper guarantee a list:**
 
-```typescript
-// TagRollupRow.tsx
-const score = averageAssetScores?.[FeatureSetKeyMap[platform]]
-
-// TagsTable.tsx
-const score = tag.averageAssetScores?.[FeatureSetKeyMap[platform]]
+```python
+def load_feed(url):
+    response = requests.get(url, timeout=10)
+    response.raise_for_status()
+    data = response.json()
+    data["items"] = data.get("items") or []
+    return data
 ```
 
-The boundary fix is preferred because it protects ALL consumers, including
-future ones.
+The best location depends on where the project expects data to be cleaned. If
+several files use the same feed, prefer the helper so every caller gets the same
+safe shape.
 
 ---
 
@@ -115,47 +104,70 @@ future ones.
 
 This is how bug-hunter would report this finding:
 
+```markdown
+#### BH-MissingValueCrash-001: Feed page assumes the reply always has items
+
+**Severity:** Will crash | **Confidence:** High | **Type:** MissingValueCrash
+**Location:** `web/index.html:27`
+
+**Evidence chain:**
+1. **Outside data:** `/feed.json` can return parsed JSON without an `items` list
+   — `helpers/load_feed.py:8-12`
+2. **Missing guard:** the page parses the reply without checking status, parse
+   failure, list shape, or empty list — `web/index.html:24-27`
+3. **Use site:** the page reads `data.items[0].title` — `web/index.html:27`
+4. **Failure:** when `items` is missing or `null`, the direct access throws and
+   the title never renders — `web/index.html:27`
+
+**Runtime scenario:** The service returns `{}` during an empty-feed day. The
+page tries to read the first item and stops before showing the user a helpful
+message.
+
+**Fix suggestion:** Check `response.ok`, ensure `items` is an array, and show a
+friendly empty-state title when it has no first item.
+
+**Test suggestion:** Serve `{}`, `{"items": null}`, and `{"items": []}` from
+`/feed.json`; the page should show "No items yet" instead of throwing.
 ```
-#### BH-GuardGap-001: averageAssetScores not normalized in transformResponse
 
-**Severity:** P0 | **Confidence:** High | **Type:** GuardGap
-**Location:** `src/features/creativeAudit/services/api.ts:99`
+---
 
-**Proof chain:**
-1. **Boundary:** `getCreativeAuditAssetsPaginated` endpoint returns
-   `PaginatedCreativeAuditAssetsResponse` — `services/api.ts:82`
-2. **Transform:** `transformResponse` guards `results` but NOT
-   `averageAssetScores` — `services/api.ts:99-102`
-3. **Consumer:** `AssetsTable` passes `paginatedAssets.averageAssetScores`
-   to state — `AssetsTable.tsx:182`
-4. **Crash site:** `TagRollupRow` accesses
-   `averageAssetScores[FeatureSetKeyMap[platform]]` — `TagRollupRow.tsx:66`
+## Coverage example for a mixed project
 
-**Runtime scenario:** API returns `averageAssetScores: null` for a client
-with no scored assets. The null passes through the transform unchanged and
-reaches TagRollupRow, which crashes with TypeError.
+For a folder containing:
 
-**Fix suggestion:**
-In `services/api.ts` transformResponse, add:
-`averageAssetScores: response.averageAssetScores ?? {}`
-
-**Test suggestion:** Mock the paginated assets API to return
-`averageAssetScores: null` and assert the component renders without throwing.
+```text
+web/index.html
+helpers/load_feed.py
+settings.json
+dist/app.min.js
+README.md
 ```
+
+The report header must say:
+
+```text
+Files read: 2 — web/index.html, helpers/load_feed.py
+Files I could not inspect: 2 — settings.json, README.md
+Files skipped as dependencies/generated/minified: 1 — dist/app.min.js
+Verdict: I read 2 files. I could not inspect these 2 files: settings.json, README.md. In what I read, I found 1 crash risk.
+
+For data/config files: I didn't inspect these; a typo in them can still break things.
+```
+
+The key point: the report never implies uninspected files are safe.
 
 ---
 
 ## Key takeaways for detector design
 
-1. **The GuardGap detector found this** — not NullDerefBoundary. The strongest
-   signal was that `results` IS guarded but `averageAssetScores` is NOT, in
-   the same transform function.
-
-2. **TypeScript types were misleading.** The type says non-optional, but the
-   runtime behavior differs. The detector should not trust types alone.
-
-3. **The fix is at the boundary.** Normalizing in `transformResponse` protects
-   all current and future consumers. This is always the preferred fix pattern.
-
-4. **Multiple crash sites from one root cause.** The report should deduplicate
-   by root cause (the missing normalization) and list all affected sites.
+1. **MissingValueCrash found this.** The strongest signal is direct use of an
+   outside value without a status, parse, shape, or empty-list guard.
+2. **Sample data can be misleading.** Tests with neat samples do not prove real
+   replies are complete.
+3. **Fix near intake when possible.** If several files use the same outside
+   data, clean it once near the file read or web reply.
+4. **Multiple failure sites from one root cause should be deduplicated.** Report
+   the missing guard once and list all affected lines.
+5. **Coverage is part of the result.** A no-finding report must still say which
+   files were not inspected.

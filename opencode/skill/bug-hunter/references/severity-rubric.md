@@ -1,67 +1,70 @@
 # Severity Rubric
 
-## P0 — Crasher (Must Fix)
+## Will crash
 
-**Definition:** Will crash the application in production given a plausible
-runtime scenario. The crash path is reachable through normal user interaction
-or normal API behavior.
+**Definition:** A normal user action can make the program throw an error, exit
+early, hang without recovery, or leave the user stuck.
 
 **Evidence required:**
-- Complete proof chain from boundary to crash site
-- The boundary value that triggers the crash is plausible (not contrived)
-- No guard exists anywhere in the chain
+- Complete evidence chain from outside data to failure site.
+- The bad value is plausible in normal use, not contrived.
+- No guard exists anywhere on the reachable path.
 
 **Examples:**
-- `obj.field[key]` where `field` can be `null` from API → TypeError
-- `arr.map(fn)` where `arr` can be `undefined` from API → TypeError
-- `JSON.parse(str)` where `str` can be `undefined` → SyntaxError
-- Component renders `{obj.a.b.c}` where any intermediate can be null
+- Python: `payload["user"]["name"]` when `user` can be missing.
+- Python: `items[0]` when a web reply can return an empty list.
+- Shell: `open "$project_dir"` when `project_dir` came from failed command
+  output and may be empty.
+- Shell: a pipeline fails but the next command still uses the missing file.
+- JavaScript: `data.items[0].title` when `items` can be `null` or absent.
+- JavaScript: `JSON.parse(text)` where `text` can be blank or invalid.
 
-**Fix urgency:** Before next deploy. These are production crash risks.
+**Fix urgency:** Fix before the user relies on this path.
 
 ---
 
-## P1 — Likely Bug (Should Fix)
+## Wrong results
 
-**Definition:** Will produce incorrect behavior, data corruption, or degraded
-UX but will not crash the application. The bug is reachable through normal
-usage.
+**Definition:** The program can finish but show, save, delete, send, or decide
+the wrong thing during normal use.
 
 **Evidence required:**
-- Proof chain showing incorrect behavior path
-- The triggering condition is plausible
-- No existing handling produces correct behavior
+- Evidence chain showing the incorrect behavior path.
+- The triggering condition is plausible.
+- No existing handling produces the correct behavior.
 
 **Examples:**
-- Filter silently returns wrong results because guard returns `[]` instead of
-  filtering correctly
-- Stale closure captures old value, causing UI to show outdated data
-- Race condition between two requests causes data from request A to overwrite
-  request B's results
-- Missing error boundary causes parent component to show blank instead of
-  error state
+- A missing lookup silently becomes an empty list, causing real items to be
+  omitted from a report.
+- A failed command prints an error message that gets saved as if it were real
+  data.
+- Two overlapping saves finish out of order, so older data overwrites newer
+  data.
+- A blank environment variable causes a script to write into the wrong folder.
 
-**Fix urgency:** Current sprint. These degrade user experience.
+**Fix urgency:** Fix in the current round of work if this path matters to the
+user.
 
 ---
 
-## P2 — Defensive Hardening (Consider)
+## Could break later
 
-**Definition:** A defensive coding gap that is not currently causing issues
-but could become P0 or P1 if API behavior changes, data volume grows, or
-new code paths are added.
+**Definition:** A missing guard is not proven to fail today, but it can become a
+crash or wrong result if outside data changes, a sample file changes, or a new
+caller reuses the code.
 
 **Evidence required:**
-- Show the unguarded access pattern
-- Explain the scenario where it would become a problem
-- Note why it's not currently triggering (e.g., "API always returns this
-  field today, but it's not documented as required")
+- Show the unchecked use pattern.
+- Explain the normal scenario where it would become a problem.
+- State why it is not proven to fail today.
 
 **Examples:**
-- Optional field that's always populated today but has no fallback
-- Array assumed non-empty that happens to always have items
-- Error path that returns `undefined` instead of a meaningful default
-- Component that works because parent always provides props, but the type
-  allows `undefined`
+- A key is always present in today's sample JSON, but the code has no fallback
+  and the field is not guaranteed by the source.
+- A list is always non-empty today, but empty is a normal future state.
+- A helper can return `None`, but current callers happen to pass only happy-path
+  inputs.
+- A command output is unquoted and works for today's path, but would fail when a
+  future path contains spaces.
 
-**Fix urgency:** Next cleanup pass. Low risk today, insurance for tomorrow.
+**Fix urgency:** Fix when touching the code or before expanding the workflow.
