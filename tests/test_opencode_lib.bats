@@ -476,6 +476,8 @@ EOF
 }
 EOF
   export OPENCODE_BOOTSTRAP_TEST=1
+  # Inject the template-current version to exercise unique de-duping when it
+  # appears in both lists; cross-version removals are covered separately above.
   export OPENCODE_TEST_HISTORICAL_MANAGED_PLUGINS="@skwid138/opencode-tui@1.1.1"
 
   run opencode_deploy_tui_config "$src" "$dest"

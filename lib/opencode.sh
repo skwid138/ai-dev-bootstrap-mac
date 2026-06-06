@@ -359,10 +359,9 @@ opencode_deploy_with_backup() {
 #   $3: model id (optional)   (e.g. "github-copilot/claude-sonnet-4.5")
 #
 # Behavior:
-# - Always overwrites $2. The user's customizations to opencode.json
-#   are NOT preserved — that file is bootstrap-managed. (This is a
-#   known tradeoff; if it ever bites a user, we'll add a backup-on-
-#   overwrite step.)
+# - Always overwrites $2. opencode_render_config backs up an existing
+#   file to $2.bak.<timestamp> first, but does not merge user
+#   customizations because opencode.json is bootstrap-managed.
 # - Requires jq (an Essential bootstrap package).
 opencode_render_config() {
   local src="$1"
