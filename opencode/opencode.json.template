@@ -10,7 +10,49 @@
   ],
   "plugin": [
     "@tarquinen/opencode-dcp@3.1.12",
-    ["@skwid138/opencode-council@0.10.0", {"council": {"reviewer": "saruman", "models": []}}]
+    ["@skwid138/opencode-council@0.10.0", {"council": {"reviewer": "saruman", "models": []}}],
+    ["@skwid138/opencode-tui@1.1.1/tui", {
+      "logo": {
+        "rows": [
+          {
+            "segments": [
+              { "text": "     ██╗██╗   ██╗███████╗████████╗", "color": "#5DBDB3" },
+              { "text": "██╗   ██╗██╗██████╗ ███████╗███████╗", "color": "#BC5C94" }
+            ]
+          },
+          {
+            "segments": [
+              { "text": "     ██║██║   ██║██╔════╝╚══██╔══╝", "color": "#5DBDB3" },
+              { "text": "██║   ██║██║██╔══██╗██╔════╝██╔════╝", "color": "#BC5C94" }
+            ]
+          },
+          {
+            "segments": [
+              { "text": "     ██║██║   ██║███████╗   ██║   ", "color": "#5DBDB3" },
+              { "text": "██║   ██║██║██████╔╝█████╗  ███████╗", "color": "#BC5C94" }
+            ]
+          },
+          {
+            "segments": [
+              { "text": "██   ██║██║   ██║╚════██║   ██║   ", "color": "#5DBDB3" },
+              { "text": "╚██╗ ██╔╝██║██╔══██╗██╔══╝  ╚════██║", "color": "#BC5C94" }
+            ]
+          },
+          {
+            "segments": [
+              { "text": "╚█████╔╝╚██████╔╝███████║   ██║   ", "color": "#5DBDB3" },
+              { "text": " ╚████╔╝ ██║██████╔╝███████╗███████║", "color": "#BC5C94" }
+            ]
+          },
+          {
+            "segments": [
+              { "text": " ╚════╝  ╚═════╝ ╚══════╝   ╚═╝   ", "color": "#5DBDB3" },
+              { "text": "  ╚═══╝  ╚═╝╚═════╝ ╚══════╝╚══════╝", "color": "#BC5C94" }
+            ]
+          }
+        ]
+      }
+    }]
   ],
   "permission": {
     "external_directory": {
@@ -32,6 +74,8 @@
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh *": "allow",
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/permission-audit.sh *": "allow",
       "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/set-models.sh *": "allow",
+      "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/chrome_mcp.sh *": "allow",
+      "$OPENCODE_CONFIG_DIR/skill/handoff/redact-secrets.sh *": "allow",
       "basename *": "allow",
       "bats *": "allow",
       "brew --prefix*": "allow",
