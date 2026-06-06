@@ -66,6 +66,46 @@ assert_literal_exists_after() {
   [ "$literal_line" -gt "$anchor_line" ]
 }
 
+handoff_select_candidate_recipe() {
+  local plans_dir="$1"
+  local date_slug="$2"
+  local subject_slug="$3"
+
+  bash -c '
+    plans_dir="$1"
+    date_slug="$2"
+    subject_slug="$3"
+
+    base="${plans_dir}/${date_slug}_${subject_slug}"
+    candidate="${base}.handoff.md"
+    counter=2
+
+    while [ -e "$candidate" ]; do
+      candidate="${base}_${counter}.handoff.md"
+      counter=$((counter + 1))
+    done
+
+    printf '\''%s\n'\'' "$candidate"
+  ' bash "$plans_dir" "$date_slug" "$subject_slug"
+}
+
+handoff_list_notes_recipe() {
+  local plans_dir="$1"
+
+  bash -c '
+    plans_dir="$1"
+
+    notes=()
+
+    for note in "$plans_dir"/*.handoff.md; do
+      [ -f "$note" ] || continue
+      notes+=("$note")
+    done
+
+    [ "${#notes[@]}" -eq 0 ] || ls -1t "${notes[@]}"
+  ' bash "$plans_dir"
+}
+
 # ── Agents ───────────────────────────────────────────────────────────────────
 
 @test "opencode/agent: all 5 curated agents exist" {
@@ -155,12 +195,12 @@ assert_literal_exists_after() {
 
 # ── Skills ───────────────────────────────────────────────────────────────────
 
-@test "opencode/skill: all 10 curated skills have SKILL.md" {
+@test "opencode/skill: all curated skills have SKILL.md" {
   skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
-  [ "${#skills[@]}" -eq 10 ]
+  [ "${#skills[@]}" -eq 13 ]
 
   deepening_skill="improve-codebase-arch""itecture"
-  for skill in tdd bug-hunter dependency-update permission-audit diagnose grill-with-docs prototype check-updates set-models "$deepening_skill"; do
+  for skill in tdd bug-hunter check-my-site dependency-update permission-audit diagnose grill-with-docs handoff prototype check-updates set-models zoom-out "$deepening_skill"; do
     [ -f "${OPENCODE_DIR}/skill/${skill}/SKILL.md" ]
   done
 }
@@ -173,13 +213,127 @@ assert_literal_exists_after() {
 
 # ── Commands ─────────────────────────────────────────────────────────────────
 
-@test "opencode/command: all 10 curated commands exist" {
+@test "opencode/command: all curated commands exist" {
   commands=("${OPENCODE_DIR}"/command/*.md)
-  [ "${#commands[@]}" -eq 10 ]
+  [ "${#commands[@]}" -eq 14 ]
 
-  for cmd in help-me explain safer commit diagnose grill prototype update-opencode-deps permission-audit check-updates; do
+  for cmd in help-me explain safer commit diagnose grill prototype update-opencode-deps permission-audit check-updates map-my-app save-progress resume check-my-site; do
     [ -f "${OPENCODE_DIR}/command/${cmd}.md" ]
   done
+}
+
+@test "opencode/skill: handoff redaction helper is executable" {
+  [ -x "${OPENCODE_DIR}/skill/handoff/redact-secrets.sh" ]
+}
+
+@test "scripts/agent: chrome helper is executable" {
+  [ -x "${BOOTSTRAP_DIR}/scripts/agent/chrome_mcp.sh" ]
+}
+
+@test "scripts/agent: chrome helper checks ownership by port and profile" {
+  helper="${BOOTSTRAP_DIR}/scripts/agent/chrome_mcp.sh"
+  run grep -q -- '--remote-debugging-port=${PORT}' "$helper"
+  [ "$status" -eq 0 ]
+  run grep -q -- '--user-data-dir=${USER_DATA_DIR}' "$helper"
+  [ "$status" -eq 0 ]
+  run grep -q 'pkill.*remote-debugging-port' "$helper"
+  [ "$status" -ne 0 ]
+}
+
+@test "handoff redact-secrets: strips common secrets and emits markers" {
+  secret_file="$TMP_DIR/secrets.txt"
+  cat >"$secret_file" <<'EOF'
+aws=AKIAIOSFODNN7EXAMPLE
+Authorization: Bearer abcdefghijklmnopqrstuvwxyz123456
+api_key="sk_test_abcdefghijklmnopqrstuvwxyz"
+url=https://person:password@example.test/path
+-----BEGIN PRIVATE KEY-----
+abc123
+-----END PRIVATE KEY-----
+EOF
+
+  run "${OPENCODE_DIR}/skill/handoff/redact-secrets.sh" redact "$secret_file"
+  [ "$status" -eq 0 ]
+  [[ "$output" != *"AKIAIOSFODNN7EXAMPLE"* ]]
+  [[ "$output" != *"abcdefghijklmnopqrstuvwxyz123456"* ]]
+  [[ "$output" != *"sk_test_abcdefghijklmnopqrstuvwxyz"* ]]
+  [[ "$output" != *"person:password"* ]]
+  [[ "$output" != *"BEGIN PRIVATE KEY"* ]]
+  [[ "$output" == *"[REDACTED_AWS_ACCESS_KEY]"* ]]
+  [[ "$output" == *"[REDACTED_BEARER_TOKEN]"* ]]
+  [[ "$output" == *"[REDACTED_SECRET]"* ]]
+  [[ "$output" == *"[REDACTED_URL_CREDENTIALS]"* ]]
+  [[ "$output" == *"[REDACTED_PRIVATE_KEY]"* ]]
+}
+
+@test "handoff redact-secrets: preserves unlabeled long non-secret strings" {
+  safe_hex="0123456789abcdef0123456789abcdef01234567"
+  safe_b64="VGhpcy1pcy1qdXN0LWEtbG9uZy1ub24tc2VjcmV0LWlkZW50aWZpZXI="
+  safe_id="build-artifact-20260606-abcdef1234567890"
+
+  run bash -c "printf '%s\n%s\n%s\n' '$safe_hex' '$safe_b64' '$safe_id' | '${OPENCODE_DIR}/skill/handoff/redact-secrets.sh' redact -"
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"$safe_hex"* ]]
+  [[ "$output" == *"$safe_b64"* ]]
+  [[ "$output" == *"$safe_id"* ]]
+  [[ "$output" != *"[REDACTED_"* ]]
+}
+
+@test "handoff skill: save and resume contracts are present" {
+  handoff_skill="${OPENCODE_DIR}/skill/handoff/SKILL.md"
+  run grep -q "## Suggested skills" "$handoff_skill"
+  [ "$status" -eq 0 ]
+  run grep -q "redact-secrets.sh" "$handoff_skill"
+  [ "$status" -eq 0 ]
+}
+
+@test "handoff skill: collision recipe uses numeric counters without overwriting" {
+  plans_dir="$TMP_DIR/.project-plans"
+  mkdir -p "$plans_dir"
+  first_note="$plans_dir/2026-06-06_foo.handoff.md"
+  second_note="$plans_dir/2026-06-06_foo_2.handoff.md"
+  third_note="$plans_dir/2026-06-06_foo_3.handoff.md"
+
+  printf 'original note\n' >"$first_note"
+
+  run handoff_select_candidate_recipe "$plans_dir" "2026-06-06" "foo"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$second_note" ]
+
+  printf 'new second note\n' >"$output"
+  [ "$(<"$first_note")" = "original note" ]
+
+  run handoff_select_candidate_recipe "$plans_dir" "2026-06-06" "foo"
+  [ "$status" -eq 0 ]
+  [ "$output" = "$third_note" ]
+
+  printf 'new third note\n' >"$output"
+  [ "$(<"$first_note")" = "original note" ]
+  [ "$(<"$second_note")" = "new second note" ]
+}
+
+@test "handoff skill: listing recipe is newest-first and non-recursive" {
+  plans_dir="$TMP_DIR/.project-plans"
+  mkdir -p "$plans_dir/archive"
+  oldest="$plans_dir/2026-06-06_oldest.handoff.md"
+  middle="$plans_dir/2026-06-06_middle.handoff.md"
+  newest="$plans_dir/2026-06-06_newest.handoff.md"
+  archived="$plans_dir/archive/2026-06-06_archived.handoff.md"
+
+  printf 'oldest\n' >"$oldest"
+  printf 'middle\n' >"$middle"
+  printf 'newest\n' >"$newest"
+  printf 'archived\n' >"$archived"
+  touch -t 202606061200.00 "$oldest"
+  touch -t 202606061300.00 "$middle"
+  touch -t 202606061400.00 "$newest"
+  touch -t 202606061500.00 "$archived"
+
+  run handoff_list_notes_recipe "$plans_dir"
+  [ "$status" -eq 0 ]
+  expected="$newest"$'\n'"$middle"$'\n'"$oldest"
+  [ "$output" = "$expected" ]
+  [[ "$output" != *"$archived"* ]]
 }
 
 # ── Instructions ─────────────────────────────────────────────────────────────
@@ -342,11 +496,13 @@ EOF
 @test "opencode.json.template: declares exact plugin versions" {
   run jq -r '.plugin | length' "${OPENCODE_DIR}/opencode.json.template"
   [ "$status" -eq 0 ]
-  [ "$output" = "2" ]
+  [ "$output" = "3" ]
   run jq -r '.plugin[0]' "${OPENCODE_DIR}/opencode.json.template"
   [ "$output" = "@tarquinen/opencode-dcp@3.1.12" ]
   run jq -r '.plugin[1][0]' "${OPENCODE_DIR}/opencode.json.template"
   [ "$output" = "@skwid138/opencode-council@0.10.0" ]
+  run jq -r '.plugin[2][0]' "${OPENCODE_DIR}/opencode.json.template"
+  [ "$output" = "@skwid138/opencode-tui@1.1.1/tui" ]
 }
 
 @test "opencode.json.template: council plugin delegates aggregation internally" {
@@ -387,8 +543,9 @@ EOF
 
 # ── Forbidden tokens (single sweep across whole tree) ────────────────────────
 
-@test "opencode/: no Wpromote-internal or hardcoded-path references" {
-  # One grep covers every file added now and every file added later.
+@test "opencode/ and scripts/agent: no internal or hardcoded-path references" {
+  # One grep covers every OpenCode asset, plus helper scripts that ship beside
+  # those assets.
   # Pattern intentionally case-insensitive for the org/tool names.
   # Excludes:
   # - 'wpromote' is matched only as a whole token (avoids accidental hits
@@ -404,7 +561,8 @@ EOF
     -e 'BIXB-[0-9]+' \
     -e '/Users/'"hunter" \
     -e '/code/wpromote' \
-    "${OPENCODE_DIR}"
+    "${OPENCODE_DIR}" \
+    "${BOOTSTRAP_DIR}/scripts/agent"
   # grep exits 1 on no-match, which is what we want.
   [ "$status" -eq 1 ]
 }

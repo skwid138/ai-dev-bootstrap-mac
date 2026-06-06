@@ -15,3 +15,5 @@ Refresh trigger: manual; re-audit when upstream releases or quarterly.
 | dependency-update | https://github.com/skwid138/config-opencode | skill/dependency-update/ | adapted | script path uses Bootstrap workspace variable | fd9b923 |
 | permission-audit | https://github.com/skwid138/config-opencode | skill/permission-audit/ | adapted | script path uses Bootstrap workspace variable; plain-language opener added | fd9b923 |
 | zoom-out | personal ~/.config/opencode | skill/zoom-out/SKILL.md | adapted | plain-language rewrite for non-technical users; no raw Mermaid or graph syntax in output; scale cap; Gandalf-level project-resolution guard | n/a |
+| handoff | personal ~/.config/opencode | skill/handoff/SKILL.md | adapted | plain-language non-technical retarget, two-layer redaction, per-project store, shared git-root resolution, auto-gitignore-on-save | n/a |
+| check-my-site | personal ~/.config/opencode | skill/chrome-devtools/SKILL.md | adapted | dropped company-specific and Figma sections, plain-language retarget, ps-based ownership, fail-closed guard, honest coverage contract, ported helper | n/a |

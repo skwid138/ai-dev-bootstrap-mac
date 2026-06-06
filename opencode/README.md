@@ -109,29 +109,41 @@ Prefer short, focused docs. Long always-on files become harder for both humans a
 
 ## 6. Skills
 
-Skills are for workflows that should load only when relevant: test-driven development, diagnosis, bug hunting, prototypes, architecture review, and plan grilling.
+Skills are for workflows that should load only when relevant: test-driven development, diagnosis, bug hunting, prototypes, architecture review, plan grilling, saved handoffs, and browser checks.
 
 Current curated skills:
 
 - `bug-hunter`
+- `check-my-site`
+- `check-updates`
 - `dependency-update`
 - `diagnose`
 - `grill-with-docs`
+- `handoff`
 - `improve-codebase-architecture`
+- `permission-audit`
 - `prototype`
+- `set-models`
 - `tdd`
+- `zoom-out`
 
 When a skill needs deterministic multi-step work, prefer a small script bundled under the repo-level `scripts/` tree (or under that skill's directory when it is truly skill-local). Scripts are easier to test and safer to reuse than long prose instructions.
 
 Curated slash commands:
 
 - `/commit`
+- `/check-my-site`
+- `/check-updates`
 - `/diagnose`
 - `/explain`
 - `/grill`
 - `/help-me`
+- `/map-my-app`
+- `/permission-audit`
 - `/prototype`
+- `/resume`
 - `/safer`
+- `/save-progress`
 - `/update-opencode-deps`
 
 ---
