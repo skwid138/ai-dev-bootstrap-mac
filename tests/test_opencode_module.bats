@@ -87,6 +87,9 @@ run_module() {
   [ -d "$HOME/.config/opencode/instruction" ]
   [ -f "$HOME/.config/opencode/AGENTS.md" ]
   [ -f "$HOME/.config/opencode/dcp.jsonc" ]
+  [ -f "$HOME/.config/opencode/skill/check-my-site/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/command/check-my-site.md" ]
+  [ -x "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/chrome_mcp.sh" ]
 
   # Brew install was attempted. (The module skips 'brew tap' when our
   # mock's bare 'brew tap' already lists anomalyco/tap, which is the
@@ -320,16 +323,72 @@ EOF
   grep -q "bug-hunter" "$bug_hunter"
 }
 
-@test "module: scripts deployment decline preserves dependency-update assets" {
+@test "module: fresh scripts deployment preserves script-backed assets" {
+  export OPENCODE_TEST_MENU_SELECTION=skip
+
+  run_module
+  [ "$status" -eq 0 ]
+
+  [ -x "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh" ]
+  [ -x "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/chrome_mcp.sh" ]
+  [ -f "$HOME/.config/opencode/skill/dependency-update/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/command/update-opencode-deps.md" ]
+  [ -f "$HOME/.config/opencode/skill/check-my-site/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/command/check-my-site.md" ]
+}
+
+@test "module: no workspace hides all assets that require workspace helpers" {
+  export OPENCODE_TEST_MENU_SELECTION=skip
+  unset AI_BOOTSTRAP_WORKSPACE
+
+  run_module
+  [ "$status" -eq 0 ]
+
+  [ ! -e "$HOME/.config/opencode/skill/check-updates" ]
+  [ ! -e "$HOME/.config/opencode/skill/set-models" ]
+  [ ! -e "$HOME/.config/opencode/skill/permission-audit" ]
+  [ ! -e "$HOME/.config/opencode/skill/dependency-update" ]
+  [ ! -e "$HOME/.config/opencode/command/update-opencode-deps.md" ]
+  [ ! -e "$HOME/.config/opencode/skill/check-my-site" ]
+  [ ! -e "$HOME/.config/opencode/command/check-my-site.md" ]
+  [ -f "$HOME/.config/opencode/command/check-updates.md" ]
+  [ -f "$HOME/.config/opencode/command/permission-audit.md" ]
+}
+
+@test "module: scripts deployment decline hides assets whose helpers are absent" {
   export OPENCODE_TEST_MENU_SELECTION=skip
   mkdir -p "$AI_BOOTSTRAP_WORKSPACE/scripts"
 
   run_module
   [ "$status" -eq 0 ]
 
-  [ -e "$HOME/.config/opencode/skill/dependency-update" ]
-  [ -e "$HOME/.config/opencode/command/update-opencode-deps.md" ]
+  [ ! -e "$HOME/.config/opencode/skill/dependency-update" ]
+  [ ! -e "$HOME/.config/opencode/command/update-opencode-deps.md" ]
+  [ ! -e "$HOME/.config/opencode/skill/check-my-site" ]
+  [ ! -e "$HOME/.config/opencode/command/check-my-site.md" ]
+  [ -f "$HOME/.config/opencode/command/check-updates.md" ]
+  [ -f "$HOME/.config/opencode/command/permission-audit.md" ]
   [[ "$output" == *"No keeps your existing scripts"* ]]
+}
+
+@test "module: scripts deployment decline preserves assets whose helpers already exist" {
+  export OPENCODE_TEST_MENU_SELECTION=skip
+  mkdir -p "$AI_BOOTSTRAP_WORKSPACE/scripts/agent"
+  for helper in bootstrap-update-check.sh set-models.sh permission-audit.sh opencode-deps-check.sh chrome_mcp.sh; do
+    echo '#!/usr/bin/env bash' >"$AI_BOOTSTRAP_WORKSPACE/scripts/agent/$helper"
+    chmod +x "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/$helper"
+  done
+
+  run_module
+  [ "$status" -eq 0 ]
+
+  [ -f "$HOME/.config/opencode/skill/check-updates/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/skill/set-models/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/skill/permission-audit/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/skill/dependency-update/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/command/update-opencode-deps.md" ]
+  [ -f "$HOME/.config/opencode/skill/check-my-site/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/command/check-my-site.md" ]
 }
 
 @test "module: non-interactive mode deploys scripts when destination exists" {
@@ -341,7 +400,10 @@ EOF
   [ "$status" -eq 0 ]
 
   [ -x "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/opencode-deps-check.sh" ]
+  [ -x "$AI_BOOTSTRAP_WORKSPACE/scripts/agent/chrome_mcp.sh" ]
   [ -f "$AI_BOOTSTRAP_WORKSPACE/scripts/lib/common.sh" ]
   [ -f "$HOME/.config/opencode/skill/dependency-update/SKILL.md" ]
   [ -f "$HOME/.config/opencode/command/update-opencode-deps.md" ]
+  [ -f "$HOME/.config/opencode/skill/check-my-site/SKILL.md" ]
+  [ -f "$HOME/.config/opencode/command/check-my-site.md" ]
 }

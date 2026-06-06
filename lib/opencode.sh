@@ -127,22 +127,53 @@ opencode_deploy_scripts() {
 }
 
 # ── opencode_cleanup_scripts_assets ──────────────────────────────────────────
-# Remove OpenCode assets that depend on scripts deployment. This prevents a
-# broken /update-opencode-deps command from being installed when the user
-# declines copying scripts into $AI_BOOTSTRAP_WORKSPACE.
+# Remove OpenCode assets whose specific helper scripts are absent from the
+# deployed workspace scripts tree. This prevents commands from shipping when
+# their backing helper cannot run, while preserving assets whose helpers are
+# present from an earlier accepted script deployment.
 #
 # Args:
 #   $1: opencode config dir (typically "$HOME/.config/opencode")
+#   $2: deployed scripts dir (typically "$AI_BOOTSTRAP_WORKSPACE/scripts")
 opencode_cleanup_scripts_assets() {
   local config_dir="$1"
+  local scripts_dir="${2:-}"
 
   if [ -z "$config_dir" ]; then
     echo "opencode_cleanup_scripts_assets: config dir is required" >&2
     return 1
   fi
 
-  rm -rf "$config_dir/skill/dependency-update"
-  rm -f "$config_dir/command/update-opencode-deps.md"
+  opencode_cleanup_asset_if_helper_missing "$config_dir" "$scripts_dir" \
+    "skill/check-updates" "agent/bootstrap-update-check.sh"
+  opencode_cleanup_asset_if_helper_missing "$config_dir" "$scripts_dir" \
+    "skill/set-models" "agent/set-models.sh"
+  opencode_cleanup_asset_if_helper_missing "$config_dir" "$scripts_dir" \
+    "skill/permission-audit" "agent/permission-audit.sh"
+  opencode_cleanup_asset_if_helper_missing "$config_dir" "$scripts_dir" \
+    "skill/dependency-update" "agent/opencode-deps-check.sh"
+  opencode_cleanup_asset_if_helper_missing "$config_dir" "$scripts_dir" \
+    "command/update-opencode-deps.md" "agent/opencode-deps-check.sh"
+  opencode_cleanup_asset_if_helper_missing "$config_dir" "$scripts_dir" \
+    "skill/check-my-site" "agent/chrome_mcp.sh"
+  opencode_cleanup_asset_if_helper_missing "$config_dir" "$scripts_dir" \
+    "command/check-my-site.md" "agent/chrome_mcp.sh"
+}
+
+opencode_cleanup_asset_if_helper_missing() {
+  local config_dir="$1"
+  local scripts_dir="$2"
+  local asset_rel="$3"
+  local helper_rel="$4"
+
+  if [ -n "$scripts_dir" ] && [ -e "$scripts_dir/$helper_rel" ]; then
+    return 0
+  fi
+
+  case "$asset_rel" in
+    command/*.md) rm -f "$config_dir/$asset_rel" ;;
+    skill/*) rm -rf "$config_dir/$asset_rel" ;;
+  esac
 }
 
 # ── opencode_deploy_agents_md ────────────────────────────────────────────────
@@ -393,13 +424,19 @@ opencode_render_config() {
   fi
   workspace="${workspace%/}"
 
-  # Substitute $AI_BOOTSTRAP_WORKSPACE with resolved path
+  # Substitute bootstrap placeholders with resolved literal paths. opencode's
+  # bash permission matcher does not expand shell variables at runtime.
   local rendered_src
   rendered_src=$(mktemp "${TMPDIR:-/tmp}/opencode-cfg.XXXXXX") || return 1
 
-  local workspace_escaped
+  local workspace_escaped config_dir config_dir_escaped
   workspace_escaped=$(printf '%s' "$workspace" | sed 's/[\\\/&]/\\&/g')
-  sed "s/\\\$AI_BOOTSTRAP_WORKSPACE/${workspace_escaped}/g" "$src" >"$rendered_src" || {
+  config_dir="$(dirname "$dest")"
+  config_dir_escaped=$(printf '%s' "$config_dir" | sed 's/[\\\/&]/\\&/g')
+  sed \
+    -e "s/\\\$AI_BOOTSTRAP_WORKSPACE/${workspace_escaped}/g" \
+    -e "s/\\\$OPENCODE_CONFIG_DIR/${config_dir_escaped}/g" \
+    "$src" >"$rendered_src" || {
     rm -f "$rendered_src"
     echo "opencode_render_config: sed substitution failed" >&2
     return 1

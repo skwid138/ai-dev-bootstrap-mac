@@ -55,14 +55,20 @@ else
   log_error "Could not install OpenCode agents and skills. Run this installer again; if it still fails, check that $OPENCODE_CONFIG_DIR is writable."
 fi
 
-if [ -z "${AI_BOOTSTRAP_WORKSPACE:-}" ]; then
-  opencode_cleanup_scripts_assets "$OPENCODE_CONFIG_DIR"
-  log_error "Workspace was not saved, so helper scripts were not installed. Re-run the installer and choose a workspace folder like ~/code."
-elif opencode_deploy_scripts "$BOOTSTRAP_DIR/scripts" "$AI_BOOTSTRAP_WORKSPACE/scripts"; then
-  log_installed "Helper scripts deployed to $AI_BOOTSTRAP_WORKSPACE/scripts"
-else
-  log_skip "Helper scripts not deployed; existing scripts and dependency-update assets preserved"
+SCRIPTS_DEST=""
+if [ -n "${AI_BOOTSTRAP_WORKSPACE:-}" ]; then
+  SCRIPTS_DEST="$AI_BOOTSTRAP_WORKSPACE/scripts"
 fi
+
+if [ -z "${AI_BOOTSTRAP_WORKSPACE:-}" ]; then
+  log_error "Workspace was not saved, so helper scripts were not installed. Re-run the installer and choose a workspace folder like ~/code."
+elif opencode_deploy_scripts "$BOOTSTRAP_DIR/scripts" "$SCRIPTS_DEST"; then
+  log_installed "Helper scripts deployed to $SCRIPTS_DEST"
+else
+  log_skip "Helper scripts not deployed; commands that need missing helpers were hidden"
+fi
+
+opencode_cleanup_scripts_assets "$OPENCODE_CONFIG_DIR" "$SCRIPTS_DEST"
 
 agents_md_result=$(opencode_deploy_agents_md \
   "${BOOTSTRAP_DIR}/opencode/AGENTS.md" \

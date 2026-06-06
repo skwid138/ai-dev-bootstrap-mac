@@ -144,20 +144,79 @@ teardown() {
   [ "$output" = "new" ]
 }
 
-@test "opencode_cleanup_scripts_assets: removes dependency update assets only" {
-  config_dir="$SANDBOX/opencode"
-  mkdir -p "$config_dir/skill/dependency-update" "$config_dir/skill/other" "$config_dir/command"
-  echo "dep" >"$config_dir/skill/dependency-update/SKILL.md"
-  echo "other" >"$config_dir/skill/other/SKILL.md"
-  echo "cmd" >"$config_dir/command/update-opencode-deps.md"
-  echo "keep" >"$config_dir/command/help-me.md"
+make_script_dependent_assets() {
+  local config_dir="$1"
+  mkdir -p \
+    "$config_dir/skill/check-updates" \
+    "$config_dir/skill/set-models" \
+    "$config_dir/skill/permission-audit" \
+    "$config_dir/skill/dependency-update" \
+    "$config_dir/skill/check-my-site" \
+    "$config_dir/command"
+  for skill in check-updates set-models permission-audit dependency-update check-my-site; do
+    echo "$skill" >"$config_dir/skill/$skill/SKILL.md"
+  done
+  for command in update-opencode-deps check-my-site check-updates permission-audit help-me; do
+    echo "$command" >"$config_dir/command/$command.md"
+  done
+}
 
-  run opencode_cleanup_scripts_assets "$config_dir"
+@test "opencode_cleanup_scripts_assets: removes only assets whose helper is absent" {
+  config_dir="$SANDBOX/opencode"
+  scripts_dir="$SANDBOX/workspace/scripts"
+  make_script_dependent_assets "$config_dir"
+  mkdir -p "$scripts_dir/agent"
+  echo "helper" >"$scripts_dir/agent/opencode-deps-check.sh"
+
+  run opencode_cleanup_scripts_assets "$config_dir" "$scripts_dir"
   [ "$status" -eq 0 ]
+  [ -f "$config_dir/skill/dependency-update/SKILL.md" ]
+  [ -f "$config_dir/command/update-opencode-deps.md" ]
+  [ ! -e "$config_dir/skill/check-updates" ]
+  [ ! -e "$config_dir/skill/set-models" ]
+  [ ! -e "$config_dir/skill/permission-audit" ]
+  [ ! -e "$config_dir/skill/check-my-site" ]
+  [ ! -e "$config_dir/command/check-my-site.md" ]
+  [ -f "$config_dir/command/check-updates.md" ]
+  [ -f "$config_dir/command/permission-audit.md" ]
+  [ -f "$config_dir/command/help-me.md" ]
+}
+
+@test "opencode_cleanup_scripts_assets: preserves all script-backed assets when helpers exist" {
+  config_dir="$SANDBOX/opencode"
+  scripts_dir="$SANDBOX/workspace/scripts"
+  make_script_dependent_assets "$config_dir"
+  mkdir -p "$scripts_dir/agent"
+  for helper in bootstrap-update-check.sh set-models.sh permission-audit.sh opencode-deps-check.sh chrome_mcp.sh; do
+    echo "helper" >"$scripts_dir/agent/$helper"
+  done
+
+  run opencode_cleanup_scripts_assets "$config_dir" "$scripts_dir"
+  [ "$status" -eq 0 ]
+  [ -f "$config_dir/skill/check-updates/SKILL.md" ]
+  [ -f "$config_dir/skill/set-models/SKILL.md" ]
+  [ -f "$config_dir/skill/permission-audit/SKILL.md" ]
+  [ -f "$config_dir/skill/dependency-update/SKILL.md" ]
+  [ -f "$config_dir/command/update-opencode-deps.md" ]
+  [ -f "$config_dir/skill/check-my-site/SKILL.md" ]
+  [ -f "$config_dir/command/check-my-site.md" ]
+}
+
+@test "opencode_cleanup_scripts_assets: no workspace removes script-backed assets but keeps same-named commands" {
+  config_dir="$SANDBOX/opencode"
+  make_script_dependent_assets "$config_dir"
+
+  run opencode_cleanup_scripts_assets "$config_dir" ""
+  [ "$status" -eq 0 ]
+  [ ! -e "$config_dir/skill/check-updates" ]
+  [ ! -e "$config_dir/skill/set-models" ]
+  [ ! -e "$config_dir/skill/permission-audit" ]
   [ ! -e "$config_dir/skill/dependency-update" ]
   [ ! -e "$config_dir/command/update-opencode-deps.md" ]
-  [ -f "$config_dir/skill/other/SKILL.md" ]
-  [ -f "$config_dir/command/help-me.md" ]
+  [ ! -e "$config_dir/skill/check-my-site" ]
+  [ ! -e "$config_dir/command/check-my-site.md" ]
+  [ -f "$config_dir/command/check-updates.md" ]
+  [ -f "$config_dir/command/permission-audit.md" ]
 }
 
 # ── opencode_deploy_agents_md ────────────────────────────────────────────────
@@ -587,7 +646,7 @@ EOF
   [ "$output" = "chrome-devtools,context7,exa" ]
 
   run jq -r '.plugin | length' "$dest"
-  [ "$output" = "2" ]
+  [ "$output" = "3" ]
 }
 
 @test "opencode_render_config: errors when template missing" {
@@ -725,6 +784,24 @@ _decide() {
   run grep -q "/custom/path/scripts/agent/" "$dest"
   [ "$status" -eq 0 ]
   run grep -q '\$AI_BOOTSTRAP_WORKSPACE' "$dest"
+  [ "$status" -ne 0 ]
+}
+
+@test "opencode_render_config: substitutes literal config dir for handoff redaction helper" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  config_dir="$SANDBOX/config/opencode"
+  dest="$config_dir/opencode.json"
+  export AI_BOOTSTRAP_WORKSPACE="/custom/workspace"
+
+  run opencode_render_config "$src" "$dest" "x/y"
+  unset AI_BOOTSTRAP_WORKSPACE
+  [ "$status" -eq 0 ]
+
+  literal_key="$config_dir/skill/handoff/redact-secrets.sh *"
+  run jq -r --arg key "$literal_key" '.permission.bash[$key]' "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "allow" ]
+  run grep -q '\$OPENCODE_CONFIG_DIR' "$dest"
   [ "$status" -ne 0 ]
 }
 
