@@ -36,8 +36,7 @@ jobs:
           #         The .sh files are gone post-Phase-1; SC2034 is now defensive — kept so
           #         the lib/*.sh and modules/*.sh stays clean if a future helper does the same.
           # SC2155: stylistic preference, not a bug class.
-          # SC2031: false positive from lib/common.sh source-guard before BOOTSTRAP_DIR assignment.
-          shellcheck -e SC1090 -e SC1091 -e SC2034 -e SC2155 -e SC2031 -x \
+          shellcheck -e SC1090 -e SC1091 -e SC2034 -e SC2155 -x \
             bootstrap.sh lib/*.sh modules/*.sh config/*.sh
 
   doctor:

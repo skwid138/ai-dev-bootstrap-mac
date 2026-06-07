@@ -91,3 +91,30 @@ teardown() {
   [ "${#RESULTS_SKIPPED[@]}" -eq 0 ]
   [ "${#RESULTS_FAILED[@]}" -eq 0 ]
 }
+
+@test "common.sh does not self-assign BOOTSTRAP_DIR; callers own it" {
+  repo_root="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
+
+  run bash -c 'unset BOOTSTRAP_DIR; unset AI_BOOTSTRAP_COMMON_SH_SOURCED; source "$1/lib/common.sh"; printf "%s" "${BOOTSTRAP_DIR:-}"' _ "$repo_root"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "" ]
+}
+
+@test "common.sh sources its sibling ui.sh without caller-provided BOOTSTRAP_DIR" {
+  repo_root="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
+
+  run bash -c 'unset BOOTSTRAP_DIR; unset AI_BOOTSTRAP_COMMON_SH_SOURCED; source "$1/lib/common.sh"; type -t ui_header' _ "$repo_root"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "function" ]
+}
+
+@test "common.sh source guard prevents double-execution" {
+  repo_root="$(cd "${BATS_TEST_DIRNAME}/.." && pwd)"
+
+  run bash -c 'unset AI_BOOTSTRAP_COMMON_SH_SOURCED; source "$1/lib/common.sh"; RESULTS_INSTALLED+=(sentinel); source "$1/lib/common.sh"; printf "%s|%s|%s" "${AI_BOOTSTRAP_COMMON_SH_SOURCED:-}" "${#RESULTS_INSTALLED[@]}" "${RESULTS_INSTALLED[*]:-}"' _ "$repo_root"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "1|1|sentinel" ]
+}

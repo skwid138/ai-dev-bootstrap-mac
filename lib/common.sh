@@ -7,10 +7,9 @@ if [ -n "${AI_BOOTSTRAP_COMMON_SH_SOURCED:-}" ]; then
 fi
 AI_BOOTSTRAP_COMMON_SH_SOURCED=1
 
-# Detect this library's bootstrap root for sourcing sibling helpers. Callers
-# that need BOOTSTRAP_DIR globally still provide/export it themselves.
-BOOTSTRAP_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
-COMMON_BOOTSTRAP_DIR="${BOOTSTRAP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
+# Callers own BOOTSTRAP_DIR globally. common.sh only computes its own root for
+# sourcing sibling helpers.
+COMMON_BOOTSTRAP_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 
 # Source UI helpers for spinners and styled messages.
 # shellcheck source=lib/ui.sh
