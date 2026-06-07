@@ -18,9 +18,10 @@ teardown() {
 
 copy_preview_repo() {
   local target="$1"
-  mkdir -p "$target/scripts/lib"
+  mkdir -p "$target/scripts/lib" "$target/opencode"
   cp "$SCRIPT" "$target/scripts/tui-preview.sh"
   cp "$COMMON" "$target/scripts/lib/common.sh"
+  cp "${BOOTSTRAP_DIR}/opencode/tui.json.template" "$target/opencode/tui.json.template"
   chmod +x "$target/scripts/tui-preview.sh"
 }
 
@@ -28,6 +29,7 @@ write_opencode_stub() {
   local stub_dir="$1"
   local log_file="$2"
   local expected_plugin_spec="${3:-@skwid138/opencode-tui@1.1.1}"
+  local expected_logo_rows="${4:-6}"
   mkdir -p "$stub_dir"
   cat >"$stub_dir/opencode" <<'EOF'
 #!/usr/bin/env bash
@@ -35,18 +37,26 @@ set -euo pipefail
 
 : "${OPENCODE_STUB_LOG:?}"
 : "${OPENCODE_STUB_EXPECTED_PLUGIN_SPEC:?}"
+: "${OPENCODE_STUB_EXPECTED_LOGO_ROWS:?}"
 
 {
   printf 'pwd=%s\n' "$PWD"
   test -f .opencode/tui.json
   jq -e '.theme == "flamingo-ember"' .opencode/tui.json >/dev/null
-  jq --arg expected "$OPENCODE_STUB_EXPECTED_PLUGIN_SPEC" -e '.plugin == [[$expected, {}]]' .opencode/tui.json >/dev/null
+  jq --arg expected "$OPENCODE_STUB_EXPECTED_PLUGIN_SPEC" -e '.plugin as $p | ($p | length) == 1 and $p[0][0] == $expected' .opencode/tui.json >/dev/null
+  if [ "$OPENCODE_STUB_EXPECTED_LOGO_ROWS" -gt 0 ]; then
+    jq --argjson expected_rows "$OPENCODE_STUB_EXPECTED_LOGO_ROWS" -e '(.plugin[0][1].logo.rows | length) == $expected_rows' .opencode/tui.json >/dev/null
+  else
+    jq -e '.plugin[0][1] == {}' .opencode/tui.json >/dev/null
+  fi
+  printf 'logo_rows=%s\n' "$(jq -r '(.plugin[0][1].logo.rows // []) | length' .opencode/tui.json)"
   printf 'ok\n'
 } >"$OPENCODE_STUB_LOG"
 EOF
   chmod +x "$stub_dir/opencode"
   export OPENCODE_STUB_LOG="$log_file"
   export OPENCODE_STUB_EXPECTED_PLUGIN_SPEC="$expected_plugin_spec"
+  export OPENCODE_STUB_EXPECTED_LOGO_ROWS="$expected_logo_rows"
 }
 
 @test "tui-preview: script exists, is executable, and passes bash syntax check" {
@@ -102,6 +112,8 @@ EOF
   [ -f "$stub_log" ]
   run grep -F "ok" "$stub_log"
   [ "$status" -eq 0 ]
+  run grep -F "logo_rows=6" "$stub_log"
+  [ "$status" -eq 0 ]
   run grep -E '^pwd=.*/opencode-tui-preview\.' "$stub_log"
   [ "$status" -eq 0 ]
 }
@@ -121,6 +133,8 @@ EOF
   [ -f "$stub_log" ]
   run grep -F "ok" "$stub_log"
   [ "$status" -eq 0 ]
+  run grep -F "logo_rows=6" "$stub_log"
+  [ "$status" -eq 0 ]
 }
 
 @test "--local with relative path resolves to absolute" {
@@ -137,6 +151,24 @@ EOF
 
   [ "$status" -eq 0 ]
   [ -f "$stub_log" ]
+  run grep -F "ok" "$stub_log"
+  [ "$status" -eq 0 ]
+}
+
+@test "tui-preview: malformed shipped template falls back to empty plugin config" {
+  preview_repo="$TMP_DIR/preview-with-malformed-template"
+  stub_dir="$TMP_DIR/stubs-with-malformed-template"
+  stub_log="$TMP_DIR/opencode-stub.log"
+  copy_preview_repo "$preview_repo"
+  printf '%s\n' '{ bad json' >"$preview_repo/opencode/tui.json.template"
+  write_opencode_stub "$stub_dir" "$stub_log" "@skwid138/opencode-tui@1.1.1" 0
+
+  PATH="$stub_dir:$PATH" run "$preview_repo/scripts/tui-preview.sh"
+
+  [ "$status" -eq 0 ]
+  [ -f "$stub_log" ]
+  run grep -F "logo_rows=0" "$stub_log"
+  [ "$status" -eq 0 ]
   run grep -F "ok" "$stub_log"
   [ "$status" -eq 0 ]
 }

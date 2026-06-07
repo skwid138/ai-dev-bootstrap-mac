@@ -24,6 +24,7 @@ EOF
 }
 
 TUI_PLUGIN_SPEC="@skwid138/opencode-tui@1.1.1"
+TUI_PLUGIN_CONFIG="{}"
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -68,6 +69,22 @@ fi
 
 require_cmd opencode "Install OpenCode before running the TUI preview."
 
+TUI_TEMPLATE="${REPO_ROOT}/opencode/tui.json.template"
+if command -v jq >/dev/null 2>&1 && [[ -f "$TUI_TEMPLATE" ]]; then
+  if TUI_PLUGIN_CONFIG_CANDIDATE="$(jq -c '
+    [.plugin[]? | select(
+      type == "array"
+      and length > 1
+      and (.[0] | type == "string" and startswith("@skwid138/opencode-tui"))
+    ) | .[1]]
+    | first // empty
+  ' "$TUI_TEMPLATE" 2>/dev/null)"; then
+    if [[ -n "$TUI_PLUGIN_CONFIG_CANDIDATE" ]] && [[ "$TUI_PLUGIN_CONFIG_CANDIDATE" != "null" ]]; then
+      TUI_PLUGIN_CONFIG="$TUI_PLUGIN_CONFIG_CANDIDATE"
+    fi
+  fi
+fi
+
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/opencode-tui-preview.XXXXXX")" || die "failed to create temp directory"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
@@ -78,7 +95,7 @@ mkdir -p "$TMP_DIR/.opencode" || die "failed to create temp OpenCode config dire
   printf "  \"\$schema\": \"https://opencode.ai/tui.json\",\n"
   printf '  "theme": "flamingo-ember",\n'
   printf '  "plugin": [\n'
-  printf '    ["%s", {}]\n' "$TUI_PLUGIN_SPEC"
+  printf '    ["%s", %s]\n' "$TUI_PLUGIN_SPEC" "$TUI_PLUGIN_CONFIG"
   printf '  ]\n'
   printf '}\n'
 } >"$TMP_DIR/.opencode/tui.json" || die "failed to write temp TUI config"
