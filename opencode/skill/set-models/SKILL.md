@@ -1,4 +1,13 @@
-# Skill: set-models
+---
+name: set-models
+description: >-
+  Choose and apply a curated OpenCode Go model profile (Default, Eco, or Reset).
+  Use when the user wants to "change my models", "update my models", "improve
+  the AI team", "make the AI better", "lower cost", "I'm hitting rate limits",
+  "use cheaper models", or "reset models to the installer default".
+---
+
+# Set Models
 
 Help the user choose and apply a curated OpenCode Go model profile. Keep the conversation plain-language and outcome-focused; avoid exposing JSON, provider settings, or shell details unless the user asks.
 
