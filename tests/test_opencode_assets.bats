@@ -51,6 +51,146 @@ frontmatter_bash_block() {
   ' "$file"
 }
 
+frontmatter_block() {
+  local file="$1"
+  awk '
+    NR == 1 {
+      if ($0 != "---") { exit 1 }
+      in_frontmatter = 1
+      next
+    }
+    in_frontmatter && $0 == "---" {
+      closed = 1
+      printf "%s", block
+      exit 0
+    }
+    in_frontmatter {
+      block = block $0 ORS
+    }
+    END {
+      if (!closed) { exit 1 }
+    }
+  ' "$file"
+}
+
+frontmatter_has_nonempty_description() {
+  local file="$1"
+  local block
+
+  if ! block="$(frontmatter_block "$file")"; then
+    printf '%s: front matter must start with --- and include a closing ---\n' "$file" >&2
+    return 1
+  fi
+
+  printf '%s\n' "$block" | awk -v file="$file" '
+    function fail(message) {
+      failed = 1
+      print file ": " message > "/dev/stderr"
+      exit 1
+    }
+    function trim(value) {
+      sub(/^[[:space:]]+/, "", value)
+      sub(/[[:space:]]+$/, "", value)
+      return value
+    }
+    function is_description_block_scalar(value) {
+      return value ~ /^[>|][-+]?$|^[>|]$/
+    }
+
+    /^[[:space:]]*$/ { next }
+
+    waiting_for_description_content && /^[^[:space:]][^:]*:/ {
+      fail("description block scalar has no indented content")
+    }
+
+    /^description:[[:space:]]*/ {
+      found_description = 1
+      value = $0
+      sub(/^description:[[:space:]]*/, "", value)
+      value = trim(value)
+
+      if (is_description_block_scalar(value)) {
+        waiting_for_description_content = 1
+        next
+      }
+
+      if (value == "") {
+        fail("description is empty")
+      }
+
+      description_ok = 1
+      next
+    }
+
+    waiting_for_description_content {
+      if ($0 ~ /^[[:space:]]+[^[:space:]]/) {
+        description_ok = 1
+        waiting_for_description_content = 0
+        next
+      }
+
+      fail("description block scalar has no indented content")
+    }
+
+    END {
+      if (failed) { exit 1 }
+      if (!found_description) {
+        print file ": description is missing" > "/dev/stderr"
+        exit 1
+      }
+      if (waiting_for_description_content) {
+        print file ": description block scalar has no indented content" > "/dev/stderr"
+        exit 1
+      }
+      if (!description_ok) { exit 1 }
+    }
+  '
+}
+
+frontmatter_yaml_has_nonempty_string_description() {
+  local file="$1"
+  local block
+
+  if [ ! -x /usr/bin/ruby ]; then
+    printf '%s: /usr/bin/ruby is required for YAML front matter validation\n' "$file" >&2
+    return 1
+  fi
+
+  if ! block="$(frontmatter_block "$file")"; then
+    printf '%s: front matter must start with --- and include a closing ---\n' "$file" >&2
+    return 1
+  fi
+
+  printf '%s\n' "$block" | /usr/bin/ruby -ryaml -e '
+    file = ARGV.fetch(0)
+
+    begin
+      parsed = YAML.safe_load(STDIN.read)
+    rescue Psych::Exception => e
+      warn "#{file}: front matter YAML parse failed: #{e.message}"
+      exit 1
+    end
+
+    unless parsed.is_a?(Hash)
+      warn "#{file}: front matter must parse to a YAML mapping"
+      exit 1
+    end
+
+    description = parsed["description"]
+    unless description.is_a?(String) && !description.strip.empty?
+      warn "#{file}: front matter description must be a non-empty string"
+      exit 1
+    end
+  ' "$file"
+}
+
+validate_curated_frontmatter() {
+  local file="$1"
+
+  frontmatter_has_nonempty_description "$file" && \
+    frontmatter_yaml_has_nonempty_string_description "$file"
+}
+
 assert_literal_exists_after() {
   local file="$1"
   local literal="$2"
@@ -108,6 +248,81 @@ handoff_list_notes_recipe() {
 
 # ── Agents ───────────────────────────────────────────────────────────────────
 
+@test "opencode/frontmatter: validator rejects malformed curated asset fixtures" {
+  no_frontmatter="${BATS_TEST_TMPDIR}/no-frontmatter.md"
+  opened_unclosed="${BATS_TEST_TMPDIR}/opened-unclosed.md"
+  missing_description="${BATS_TEST_TMPDIR}/missing-description.md"
+  empty_block_description="${BATS_TEST_TMPDIR}/empty-block-description.md"
+  array_description="${BATS_TEST_TMPDIR}/array-description.md"
+  boolean_description="${BATS_TEST_TMPDIR}/boolean-description.md"
+  crlf_frontmatter="${BATS_TEST_TMPDIR}/crlf-frontmatter.md"
+
+  cat >"$no_frontmatter" <<'EOF'
+# Foo
+EOF
+
+  cat >"$opened_unclosed" <<'EOF'
+---
+description: >-
+  This front matter never closes.
+# Body
+EOF
+
+  cat >"$missing_description" <<'EOF'
+---
+permission:
+  edit: deny
+---
+# Body
+EOF
+
+  cat >"$empty_block_description" <<'EOF'
+---
+description: >-
+
+permission:
+  edit: deny
+---
+# Body
+EOF
+
+  cat >"$array_description" <<'EOF'
+---
+description: []
+---
+# Body
+EOF
+
+  cat >"$boolean_description" <<'EOF'
+---
+description: true
+---
+# Body
+EOF
+
+  printf '%s\r\n%s\r\n%s\r\n%s\r\n' '---' 'description: Valid-looking text with CRLF delimiters.' '---' '# Body' >"$crlf_frontmatter"
+
+  run frontmatter_block "$no_frontmatter"
+  [ "$status" -ne 0 ]
+  [ "$output" = "" ]
+
+  run frontmatter_block "$opened_unclosed"
+  [ "$status" -ne 0 ]
+  [ "$output" = "" ]
+
+  for fixture in \
+    "$no_frontmatter" \
+    "$opened_unclosed" \
+    "$missing_description" \
+    "$empty_block_description" \
+    "$array_description" \
+    "$boolean_description" \
+    "$crlf_frontmatter"; do
+    run validate_curated_frontmatter "$fixture"
+    [ "$status" -ne 0 ]
+  done
+}
+
 @test "opencode/agent: all 5 curated agents exist" {
   agents=("${OPENCODE_DIR}"/agent/*.md)
   [ "${#agents[@]}" -eq 5 ]
@@ -123,6 +338,26 @@ handoff_list_notes_recipe() {
     run head -n 1 "$f"
     [ "$status" -eq 0 ]
     [ "$output" = "---" ]
+  done
+}
+
+@test "opencode/agent: every agent declares a non-empty description" {
+  agents=("${OPENCODE_DIR}"/agent/*.md)
+  [ "${#agents[@]}" -ge 1 ]
+
+  for f in "${agents[@]}"; do
+    run frontmatter_has_nonempty_description "$f"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "opencode/agent: every agent front matter parses with a string description" {
+  agents=("${OPENCODE_DIR}"/agent/*.md)
+  [ "${#agents[@]}" -ge 1 ]
+
+  for f in "${agents[@]}"; do
+    run frontmatter_yaml_has_nonempty_string_description "$f"
+    [ "$status" -eq 0 ]
   done
 }
 
@@ -205,6 +440,46 @@ handoff_list_notes_recipe() {
   done
 }
 
+@test "opencode/skill: every skill begins with YAML frontmatter" {
+  skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
+  [ "${#skills[@]}" -ge 13 ]
+
+  for f in "${skills[@]}"; do
+    run awk 'NR == 1 { first_line_is_open = ($0 == "---"); exit } END { exit first_line_is_open ? 0 : 1 }' "$f"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "opencode/skill: every skill front matter is closed" {
+  skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
+  [ "${#skills[@]}" -ge 13 ]
+
+  for f in "${skills[@]}"; do
+    run frontmatter_block "$f"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "opencode/skill: every skill declares a non-empty description" {
+  skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
+  [ "${#skills[@]}" -ge 13 ]
+
+  for f in "${skills[@]}"; do
+    run frontmatter_has_nonempty_description "$f"
+    [ "$status" -eq 0 ]
+  done
+}
+
+@test "opencode/skill: every skill front matter parses with a string description" {
+  skills=("${OPENCODE_DIR}"/skill/*/SKILL.md)
+  [ "${#skills[@]}" -ge 13 ]
+
+  for f in "${skills[@]}"; do
+    run frontmatter_yaml_has_nonempty_string_description "$f"
+    [ "$status" -eq 0 ]
+  done
+}
+
 @test "opencode/skill: bug-hunter has all 4 reference files" {
   for ref in detector-rules.md examples.md fix-patterns.md severity-rubric.md; do
     [ -f "${OPENCODE_DIR}/skill/bug-hunter/references/${ref}" ]
@@ -219,6 +494,19 @@ handoff_list_notes_recipe() {
 
   for cmd in help-me explain safer commit diagnose grill prototype update-opencode-deps permission-audit check-updates map-my-app save-progress resume check-my-site; do
     [ -f "${OPENCODE_DIR}/command/${cmd}.md" ]
+  done
+}
+
+@test "opencode/command: command front matter closes when present" {
+  commands=("${OPENCODE_DIR}"/command/*.md)
+  [ "${#commands[@]}" -ge 1 ]
+
+  for f in "${commands[@]}"; do
+    IFS= read -r first_line <"$f"
+    if [ "$first_line" = "---" ]; then
+      run frontmatter_block "$f"
+      [ "$status" -eq 0 ]
+    fi
   done
 }
 
