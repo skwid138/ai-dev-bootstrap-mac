@@ -256,6 +256,10 @@ opencode_deploy_tui_config() (
   local src="$1"
   local dest="$2"
   local dest_dir tmp historical_json
+  # If opencode/tui.json.template bumps @skwid138/opencode-tui past @1.1.1,
+  # add the prior package spec here (for example, @skwid138/opencode-tui@1.1.1).
+  # Otherwise the merge below can keep the old user-installed tuple and emit
+  # duplicate managed TUI plugins alongside the new template tuple.
   local -a historical_managed_plugins=(
     "@skwid138/opencode-tui@1.1.0"
     "@skwid138/opencode-tui@1.0.0"
