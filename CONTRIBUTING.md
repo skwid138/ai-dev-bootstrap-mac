@@ -19,7 +19,7 @@ Three commands. All run locally and in CI with identical args.
 ### 1. ShellCheck (static analysis — blocking, `.sh` only)
 
 ```sh
-shellcheck -e SC1090 -e SC1091 -e SC2034 -e SC2155 -x \
+shellcheck -e SC1090 -e SC1091 -e SC2034 -e SC2155 -e SC2031 -x \
   bootstrap.sh lib/*.sh modules/*.sh config/*.sh \
   scripts/*.sh scripts/lib/*.sh scripts/agent/*.sh launcher/*.sh
 ```
@@ -32,6 +32,7 @@ Justified exclusions (single source of truth: `.github/workflows/ci.yml`):
 - **SC1091**: don't follow sourced files individually — they're checked on their own.
 - **SC2034**: kept defensive — declares an exclusion that historically applied to `dotfiles/zsh_*.sh` and remains a useful escape hatch for any helper file that exports vars consumed by external code.
 - **SC2155**: stylistic preference, not a bug class.
+- **SC2031**: temporary false-positive exclusion from the opencode.jsonc migration's `lib/common.sh` source guard before `BOOTSTRAP_DIR` assignment.
 
 If you need to add a new exclusion, document the justification in `.github/workflows/ci.yml` and here in the same PR.
 
