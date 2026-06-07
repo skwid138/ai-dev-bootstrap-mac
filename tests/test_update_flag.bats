@@ -115,7 +115,7 @@ EOF
   grep -qF "Usage: opencode-deps-check" "$WORKSPACE/scripts/agent/opencode-deps-check.sh"
   [ "$(jq -r '.model' "$HOME/.config/opencode/opencode.json")" = "openai/gpt-5.2" ]
   jq -e '.theme == "catppuccin"' "$HOME/.config/opencode/tui.json"
-  jq -e '.plugin == [["@skwid138/opencode-tui@1.1.1", {}], ["./plugins/user-plugin.tsx", {"enabled": true}]]' "$HOME/.config/opencode/tui.json"
+  jq -e '.plugin as $p | ($p | length) == 2 and $p[0][0] == "@skwid138/opencode-tui@1.1.1" and ($p[0][1].logo.rows | length) == 6 and $p[1] == ["./plugins/user-plugin.tsx", {"enabled": true}]' "$HOME/.config/opencode/tui.json"
   tui_backups=("$HOME"/.config/opencode/tui.json.bak.*)
   [ "${#tui_backups[@]}" -eq 1 ]
   jq -e '.theme == "catppuccin"' "${tui_backups[0]}"

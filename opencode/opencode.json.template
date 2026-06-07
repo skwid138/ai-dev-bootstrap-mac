@@ -10,49 +10,7 @@
   ],
   "plugin": [
     "@tarquinen/opencode-dcp@3.1.12",
-    ["@skwid138/opencode-council@0.10.0", {"council": {"reviewer": "saruman", "models": []}}],
-    ["@skwid138/opencode-tui@1.1.1/tui", {
-      "logo": {
-        "rows": [
-          {
-            "segments": [
-              { "text": "     ██╗██╗   ██╗███████╗████████╗", "color": "#5DBDB3" },
-              { "text": "██╗   ██╗██╗██████╗ ███████╗███████╗", "color": "#BC5C94" }
-            ]
-          },
-          {
-            "segments": [
-              { "text": "     ██║██║   ██║██╔════╝╚══██╔══╝", "color": "#5DBDB3" },
-              { "text": "██║   ██║██║██╔══██╗██╔════╝██╔════╝", "color": "#BC5C94" }
-            ]
-          },
-          {
-            "segments": [
-              { "text": "     ██║██║   ██║███████╗   ██║   ", "color": "#5DBDB3" },
-              { "text": "██║   ██║██║██████╔╝█████╗  ███████╗", "color": "#BC5C94" }
-            ]
-          },
-          {
-            "segments": [
-              { "text": "██   ██║██║   ██║╚════██║   ██║   ", "color": "#5DBDB3" },
-              { "text": "╚██╗ ██╔╝██║██╔══██╗██╔══╝  ╚════██║", "color": "#BC5C94" }
-            ]
-          },
-          {
-            "segments": [
-              { "text": "╚█████╔╝╚██████╔╝███████║   ██║   ", "color": "#5DBDB3" },
-              { "text": " ╚████╔╝ ██║██████╔╝███████╗███████║", "color": "#BC5C94" }
-            ]
-          },
-          {
-            "segments": [
-              { "text": " ╚════╝  ╚═════╝ ╚══════╝   ╚═╝   ", "color": "#5DBDB3" },
-              { "text": "  ╚═══╝  ╚═╝╚═════╝ ╚══════╝╚══════╝", "color": "#BC5C94" }
-            ]
-          }
-        ]
-      }
-    }]
+    ["@skwid138/opencode-council@0.10.0", {"council": {"reviewer": "saruman", "models": []}}]
   ],
   "permission": {
     "external_directory": {

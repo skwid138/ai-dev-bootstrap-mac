@@ -251,7 +251,7 @@ EOF
 
   tui_config="$HOME/.config/opencode/tui.json"
   [ -f "$tui_config" ]
-  run jq -e '.plugin == [["@skwid138/opencode-tui@1.1.1", {}]]' "$tui_config"
+  run jq -e '.plugin as $p | ($p | length) == 1 and $p[0][0] == "@skwid138/opencode-tui@1.1.1" and ($p[0][1].logo.rows | length) == 6' "$tui_config"
   [ "$status" -eq 0 ]
   [ -d "$HOME/.config/opencode/plugins" ]
   [ -f "$HOME/.config/opencode/plugins/.gitkeep" ]
@@ -272,7 +272,7 @@ EOF
   run cat "${backups[0]}"
   [ "$output" = '{ "plugin": ["custom"] }' ]
 
-  run jq -e '.plugin == [["@skwid138/opencode-tui@1.1.1", {}]]' "$HOME/.config/opencode/tui.json"
+  run jq -e '.plugin as $p | ($p | length) == 1 and $p[0][0] == "@skwid138/opencode-tui@1.1.1" and ($p[0][1].logo.rows | length) == 6' "$HOME/.config/opencode/tui.json"
   [ "$status" -eq 0 ]
 }
 

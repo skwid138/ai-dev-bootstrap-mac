@@ -314,6 +314,17 @@ EOF
   [ ! -e "${backups[0]}" ]
 }
 
+@test "opencode_deploy_tui_config: deployed config carries shipped logo rows" {
+  src="${BOOTSTRAP_DIR}/opencode/tui.json.template"
+  dest="$SANDBOX/dest/config/tui.json"
+
+  run opencode_deploy_tui_config "$src" "$dest"
+  [ "$status" -eq 0 ]
+  [ "$output" = "installed" ]
+
+  jq -e '(.plugin[] | select(.[0] == "@skwid138/opencode-tui@1.1.1") | .[1].logo.rows | length) == 6' "$dest"
+}
+
 @test "opencode_deploy_tui_config: existing valid config preserves theme and merges plugins" {
   src="$SANDBOX/tui.json"
   dest="$SANDBOX/dest/tui.json"
@@ -646,7 +657,17 @@ EOF
   [ "$output" = "chrome-devtools,context7,exa" ]
 
   run jq -r '.plugin | length' "$dest"
-  [ "$output" = "3" ]
+  [ "$output" = "2" ]
+}
+
+@test "opencode_render_config: rendered opencode config contains no TUI plugin" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  dest="$SANDBOX/opencode.json"
+
+  run opencode_render_config "$src" "$dest" "x/y"
+  [ "$status" -eq 0 ]
+
+  jq -e 'all(.plugin[]; ((if type == "array" then .[0] else . end) | contains("opencode-tui") | not))' "$dest"
 }
 
 @test "opencode_render_config: errors when template missing" {

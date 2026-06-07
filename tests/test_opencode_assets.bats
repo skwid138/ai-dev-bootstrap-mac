@@ -784,13 +784,11 @@ EOF
 @test "opencode.json.template: declares exact plugin versions" {
   run jq -r '.plugin | length' "${OPENCODE_DIR}/opencode.json.template"
   [ "$status" -eq 0 ]
-  [ "$output" = "3" ]
+  [ "$output" = "2" ]
   run jq -r '.plugin[0]' "${OPENCODE_DIR}/opencode.json.template"
   [ "$output" = "@tarquinen/opencode-dcp@3.1.12" ]
   run jq -r '.plugin[1][0]' "${OPENCODE_DIR}/opencode.json.template"
   [ "$output" = "@skwid138/opencode-council@0.10.0" ]
-  run jq -r '.plugin[2][0]' "${OPENCODE_DIR}/opencode.json.template"
-  [ "$output" = "@skwid138/opencode-tui@1.1.1/tui" ]
 }
 
 @test "opencode.json.template: council plugin delegates aggregation internally" {
