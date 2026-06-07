@@ -150,7 +150,7 @@ fi
 # listening, or a foreign process holds the port. We distinguish those two
 # cases via `opencode_port_listener_pid` so a foreign listener gets a clean
 # error rather than a misleading spawn attempt.
-if EXISTING_PID="$(opencode_daemon_pid_for_port "$PORT" 2>/dev/null)"; then
+if opencode_daemon_pid_for_port "$PORT" >/dev/null 2>&1; then
   # Daemon is up. Fresh or stale → either way, openattach handles it. If stale,
   # openattach's prompt fires; if fresh, it attaches silently. opensession
   # does NOT duplicate that decision tree.

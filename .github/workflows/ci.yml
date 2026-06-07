@@ -32,12 +32,9 @@ jobs:
         run: |
           # SC1090: dynamic source by design (bootstrap.sh sources modules/*.sh by computed name).
           # SC1091: don't follow sourced files individually — they're checked on their own.
-          # SC2034: dotfiles/zsh_*.sh used to define vars consumed by external zsh plugins.
-          #         The .sh files are gone post-Phase-1; SC2034 is now defensive — kept so
-          #         the lib/*.sh and modules/*.sh stays clean if a future helper does the same.
-          # SC2155: stylistic preference, not a bug class.
-          shellcheck -e SC1090 -e SC1091 -e SC2034 -e SC2155 -x \
-            bootstrap.sh lib/*.sh modules/*.sh config/*.sh
+          shellcheck -e SC1090 -e SC1091 -x \
+            bootstrap.sh lib/*.sh modules/*.sh config/*.sh \
+            scripts/*.sh scripts/lib/*.sh scripts/agent/*.sh scripts/personal/*.sh launcher/*.sh
 
   doctor:
     name: Bootstrap Doctor
@@ -153,7 +150,7 @@ jobs:
           shfmt --version
 
       - name: Check formatting (.sh files)
-        run: shfmt -d -i 2 -ci -bn bootstrap.sh lib/ modules/ config/
+        run: shfmt -d -i 2 -ci -bn bootstrap.sh lib/ modules/ config/ scripts/ launcher/
 
       - name: Check formatting (dotfiles/, dialect auto-detected from .zsh extension)
         run: shfmt -d -i 2 -ci -bn dotfiles/

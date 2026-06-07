@@ -19,19 +19,17 @@ Three commands. All run locally and in CI with identical args.
 ### 1. ShellCheck (static analysis — blocking, `.sh` only)
 
 ```sh
-shellcheck -e SC1090 -e SC1091 -e SC2034 -e SC2155 -x \
+shellcheck -e SC1090 -e SC1091 -x \
   bootstrap.sh lib/*.sh modules/*.sh config/*.sh \
-  scripts/*.sh scripts/lib/*.sh scripts/agent/*.sh launcher/*.sh
+  scripts/*.sh scripts/lib/*.sh scripts/agent/*.sh scripts/personal/*.sh launcher/*.sh
 ```
 
-ShellCheck dropped zsh support in v0.11.0, so it does **not** lint `dotfiles/*.zsh`. The dialect-aware gate for those files is `zsh -n` (see step 1b). If you have a `.zsh` file where bash-overlap coverage would be useful, you can opt in with `# shellcheck shell=bash` on line 2 (after the purpose comment) — but plan to also exclude `SC2034` since `.zsh` files often define vars consumed by external zsh plugins.
+ShellCheck dropped zsh support in v0.11.0, so it does **not** lint `dotfiles/*.zsh`. The dialect-aware gate for those files is `zsh -n` (see step 1b).
 
 Justified exclusions (single source of truth: `.github/workflows/ci.yml`):
 
 - **SC1090**: dynamic `source` in `bootstrap.sh` is intentional — the modular architecture sources `modules/*.sh` by computed name.
 - **SC1091**: don't follow sourced files individually — they're checked on their own.
-- **SC2034**: kept defensive — declares an exclusion that historically applied to `dotfiles/zsh_*.sh` and remains a useful escape hatch for any helper file that exports vars consumed by external code.
-- **SC2155**: stylistic preference, not a bug class.
 
 If you need to add a new exclusion, document the justification in `.github/workflows/ci.yml` and here in the same PR.
 

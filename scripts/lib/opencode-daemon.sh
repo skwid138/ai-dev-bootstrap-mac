@@ -30,6 +30,7 @@
 
 # Re-source guard — mirrors lib/keychain.sh / lib/common.sh pattern.
 if [[ -n "${_LIB_OPENCODE_DAEMON_LOADED:-}" ]]; then
+  # shellcheck disable=SC2317 # opencode-daemon.sh is source-only; fallback handles accidental execute context.
   return 0 2>/dev/null || exit 0
 fi
 _LIB_OPENCODE_DAEMON_LOADED=1
@@ -187,16 +188,16 @@ opencode_config_relevant_files() {
   # under different $HOME paths produce identical digests.
   (
     cd "$OPENCODE_CONFIG_DIR" 2>/dev/null || exit 0
-    find . \( -type f -o -type l \) -print0 2>/dev/null |
-      LC_ALL=C sort -z |
-      grep -zvE '(^|/)README[^/]*\.md$' |
-      grep -zvE '(^|/)\.project-plans/' |
-      grep -zvE '(^|/)logs/' |
-      grep -zvE '(^|/)log/' |
-      grep -zvE '(^|/)node_modules/' |
-      grep -zvE '(^|/)package-lock\.json$' |
-      grep -zvE '(^|/)\.git/' |
-      grep -zvE '(^|/)daemon-config-hash-'
+    find . \( -type f -o -type l \) -print0 2>/dev/null \
+      | LC_ALL=C sort -z \
+      | grep -zvE '(^|/)README[^/]*\.md$' \
+      | grep -zvE '(^|/)\.project-plans/' \
+      | grep -zvE '(^|/)logs/' \
+      | grep -zvE '(^|/)log/' \
+      | grep -zvE '(^|/)node_modules/' \
+      | grep -zvE '(^|/)package-lock\.json$' \
+      | grep -zvE '(^|/)\.git/' \
+      | grep -zvE '(^|/)daemon-config-hash-'
   )
 }
 
@@ -349,7 +350,7 @@ opencode_daemon_is_stale() {
 opencode_kill_daemon() {
   local pid="${1:?pid required}" port="${2:?port required}" timeout="${3:-5}"
   kill -TERM "$pid" 2>/dev/null || true
-  local deadline waited
+  local deadline
   deadline=$(($(date +%s) + timeout))
   while (($(date +%s) < deadline)); do
     if ! opencode_port_listener_pid "$port" >/dev/null 2>&1; then

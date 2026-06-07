@@ -1,19 +1,10 @@
 #!/usr/bin/env bash
-set -uo pipefail
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  set -uo pipefail
+fi
 
 # shellcheck source=../lib/common.sh
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/../lib/common.sh"
-
-CHROME_APP="Google Chrome"
-CHROME_BIN="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
-PORT="9222"
-USER_DATA_DIR="/tmp/chrome-devtools-mcp-auth"
-MODE="detached"
-VERBOSE=0
-URL=""
-OPEN_TARGET="default" # default | tab | window
-ACTION="run"          # run | check | kill
-WAIT_SECONDS=15
 
 usage() {
   cat <<'EOF'
@@ -53,12 +44,15 @@ matching_instance_pids() {
   local port_flag="--remote-debugging-port=${PORT}"
   local profile_flag="--user-data-dir=${USER_DATA_DIR}"
 
-  ps ax -ww -o pid= -o command= |
-    grep -F -- "$port_flag" |
-    grep -F -- "$profile_flag" |
-    while IFS= read -r line; do
-      set -- $line
-      printf '%s\n' "$1"
+  # shellcheck disable=SC2009 # Need both-flags AND-match; pgrep ERE risks matching unrelated Chrome.
+  ps ax -ww -o pid= -o command= \
+    | grep -F -- "$port_flag" \
+    | grep -F -- "$profile_flag" \
+    | while read -r pid _; do
+      case "$pid" in
+        '' | *[!0-9]*) continue ;;
+      esac
+      printf '%s\n' "$pid"
     done
 }
 
@@ -133,6 +127,23 @@ tell application "$CHROME_APP"
 end tell
 EOF
 }
+
+# If the script is being sourced (e.g. by bats), stop here.
+if [[ "${BASH_SOURCE[0]}" != "${0}" ]]; then
+  # shellcheck disable=SC2317  # `return` may fail outside sourced context; fallback intentional
+  return 0 2>/dev/null || true
+fi
+
+CHROME_APP="Google Chrome"
+CHROME_BIN="/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
+PORT="9222"
+USER_DATA_DIR="/tmp/chrome-devtools-mcp-auth"
+MODE="detached"
+VERBOSE=0
+URL=""
+OPEN_TARGET="default" # default | tab | window
+ACTION="run"          # run | check | kill
+WAIT_SECONDS=15
 
 while [[ $# -gt 0 ]]; do
   case "$1" in

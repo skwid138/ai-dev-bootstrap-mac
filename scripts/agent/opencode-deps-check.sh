@@ -189,8 +189,8 @@ require_cmd "jq" "Install: brew install jq"
 require_cmd "perl" "perl ships with macOS — if missing, install via brew"
 
 # --- Preflight: paths ---
-[[ -d "$OPENCODE_CONFIG_DIR" ]] ||
-  die "OpenCode config dir not found: $OPENCODE_CONFIG_DIR"
+[[ -d "$OPENCODE_CONFIG_DIR" ]] \
+  || die "OpenCode config dir not found: $OPENCODE_CONFIG_DIR"
 
 PKG_JSON="$OPENCODE_CONFIG_DIR/package.json"
 # Support both opencode.json and opencode.jsonc
@@ -208,8 +208,8 @@ fi
 
 # Validate package.json JSON early
 if [[ -f "$PKG_JSON" ]]; then
-  jq empty "$PKG_JSON" 2>/dev/null ||
-    die "package.json is not valid JSON: $PKG_JSON"
+  jq empty "$PKG_JSON" 2>/dev/null \
+    || die "package.json is not valid JSON: $PKG_JSON"
 fi
 
 # Validate opencode.json(c) JSONC (after stripping comments)

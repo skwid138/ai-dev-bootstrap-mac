@@ -13,6 +13,7 @@
 
 # Re-source guard: skip body if already loaded in this process.
 if [[ -n "${_LIB_COMMON_LOADED:-}" ]]; then
+  # shellcheck disable=SC2317 # common.sh can be sourced or executed; fallback handles execute context.
   return 0 2>/dev/null || exit 0
 fi
 _LIB_COMMON_LOADED=1

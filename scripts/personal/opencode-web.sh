@@ -127,8 +127,8 @@ export OPENCODE_SERVER_USERNAME="${OPENCODE_SERVER_USERNAME:-opencode}"
 TS_FQDN=""
 if command -v tailscale >/dev/null 2>&1; then
   TS_FQDN="$(
-    tailscale status --json 2>/dev/null |
-      /usr/bin/python3 -c \
+    tailscale status --json 2>/dev/null \
+      | /usr/bin/python3 -c \
         'import json,sys
 try:
   d=json.load(sys.stdin)
