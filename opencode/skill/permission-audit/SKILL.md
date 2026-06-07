@@ -16,7 +16,7 @@ then present safe, evidence-backed recommendations for permission config changes
 
 The invoking agent runs this read-only audit workflow. The audit script is
 authoritative for retrieving permission events. This skill does not edit
-`opencode.json`; if the user approves recommendations, generate a config diff
+`opencode.jsonc`; if the user approves recommendations, generate a config diff
 for **Aragorn** to apply.
 
 ## Script

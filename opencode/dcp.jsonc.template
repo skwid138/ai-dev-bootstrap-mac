@@ -1,14 +1,14 @@
 // dcp (dynamic context pruning) plugin configuration.
 //
 // dcp is loaded by opencode via the `plugin: ["@tarquinen/opencode-dcp"]`
-// entry in opencode.json. It reads its own sibling config file
+// entry in opencode.jsonc. It reads its own sibling config file
 // (this one — dcp.jsonc) at one of these paths, in priority order:
 //   1. ./.opencode/dcp.jsonc          (per-project)
 //   2. $OPENCODE_CONFIG_DIR/dcp.jsonc (env override)
 //   3. ~/.config/opencode/dcp.jsonc   (global — this file's install dest)
 //
-// Why this lives in its own file (not opencode.json):
-//   dcp ignores any `dcp` key inside opencode.json. The plugin uses a
+// Why this lives in its own file (not opencode.jsonc):
+//   dcp ignores any `dcp` key inside opencode.jsonc. The plugin uses a
 //   sibling file so its schema can evolve independently of opencode core.
 //
 // What this config does:

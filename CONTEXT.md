@@ -54,10 +54,13 @@ The AI coding assistant configured by this bootstrap. Config lives at `~/.config
 
 **Curated assets**:
 The `agent/`, `skill/`, `command/`, and `instruction/` directories deployed from `opencode/` in this repo to `~/.config/opencode/`. Tracked by a `.managed-files` manifest for stale cleanup.
-_Avoid_: OpenCode config (ambiguous with opencode.json)
+_Avoid_: OpenCode config (ambiguous with opencode.jsonc)
 
-**opencode.json**:
-The rendered OpenCode configuration file. Always overwritten on re-run (with `.bak.<timestamp>` backup). Contains model provider, MCP servers, and plugin config.
+**opencode.jsonc**:
+The single live Bootstrap-managed OpenCode configuration file. Always rendered to `~/.config/opencode/opencode.jsonc` on install, re-run, `--update`, and `set-models`. Before writing, any live `opencode.json` and/or `opencode.jsonc` is renamed to `<name>.bak.<YYYYMMDD-HHMMSS>.<pid>`. Contains model provider, MCP servers, and plugin config.
+
+**OpenCode config convergence invariant**:
+The Bootstrap-managed config directory must converge to exactly one live Bootstrap-managed config file: `opencode.jsonc`. OpenCode deep-merges `config.json` → `opencode.json` → `opencode.jsonc`, and OpenCode itself writes to `opencode.jsonc` first, so leaving both `opencode.json` and `opencode.jsonc` live can create split-brain config. `config.json` is out of scope and never created, migrated, or deleted by the Bootstrap. During migration, the `.model` value is preserved from `opencode.jsonc` first, then `opencode.json`; non-model customizations are intentionally moved to backup rather than merged.
 
 **Helper scripts**:
 Shell scripts deployed from `scripts/` to `$WORKSPACE/scripts/`. Used by OpenCode skills at runtime (e.g., dependency checks, bootstrap doctor).
@@ -75,7 +78,7 @@ _Avoid_: flag file, marker
 - A **Tier** determines which **Modules** run and which packages are installed.
 - **Phase 0** modules must succeed before **Phase 1+** modules execute.
 - The **State file** is written by the installer and consumed by **JustVibes** and shell config.
-- **Curated assets** are managed by a manifest; **opencode.json** is rendered separately.
+- **Curated assets** are managed by a manifest; **opencode.jsonc** is rendered separately.
 - **Helper scripts** are optional; declining the overwrite prompt preserves existing scripts without removing curated assets.
 - **Add-on modules** are excluded from **Tier** expansion; they run only via explicit `--module` flag.
 - A **Breadcrumb** bridges an interrupted **Add-on module** run to the **Bootstrap** completion, enabling seamless continuation.
@@ -85,10 +88,10 @@ _Avoid_: flag file, marker
 > **Dev:** "If module 08 fails, does the whole install stop?"
 > **Domain expert:** "No — it's Phase 1+, so the failure is recorded and the summary shows it failed. Only Phase 0 failures abort."
 
-> **Dev:** "What happens to opencode.json on re-run?"
-> **Domain expert:** "It's backed up to `.bak.<timestamp>` then overwritten with the latest rendered config."
+> **Dev:** "What happens to OpenCode config files on re-run?"
+> **Domain expert:** "Any live `opencode.json` or `opencode.jsonc` is first renamed to a timestamped `.bak.<timestamp>.<pid>` file, then the Bootstrap writes one live `opencode.jsonc`. The model value is preserved, but other customizations stay in the backup."
 
 ## Flagged ambiguities
 
-- "config" was used to mean both **opencode.json** (rendered settings) and **curated assets** (agent/skill/command/instruction dirs) — resolved: these are distinct concepts with different update mechanisms.
+- "config" was used to mean both **opencode.jsonc** (rendered settings) and **curated assets** (agent/skill/command/instruction dirs) — resolved: these are distinct concepts with different update mechanisms.
 - "launcher" was used to mean both the **JustVibes** `.app` bundle and the `launcher/` source directory — resolved: "JustVibes" for the installed app, "launcher/" for the build source.

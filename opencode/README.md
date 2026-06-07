@@ -14,7 +14,7 @@ This README explains why the directory looks the way it does and where to put fu
 
 ```text
 opencode/
-├── opencode.json.template      # rendered by bootstrap → ~/.config/opencode/opencode.json
+├── opencode.jsonc.template     # rendered by bootstrap → ~/.config/opencode/opencode.jsonc
 ├── tui.json.template           # merged by bootstrap → ~/.config/opencode/tui.json
 ├── AGENTS.md                   # short, always-on safety rules
 ├── instruction/                # small auto-loaded defaults
@@ -31,7 +31,7 @@ opencode/
 └── plugins/                    # managed placeholder directory (.gitkeep)
 ```
 
-The `template` extension on `opencode.json.template` exists because the bootstrap renders it into the final `opencode.json` on the user's machine.
+The `template` extension on `opencode.jsonc.template` exists because the bootstrap renders it into the final `opencode.jsonc` on the user's machine. Bootstrap converges the managed config surface to one live file: pre-existing `opencode.json` and/or `opencode.jsonc` are backed up first, then a fresh `opencode.jsonc` is written. This avoids OpenCode's deep-merge split-brain behavior (`config.json` → `opencode.json` → `opencode.jsonc`, with `.jsonc` winning). `config.json` is outside this bootstrap's scope.
 
 `tui.json.template` enables the branded OpenCode TUI prompt and logo through the published `@skwid138/opencode-tui@1.1.1` npm package. OpenCode resolves that package at runtime; this repo does not keep local TUI plugin source, npm manifests, or lockfiles for it.
 
@@ -98,10 +98,10 @@ When the council review plugin is configured with models, Gandalf uses `council_
 When adding behavior, choose the smallest layer that works:
 
 1. **Always-on safety rule?** Add it to `AGENTS.md`.
-2. **Session-wide default with more explanation?** Add it under `instruction/` and register it in `opencode.json.template`.
+2. **Session-wide default with more explanation?** Add it under `instruction/` and register it in `opencode.jsonc.template`.
 3. **Role-specific behavior?** Add it to `agent/<name>.md`.
 4. **On-demand workflow?** Add a skill under `skill/<name>/SKILL.md`.
-5. **Hard enforcement?** Add or tighten a `permission` block in `opencode.json.template` or the relevant agent file.
+5. **Hard enforcement?** Add or tighten a `permission` block in `opencode.jsonc.template` or the relevant agent file.
 
 Prefer short, focused docs. Long always-on files become harder for both humans and agents to use.
 
@@ -167,7 +167,7 @@ Curated slash commands:
 ### Adding an instruction file
 
 1. Create `instruction/<name>.md`.
-2. Add it to `opencode.json.template`'s `instructions[]` array.
+2. Add it to `opencode.jsonc.template`'s `instructions[]` array.
 3. Keep it small and broadly useful.
 
 ### Tightening permissions

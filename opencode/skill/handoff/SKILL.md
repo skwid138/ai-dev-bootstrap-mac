@@ -65,7 +65,7 @@ main workspace area. Do not tell the user to run technical setup commands.
 The second redaction layer is mandatory and fail-closed:
 
 - Locate the already rendered literal bash allowlist entry in
-  `~/.config/opencode/opencode.json` that ends with
+  `~/.config/opencode/opencode.jsonc` that ends with
   `/skill/handoff/redact-secrets.sh *`.
 - Invoke that exact absolute script path, with the `redact` subcommand, over the
   fully composed text before writing. Do not use `~`, environment variables, or a
