@@ -1,5 +1,5 @@
 {
-  "$schema": "https://opencode.ai/config.json",
+  "$schema": "https:\/\/opencode.ai\/config.json",
   "model": "",
   "default_agent": "gandalf",
   "share": "disabled",
@@ -106,17 +106,17 @@
   "mcp": {
     "chrome-devtools": {
       "type": "local",
-      "command": ["npx", "-y", "chrome-devtools-mcp@1.1.1", "--browserUrl", "http://127.0.0.1:9222"],
+      "command": ["npx", "-y", "chrome-devtools-mcp@1.1.1", "--browserUrl", "http:\/\/127.0.0.1:9222"],
       "enabled": true
     },
     "context7": {
       "type": "remote",
-      "url": "https://mcp.context7.com/mcp",
+      "url": "https:\/\/mcp.context7.com\/mcp",
       "enabled": true
     },
     "exa": {
       "type": "remote",
-      "url": "https://mcp.exa.ai/mcp",
+      "url": "https:\/\/mcp.exa.ai\/mcp",
       "enabled": true
     }
   }

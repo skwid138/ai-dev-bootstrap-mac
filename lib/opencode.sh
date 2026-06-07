@@ -11,6 +11,9 @@
 # - Output to stderr is for humans; stdout is for return values only,
 #   so callers can capture results.
 
+# shellcheck source=lib/common.sh
+[ -n "${BOOTSTRAP_DIR:-}" ] && [ -z "${AI_BOOTSTRAP_COMMON_SH_SOURCED:-}" ] && [ -f "${BOOTSTRAP_DIR}/lib/common.sh" ] && source "${BOOTSTRAP_DIR}/lib/common.sh"
+
 # ── opencode_deploy_assets ───────────────────────────────────────────────────
 # Mirror the curated asset tree (agents, skills, commands, instructions,
 # plugins) from the bootstrap repo into the user's ~/.config/opencode.
@@ -22,10 +25,10 @@
 # Behavior:
 # - Copies these subtrees: agent/, skill/, command/, instruction/, plugins/
 # - Does NOT touch AGENTS.md (handled separately, see opencode_deploy_agents_md).
-# - Does NOT touch opencode.json (handled separately, see opencode_render_config).
+# - Does NOT touch opencode.jsonc (handled separately, see opencode_render_config).
 # - Overwrites destination files unconditionally — they're maintained by
 #   the bootstrap, not the user. This matches the "asset" semantic: the
-#   user's customizations belong in opencode.json or in their own
+#   user's customizations belong in opencode.jsonc or in their own
 #   ~/.config/opencode/agent/<custom>.md files (we never delete files
 #   that aren't ours).
 # - Uses cp -R rather than rsync so we don't take a dependency on rsync
@@ -172,7 +175,7 @@ opencode_cleanup_asset_if_helper_missing() {
 
   case "$asset_rel" in
     command/*.md) rm -f "$config_dir/$asset_rel" ;;
-    skill/*) rm -rf "$config_dir/$asset_rel" ;;
+    skill/*) rm -rf "${config_dir:?}/$asset_rel" ;;
   esac
 }
 
@@ -378,7 +381,7 @@ opencode_deploy_with_backup() {
 }
 
 # ── opencode_render_config ───────────────────────────────────────────────────
-# Render opencode.json from the template, optionally setting the model.
+# Render opencode.jsonc from the template, optionally setting the model.
 #
 # Per plan §0.4: the model field is the single source of truth for the
 # default model. The template ships with model: "" as a placeholder.
@@ -389,19 +392,78 @@ opencode_deploy_with_backup() {
 #   just won't have a usable model until the user runs /connect.
 #
 # Args:
-#   $1: source template path  (e.g. opencode/opencode.json.template)
-#   $2: dest   config   path  (e.g. ~/.config/opencode/opencode.json)
+#   $1: source template path  (e.g. opencode/opencode.jsonc.template)
+#   $2: dest   config   path  (e.g. ~/.config/opencode/opencode.jsonc)
 #   $3: model id (optional)   (e.g. "github-copilot/claude-sonnet-4.5")
 #
 # Behavior:
-# - Always overwrites $2. opencode_render_config backs up an existing
-#   file to $2.bak.<timestamp> first, but does not merge user
-#   customizations because opencode.json is bootstrap-managed.
+# - Always writes $2, which must be opencode.jsonc. Any live opencode.json or
+#   opencode.jsonc in the destination directory is renamed to
+#   <name>.bak.<YYYYMMDD-HHMMSS>.<pid> after temp render validation and before
+#   the final atomic rename. Non-model customizations are moved to backup rather
+#   than merged because opencode.jsonc is bootstrap-managed.
 # - Requires jq (an Essential bootstrap package).
+opencode_backup_stale_configs() {
+  local config_dir="$1"
+  local ts moved=()
+  local name path backup moved_backup
+
+  if [ -z "$config_dir" ]; then
+    echo "opencode_backup_stale_configs: config dir is required" >&2
+    return 1
+  fi
+
+  ts="$(date +%Y%m%d-%H%M%S).$$"
+  for name in opencode.json opencode.jsonc; do
+    path="$config_dir/$name"
+    [ -e "$path" ] || continue
+    backup="$path.bak.$ts"
+    if ! mv "$path" "$backup"; then
+      echo "opencode_backup_stale_configs: failed to backup: $path" >&2
+      if [ "${#moved[@]}" -gt 0 ]; then
+        for moved_backup in "${moved[@]}"; do
+          [ -e "$moved_backup" ] || continue
+          mv "$moved_backup" "${moved_backup%.bak."$ts"}" 2>/dev/null || true
+        done
+      fi
+      return 1
+    fi
+    moved+=("$backup")
+  done
+}
+
+opencode_read_model_value() {
+  local config_dir="$1"
+  local name path value
+
+  for name in opencode.jsonc opencode.json; do
+    path="$config_dir/$name"
+    [ -f "$path" ] || continue
+    if command -v strip_jsonc >/dev/null 2>&1; then
+      value=$(strip_jsonc "$path" | jq -r '.model // empty' 2>/dev/null || true)
+    else
+      value=$(jq -r '.model // empty' "$path" 2>/dev/null || true)
+    fi
+    if [ -n "$value" ]; then
+      printf '%s\n' "$value"
+      return 0
+    fi
+  done
+}
+
 opencode_render_config() {
   local src="$1"
   local dest="$2"
   local model="${3:-}"
+  local dest_dir tmp rendered_src rc
+
+  case "$dest" in
+    *.jsonc) ;;
+    *)
+      echo "opencode_render_config: destination must be opencode.jsonc: $dest" >&2
+      return 1
+      ;;
+  esac
 
   if [ ! -f "$src" ]; then
     echo "opencode_render_config: template not found: $src" >&2
@@ -413,7 +475,8 @@ opencode_render_config() {
     return 1
   fi
 
-  mkdir -p "$(dirname "$dest")"
+  dest_dir="$(dirname "$dest")"
+  mkdir -p "$dest_dir"
 
   # Resolve workspace for permission rule substitution
   local workspace="${AI_BOOTSTRAP_WORKSPACE:-}"
@@ -430,41 +493,50 @@ opencode_render_config() {
 
   # Substitute bootstrap placeholders with resolved literal paths. opencode's
   # bash permission matcher does not expand shell variables at runtime.
-  local rendered_src
-  rendered_src=$(mktemp "${TMPDIR:-/tmp}/opencode-cfg.XXXXXX") || return 1
+  rendered_src=$(mktemp "$dest_dir/.opencode-rendered.XXXXXX") || return 1
+  tmp=$(mktemp "$dest_dir/.opencode.jsonc.XXXXXX") || {
+    rm -f "$rendered_src"
+    return 1
+  }
+  trap 'rm -f "$rendered_src" "$tmp"' RETURN
 
   local workspace_escaped config_dir config_dir_escaped
   workspace_escaped=$(printf '%s' "$workspace" | sed 's/[\\\/&]/\\&/g')
-  config_dir="$(dirname "$dest")"
+  config_dir="$dest_dir"
   config_dir_escaped=$(printf '%s' "$config_dir" | sed 's/[\\\/&]/\\&/g')
   sed \
     -e "s/\\\$AI_BOOTSTRAP_WORKSPACE/${workspace_escaped}/g" \
     -e "s/\\\$OPENCODE_CONFIG_DIR/${config_dir_escaped}/g" \
     "$src" >"$rendered_src" || {
-    rm -f "$rendered_src"
     echo "opencode_render_config: sed substitution failed" >&2
     return 1
   }
 
-  if [ -f "$dest" ]; then
-    cp "$dest" "$dest.bak.$(date +%Y%m%d-%H%M%S)"
-  fi
-
-  local rc=0
+  rc=0
   if [ -n "$model" ]; then
     # Set .model to the provided string.
-    jq --arg m "$model" '.model = $m' "$rendered_src" >"$dest" || rc=$?
+    jq --arg m "$model" '.model = $m' "$rendered_src" >"$tmp" || rc=$?
   else
     # Delete .model so opencode uses its built-in default.
-    jq 'del(.model)' "$rendered_src" >"$dest" || rc=$?
+    jq 'del(.model)' "$rendered_src" >"$tmp" || rc=$?
   fi
-
-  rm -f "$rendered_src"
 
   if [ $rc -ne 0 ]; then
     echo "opencode_render_config: jq failed processing template" >&2
     return 1
   fi
+
+  if ! opencode_backup_stale_configs "$dest_dir"; then
+    return 1
+  fi
+
+  if ! mv "$tmp" "$dest"; then
+    echo "opencode_render_config: failed to install: $dest" >&2
+    return 1
+  fi
+
+  trap - RETURN
+  rm -f "$rendered_src"
 }
 
 # ── opencode_has_github_auth ─────────────────────────────────────────────────
@@ -499,7 +571,7 @@ opencode_login_copilot() {
 # ── opencode_decide_provider_path ────────────────────────────────────────────
 # Pure decision function: given the user's GitHub-auth state and their
 # menu choice, return (a) the opencode provider to log into and (b) the
-# model id to write into opencode.json.
+# model id to write into opencode.jsonc.
 #
 # This is the single point of policy for the provider flow. Splitting it
 # out keeps modules/09-opencode.sh as a thin orchestrator and lets us

@@ -33,7 +33,7 @@
 #                     alone — re-run full bootstrap instead).
 #   --update          Fast, non-interactive managed-asset refresh. Reads the
 #                     existing state.sh, refreshes OpenCode assets/scripts,
-#                     re-renders opencode.json, re-runs shell config, rebuilds
+#                     re-renders opencode.jsonc, re-runs shell config, rebuilds
 #                     JustVibes only if launcher sources changed, and exits.
 #   --list-modules    Print canonical module names, one per line, and exit.
 #                     Implies --non-interactive.

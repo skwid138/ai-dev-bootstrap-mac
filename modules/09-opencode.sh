@@ -15,10 +15,9 @@
 #        - Otherwise show a 5-option menu (Anthropic / OpenAI / Gemini /
 #          OpenCode Go / Zen / Skip) with a dated pricing snapshot, then drive
 #          the matching provider setup flow.
-#        - Skip writes opencode.json without a model field, so opencode
-#          falls back to its built-in default. The post-install message
-#          tells the user how to fix it later.
-#   4. Render ~/.config/opencode/opencode.json from the template, with
+#        - Skip writes opencode.jsonc without a model field on fresh installs,
+#          or preserves an existing model on re-runs.
+#   4. Render ~/.config/opencode/opencode.jsonc from the template, with
 #      the chosen model id baked in.
 #
 # Environment hooks (used by tests/test_opencode_module.bats to mock the
@@ -111,6 +110,7 @@ echo ""
 opencode_provider_id=""
 opencode_model_id=""
 opencode_login_invoked=false
+opencode_model_preserved=false
 selection_id=""
 
 if opencode_has_github_auth; then
@@ -251,32 +251,47 @@ if [ -n "$opencode_provider_id" ] && [ "$opencode_provider_id" != "none" ] && [ 
   fi
 fi
 
-# ── 4. Render opencode.json ──────────────────────────────────────────────────
+# Preserve the user's existing model on a skip re-run. This is value-level:
+# opencode.jsonc wins, but a model in legacy opencode.json is recovered when
+# jsonc is schema-only.
+if [ "$opencode_provider_id" = "none" ] && [ -z "$opencode_model_id" ]; then
+  existing_model="$(opencode_read_model_value "$OPENCODE_CONFIG_DIR")"
+  if [ -n "$existing_model" ]; then
+    opencode_model_id="$existing_model"
+    opencode_model_preserved=true
+  fi
+fi
+
+# ── 4. Render opencode.jsonc ─────────────────────────────────────────────────
 if opencode_render_config \
-  "${BOOTSTRAP_DIR}/opencode/opencode.json.template" \
-  "$OPENCODE_CONFIG_DIR/opencode.json" \
+  "${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template" \
+  "$OPENCODE_CONFIG_DIR/opencode.jsonc" \
   "$opencode_model_id"; then
-  if [ -n "$opencode_model_id" ]; then
-    log_installed "opencode.json rendered with model: $opencode_model_id"
+  if [ "$opencode_model_preserved" = "true" ]; then
+    log_installed "opencode.jsonc rendered with preserved model: $opencode_model_id"
+  elif [ -n "$opencode_model_id" ]; then
+    log_installed "opencode.jsonc rendered with model: $opencode_model_id"
   else
-    log_installed "opencode.json rendered (no model set — opencode default)"
+    log_installed "opencode.jsonc rendered (no model set — opencode default)"
   fi
 else
-  log_error "Could not write opencode.json. Check that $OPENCODE_CONFIG_DIR is writable, then run this installer again."
+  log_error "Could not write opencode.jsonc. Check that $OPENCODE_CONFIG_DIR is writable, then run this installer again."
 fi
 
 # ── 5. Post-install help ─────────────────────────────────────────────────────
 echo ""
 ui_header "✅ OpenCode is ready"
 echo ""
-log_info "Config:        $OPENCODE_CONFIG_DIR/opencode.json"
+log_info "Config:        $OPENCODE_CONFIG_DIR/opencode.jsonc"
 log_info "Global rules:  $OPENCODE_CONFIG_DIR/AGENTS.md"
 log_info "Launch:        type 'opencode' in any terminal"
 echo ""
-if [ "$opencode_provider_id" = "none" ]; then
+if [ "$opencode_provider_id" = "none" ] && [ "$opencode_model_preserved" != "true" ]; then
   log_warn "You skipped provider setup. OpenCode will launch but won't have"
   log_warn "a working model. To fix this, run 'opencode' and type /connect"
   log_warn "in the TUI, then pick a provider."
+elif [ "$opencode_provider_id" = "none" ] && [ "$opencode_model_preserved" = "true" ]; then
+  log_info "Preserved existing model, so OpenCode can keep using it."
 elif [ "$opencode_login_invoked" != "true" ] && [ -n "$opencode_provider_id" ]; then
   log_warn "Provider login didn't finish. Run 'opencode' and type /connect"
   log_warn "in the TUI to complete it."

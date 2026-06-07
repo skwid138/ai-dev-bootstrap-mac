@@ -9,7 +9,7 @@
 #
 # Why these invariants:
 # - Catches accidental deletion / typo of any asset declared in the
-#   opencode.json.template instruction list.
+#   opencode.jsonc.template instruction list.
 # - Catches re-introduction of forbidden tokens during future edits
 #   (Jira / Sonar / Stryker / Wpromote / acli / atlassian / BIXB-NNNN /
 #   hardcoded personal home paths or /code/wpromote paths).
@@ -363,7 +363,7 @@ EOF
 
 @test "opencode/agent: no model field set (defer to global default)" {
   # Per plan §0.4, lifted agents must not pin a model — the global
-  # opencode.json default is the single source of truth.
+  # opencode.jsonc default is the single source of truth.
   for f in "${OPENCODE_DIR}"/agent/*.md; do
     run grep -E '^model:' "$f"
     [ "$status" -ne 0 ]
@@ -717,15 +717,15 @@ EOF
   [ "$output" = "65%" ]
 }
 
-# ── opencode.json.template ───────────────────────────────────────────────────
+# ── opencode.jsonc.template ──────────────────────────────────────────────────
 
-@test "opencode.json.template is valid JSON" {
-  run jq . "${OPENCODE_DIR}/opencode.json.template"
+@test "opencode.jsonc.template is valid JSON" {
+  run jq . "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$status" -eq 0 ]
 }
 
-@test "opencode.json.template: global dangerous command deny rules override broad asks" {
-  local template_file="${OPENCODE_DIR}/opencode.json.template"
+@test "opencode.jsonc.template: global dangerous command deny rules override broad asks" {
+  local template_file="${OPENCODE_DIR}/opencode.jsonc.template"
   local catch_all='"*": "ask"'
   local git_push_ask='"git push*": "ask"'
 
@@ -756,53 +756,53 @@ EOF
   done
 }
 
-@test "opencode.json.template: default agent is gandalf" {
-  run grep -Eq '^  "default_agent": "gandalf",?$' "${OPENCODE_DIR}/opencode.json.template"
+@test "opencode.jsonc.template: default agent is gandalf" {
+  run grep -Eq '^  "default_agent": "gandalf",?$' "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$status" -eq 0 ]
 }
 
-@test "opencode.json.template: built-in plan, build, and general agents are hidden" {
+@test "opencode.jsonc.template: built-in plan, build, and general agents are hidden" {
   for agent in plan build general; do
-    run bash -c "grep -A4 '\"${agent}\": {' '${OPENCODE_DIR}/opencode.json.template' | grep -Eq '\"hidden\": true'"
+    run bash -c "grep -A4 '\"${agent}\": {' '${OPENCODE_DIR}/opencode.jsonc.template' | grep -Eq '\"hidden\": true'"
     [ "$status" -eq 0 ]
   done
 }
 
-@test "opencode.json.template: every referenced instruction file exists" {
+@test "opencode.jsonc.template: every referenced instruction file exists" {
   # Defends against typos in the instructions array vs. on-disk filenames.
   while IFS= read -r rel; do
     [ -f "${OPENCODE_DIR}/${rel}" ]
-  done < <(jq -r '.instructions[]' "${OPENCODE_DIR}/opencode.json.template")
+  done < <(jq -r '.instructions[]' "${OPENCODE_DIR}/opencode.jsonc.template")
 }
 
-@test "opencode.json.template: declares 3 MCPs (chrome-devtools, context7, exa)" {
-  run jq -r '.mcp | keys | sort | join(",")' "${OPENCODE_DIR}/opencode.json.template"
+@test "opencode.jsonc.template: declares 3 MCPs (chrome-devtools, context7, exa)" {
+  run jq -r '.mcp | keys | sort | join(",")' "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$status" -eq 0 ]
   [ "$output" = "chrome-devtools,context7,exa" ]
 }
 
-@test "opencode.json.template: declares exact plugin versions" {
-  run jq -r '.plugin | length' "${OPENCODE_DIR}/opencode.json.template"
+@test "opencode.jsonc.template: declares exact plugin versions" {
+  run jq -r '.plugin | length' "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$status" -eq 0 ]
   [ "$output" = "2" ]
-  run jq -r '.plugin[0]' "${OPENCODE_DIR}/opencode.json.template"
+  run jq -r '.plugin[0]' "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$output" = "@tarquinen/opencode-dcp@3.1.12" ]
-  run jq -r '.plugin[1][0]' "${OPENCODE_DIR}/opencode.json.template"
+  run jq -r '.plugin[1][0]' "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$output" = "@skwid138/opencode-council@0.10.0" ]
 }
 
-@test "opencode.json.template: council plugin delegates aggregation internally" {
-  run jq -r '.plugin[1][1].council.reviewer' "${OPENCODE_DIR}/opencode.json.template"
+@test "opencode.jsonc.template: council plugin delegates aggregation internally" {
+  run jq -r '.plugin[1][1].council.reviewer' "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$status" -eq 0 ]
   [ "$output" = "saruman" ]
 
-  run jq -r '.plugin[1][1].council | has("aggregator")' "${OPENCODE_DIR}/opencode.json.template"
+  run jq -r '.plugin[1][1].council | has("aggregator")' "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$status" -eq 0 ]
   [ "$output" = "false" ]
 }
 
-@test "opencode.json.template: global questions are denied by default" {
-  run jq -e '.permission.question == "deny"' "${OPENCODE_DIR}/opencode.json.template"
+@test "opencode.jsonc.template: global questions are denied by default" {
+  run jq -e '.permission.question == "deny"' "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$status" -eq 0 ]
 }
 

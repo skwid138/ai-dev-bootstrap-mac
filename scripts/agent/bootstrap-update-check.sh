@@ -84,7 +84,7 @@ if [ "$commits_behind" -gt 0 ]; then
       opencode/skill/*) skills=$((skills + 1)) ;;
       opencode/command/*) commands=$((commands + 1)) ;;
       scripts/*) scripts=$((scripts + 1)) ;;
-      opencode/opencode.json.template | lib/*) config=$((config + 1)) ;;
+      opencode/opencode.jsonc.template | lib/*) config=$((config + 1)) ;;
       launcher/*) launcher=$((launcher + 1)) ;;
       *) other=$((other + 1)) ;;
     esac

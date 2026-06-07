@@ -88,7 +88,7 @@ EOF
     "${FIXTURE}/dotfiles/profile/tool_hooks.zsh" \
     "${FIXTURE}/dotfiles/rc/aliases.zsh"
 
-  cat >"${FIXTURE}/opencode/opencode.json.template" <<'EOF'
+  cat >"${FIXTURE}/opencode/opencode.jsonc.template" <<'EOF'
 {
   "instructions": ["instruction/repo-context.md"],
   "agent": {"gandalf": "agent/gandalf.md"}

@@ -93,6 +93,12 @@ save_current_launcher_checksum() {
   cat >"$HOME/.config/opencode/opencode.json" <<'EOF'
 {"model":"openai/gpt-5.2"}
 EOF
+  cat >"$HOME/.config/opencode/opencode.jsonc" <<'EOF'
+{
+  // schema-only file should not make --update drop the model from opencode.json
+  "$schema": "https://opencode.ai/config.json"
+}
+EOF
   cat >"$HOME/.config/opencode/tui.json" <<'EOF'
 {
   "$schema": "old-schema",
@@ -113,7 +119,12 @@ EOF
   [ -f "$HOME/.config/opencode/command/help-me.md" ]
   [ -f "$WORKSPACE/scripts/agent/opencode-deps-check.sh" ]
   grep -qF "Usage: opencode-deps-check" "$WORKSPACE/scripts/agent/opencode-deps-check.sh"
-  [ "$(jq -r '.model' "$HOME/.config/opencode/opencode.json")" = "openai/gpt-5.2" ]
+  [ ! -e "$HOME/.config/opencode/opencode.json" ]
+  [ "$(jq -r '.model' "$HOME/.config/opencode/opencode.jsonc")" = "openai/gpt-5.2" ]
+  config_backups=("$HOME"/.config/opencode/opencode.json.bak.*.*)
+  config_jsonc_backups=("$HOME"/.config/opencode/opencode.jsonc.bak.*.*)
+  [ "${#config_backups[@]}" -eq 1 ]
+  [ "${#config_jsonc_backups[@]}" -eq 1 ]
   jq -e '.theme == "catppuccin"' "$HOME/.config/opencode/tui.json"
   jq -e '.plugin as $p | ($p | length) == 2 and $p[0][0] == "@skwid138/opencode-tui@1.1.1" and ($p[0][1].logo.rows | length) == 6 and $p[1] == ["./plugins/user-plugin.tsx", {"enabled": true}]' "$HOME/.config/opencode/tui.json"
   tui_backups=("$HOME"/.config/opencode/tui.json.bak.*)

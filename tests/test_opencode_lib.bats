@@ -14,6 +14,9 @@ setup() {
   source "${BATS_TEST_DIRNAME}/test_helper.sh"
   setup_test_env
 
+  # shellcheck source=lib/common.sh
+  [ -n "${BOOTSTRAP_DIR:-}" ] && [ -z "${AI_BOOTSTRAP_COMMON_SH_SOURCED:-}" ] && [ -f "${BOOTSTRAP_DIR}/lib/common.sh" ] && source "${BOOTSTRAP_DIR}/lib/common.sh"
+
   # shellcheck source=lib/opencode.sh
   source "${BOOTSTRAP_DIR}/lib/opencode.sh"
 
@@ -610,8 +613,8 @@ EOF
 # ── opencode_render_config ───────────────────────────────────────────────────
 
 @test "opencode_render_config: sets model when provided" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
 
   run opencode_render_config "$src" "$dest" "github-copilot/claude-sonnet-4.5"
   [ "$status" -eq 0 ]
@@ -621,8 +624,8 @@ EOF
 }
 
 @test "opencode_render_config: deletes model when blank (skip path)" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
 
   run opencode_render_config "$src" "$dest" ""
   [ "$status" -eq 0 ]
@@ -635,8 +638,8 @@ EOF
 }
 
 @test "opencode_render_config: deletes model when 3rd arg omitted entirely" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
 
   run opencode_render_config "$src" "$dest"
   [ "$status" -eq 0 ]
@@ -647,8 +650,8 @@ EOF
 @test "opencode_render_config: preserves the rest of the template" {
   # Spot-check that we didn't accidentally strip MCPs or the plugin
   # array while doing the model field surgery.
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
 
   run opencode_render_config "$src" "$dest" "x/y"
   [ "$status" -eq 0 ]
@@ -661,8 +664,8 @@ EOF
 }
 
 @test "opencode_render_config: rendered opencode config contains no TUI plugin" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
 
   run opencode_render_config "$src" "$dest" "x/y"
   [ "$status" -eq 0 ]
@@ -676,11 +679,11 @@ EOF
 }
 
 @test "opencode_render_config: overwrites existing config" {
-  # We've documented that opencode.json is bootstrap-managed. Verify it
+  # We've documented that opencode.jsonc is bootstrap-managed. Verify it
   # actually overwrites — silent skipping would be much worse than
   # known-overwrite.
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
   echo '{"old":true}' >"$dest"
 
   run opencode_render_config "$src" "$dest" "x/y"
@@ -692,18 +695,204 @@ EOF
 }
 
 @test "opencode_render_config: backs up existing config before overwrite" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
   echo '{"user_tweak":true}' >"$dest"
 
   run opencode_render_config "$src" "$dest" "x/y"
   [ "$status" -eq 0 ]
 
-  backups=("$SANDBOX"/opencode.json.bak.*)
+  backups=("$SANDBOX"/opencode.jsonc.bak.*.*)
   [ "${#backups[@]}" -eq 1 ]
   [ -f "${backups[0]}" ]
   run cat "${backups[0]}"
   [ "$output" = '{"user_tweak":true}' ]
+}
+
+@test "opencode_render_config: migrates legacy opencode.json to single live opencode.jsonc" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  config_dir="$SANDBOX/config"
+  dest="$config_dir/opencode.jsonc"
+  mkdir -p "$config_dir"
+  echo '{"model":"legacy/model","user_tweak":true}' >"$config_dir/opencode.json"
+
+  run opencode_render_config "$src" "$dest" "legacy/model"
+  [ "$status" -eq 0 ]
+
+  [ -f "$dest" ]
+  [ ! -e "$config_dir/opencode.json" ]
+  backups=("$config_dir"/opencode.json.bak.*.*)
+  [ "${#backups[@]}" -eq 1 ]
+  jq -e '.user_tweak == true' "${backups[0]}"
+  [ "$(find "$config_dir" -maxdepth 1 \( -name 'opencode.json' -o -name 'opencode.jsonc' \) -type f | wc -l | tr -d ' ')" = "1" ]
+}
+
+@test "opencode_render_config: backs up existing opencode.jsonc before writing new live file" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  config_dir="$SANDBOX/config-jsonc"
+  dest="$config_dir/opencode.jsonc"
+  mkdir -p "$config_dir"
+  echo '{"model":"old/jsonc"}' >"$dest"
+
+  run opencode_render_config "$src" "$dest" "new/model"
+  [ "$status" -eq 0 ]
+
+  [ "$(jq -r '.model' "$dest")" = "new/model" ]
+  backups=("$config_dir"/opencode.jsonc.bak.*.*)
+  [ "${#backups[@]}" -eq 1 ]
+  [ "$(jq -r '.model' "${backups[0]}")" = "old/jsonc" ]
+}
+
+@test "opencode_render_config: both legacy live files are backed up before single opencode.jsonc remains" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  config_dir="$SANDBOX/config-both"
+  dest="$config_dir/opencode.jsonc"
+  mkdir -p "$config_dir"
+  echo '{"model":"old/json"}' >"$config_dir/opencode.json"
+  echo '{"$schema":"schema-only"}' >"$dest"
+
+  run opencode_render_config "$src" "$dest" "old/json"
+  [ "$status" -eq 0 ]
+
+  [ ! -e "$config_dir/opencode.json" ]
+  [ -f "$dest" ]
+  json_backups=("$config_dir"/opencode.json.bak.*.*)
+  jsonc_backups=("$config_dir"/opencode.jsonc.bak.*.*)
+  [ "${#json_backups[@]}" -eq 1 ]
+  [ "${#jsonc_backups[@]}" -eq 1 ]
+  [ "$(find "$config_dir" -maxdepth 1 \( -name 'opencode.json' -o -name 'opencode.jsonc' \) -type f | wc -l | tr -d ' ')" = "1" ]
+}
+
+@test "opencode_render_config: jq failure leaves existing live file byte-identical" {
+  src="$SANDBOX/bad-template.jsonc"
+  config_dir="$SANDBOX/config-jq-fail"
+  dest="$config_dir/opencode.jsonc"
+  mkdir -p "$config_dir"
+  printf '{"model":"keep","spacing": [1, 2, 3]}\n' >"$dest"
+  before="$SANDBOX/before.jsonc"
+  cp "$dest" "$before"
+  printf '{ invalid json\n' >"$src"
+
+  run opencode_render_config "$src" "$dest" "new/model"
+  [ "$status" -ne 0 ]
+  cmp "$before" "$dest"
+  backups=("$config_dir"/opencode.jsonc.bak.*.*)
+  [[ ${#backups[@]} -eq 0 || ! -e "${backups[0]}" ]]
+}
+
+@test "opencode_render_config: backup mv failure returns nonzero and leaves live file untouched" {
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  config_dir="$SANDBOX/config-mv-fail"
+  dest="$config_dir/opencode.jsonc"
+  mkdir -p "$config_dir"
+  echo '{"model":"keep"}' >"$dest"
+  before="$SANDBOX/before-mv.jsonc"
+  cp "$dest" "$before"
+  real_mv="$(command -v mv)"
+  mock_dir="$SANDBOX/mock-bin"
+  mkdir -p "$mock_dir"
+  cat >"$mock_dir/mv" <<EOF
+#!/usr/bin/env bash
+case "\${2:-}" in
+  *.bak.*) exit 42 ;;
+esac
+exec "$real_mv" "\$@"
+EOF
+  chmod +x "$mock_dir/mv"
+  old_path="$PATH"
+  PATH="$mock_dir:$PATH"
+
+  run opencode_render_config "$src" "$dest" "new/model"
+  PATH="$old_path"
+
+  [ "$status" -ne 0 ]
+  cmp "$before" "$dest"
+  [ "$(jq -r '.model' "$dest")" = "keep" ]
+}
+
+@test "opencode_backup_stale_configs: restores first live file when second backup move fails" {
+  config_dir="$SANDBOX/config-partial-mv-fail"
+  mkdir -p "$config_dir"
+  printf '{"model":"json-first"}\n' >"$config_dir/opencode.json"
+  printf '{"model":"jsonc-second"}\n' >"$config_dir/opencode.jsonc"
+  real_mv="$(command -v mv)"
+  mock_dir="$SANDBOX/mock-bin-partial-mv"
+  mkdir -p "$mock_dir"
+  cat >"$mock_dir/mv" <<EOF
+#!/usr/bin/env bash
+if [ "\${1:-}" = "$config_dir/opencode.jsonc" ] && [[ "\${2:-}" == *.bak.* ]]; then
+  exit 42
+fi
+exec "$real_mv" "\$@"
+EOF
+  chmod +x "$mock_dir/mv"
+  old_path="$PATH"
+  PATH="$mock_dir:$PATH"
+
+  run opencode_backup_stale_configs "$config_dir"
+  PATH="$old_path"
+
+  [ "$status" -ne 0 ]
+  run cat "$config_dir/opencode.json"
+  [ "$output" = '{"model":"json-first"}' ]
+  run cat "$config_dir/opencode.jsonc"
+  [ "$output" = '{"model":"jsonc-second"}' ]
+  json_backups=("$config_dir"/opencode.json.bak.*.*)
+  jsonc_backups=("$config_dir"/opencode.jsonc.bak.*.*)
+  [ ! -e "${json_backups[0]}" ]
+  [ ! -e "${jsonc_backups[0]}" ]
+}
+
+@test "opencode_backup_stale_configs: first backup mv failure is clean and leaves live file untouched" {
+  config_dir="$SANDBOX/config-first-mv-fail"
+  mkdir -p "$config_dir"
+  printf '{"model":"json-first","legacy":true}\n' >"$config_dir/opencode.json"
+  before="$SANDBOX/before-opencode.json"
+  cp "$config_dir/opencode.json" "$before"
+  real_mv="$(command -v mv)"
+  mock_dir="$SANDBOX/mock-bin-first-mv"
+  mkdir -p "$mock_dir"
+  cat >"$mock_dir/mv" <<EOF
+#!/usr/bin/env bash
+if [ "\${1:-}" = "$config_dir/opencode.json" ] && [[ "\${2:-}" == *.bak.* ]]; then
+  exit 42
+fi
+exec "$real_mv" "\$@"
+EOF
+  chmod +x "$mock_dir/mv"
+
+  PATH="$mock_dir:$PATH" run /bin/bash -c 'set -euo pipefail; export BOOTSTRAP_DIR="$1"; source "$BOOTSTRAP_DIR/lib/opencode.sh"; opencode_backup_stale_configs "$2"' bash "$BOOTSTRAP_DIR" "$config_dir"
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"opencode_backup_stale_configs: failed to backup: $config_dir/opencode.json"* ]]
+  [[ "$output" != *"unbound variable"* ]]
+  cmp "$before" "$config_dir/opencode.json"
+  backups=("$config_dir"/opencode.json.bak.*.*)
+  [ ! -e "${backups[0]}" ]
+}
+
+@test "opencode_read_model_value: reads model from opencode.json when opencode.jsonc is absent" {
+  config_dir="$SANDBOX/config-json-only-model-read"
+  mkdir -p "$config_dir"
+  printf '{"model":"json-only/model"}\n' >"$config_dir/opencode.json"
+
+  run opencode_read_model_value "$config_dir"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "json-only/model" ]
+  [ ! -e "$config_dir/opencode.jsonc" ]
+}
+
+@test "opencode_read_model_value: falls back to opencode.json when opencode.jsonc lacks model" {
+  config_dir="$SANDBOX/config-jsonc-schema-only-model-read"
+  mkdir -p "$config_dir"
+  printf '{"$schema":"https://opencode.ai/config.json"}\n' >"$config_dir/opencode.jsonc"
+  printf '{"model":"json-fallback/model"}\n' >"$config_dir/opencode.json"
+
+  run opencode_read_model_value "$config_dir"
+
+  [ "$status" -eq 0 ]
+  [ "$output" = "json-fallback/model" ]
 }
 
 # ── opencode_decide_provider_path ────────────────────────────────────────────
@@ -794,8 +983,8 @@ _decide() {
 # ── opencode_render_config workspace substitution ────────────────────────────
 
 @test "opencode_render_config: substitutes workspace from AI_BOOTSTRAP_WORKSPACE" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
   export AI_BOOTSTRAP_WORKSPACE="/custom/path"
 
   run opencode_render_config "$src" "$dest" "x/y"
@@ -809,9 +998,9 @@ _decide() {
 }
 
 @test "opencode_render_config: substitutes literal config dir for handoff redaction helper" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
   config_dir="$SANDBOX/config/opencode"
-  dest="$config_dir/opencode.json"
+  dest="$config_dir/opencode.jsonc"
   export AI_BOOTSTRAP_WORKSPACE="/custom/workspace"
 
   run opencode_render_config "$src" "$dest" "x/y"
@@ -827,8 +1016,8 @@ _decide() {
 }
 
 @test "opencode_render_config: reads workspace from state file when env unset" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
   home="$SANDBOX/home-state"
   mkdir -p "$home/.config/ai-bootstrap"
   cat >"$home/.config/ai-bootstrap/state.sh" <<'EOF'
@@ -847,8 +1036,8 @@ EOF
 }
 
 @test "opencode_render_config: falls back to HOME code workspace when env and state missing" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
   home="$SANDBOX/home-default"
   mkdir -p "$home"
   old_home="$HOME"
@@ -864,8 +1053,8 @@ EOF
 }
 
 @test "opencode_render_config: strips trailing slash from workspace" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
   export AI_BOOTSTRAP_WORKSPACE="/foo/bar/"
 
   run opencode_render_config "$src" "$dest" "x/y"
@@ -879,8 +1068,8 @@ EOF
 }
 
 @test "opencode_render_config: rendered output is valid JSON after substitution" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
   export AI_BOOTSTRAP_WORKSPACE="/json/workspace"
 
   run opencode_render_config "$src" "$dest" "x/y"
@@ -893,9 +1082,9 @@ EOF
 }
 
 @test "opencode_render_config: model set and delete still work after substitution" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest_with_model="$SANDBOX/opencode-with-model.json"
-  dest_without_model="$SANDBOX/opencode-without-model.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest_with_model="$SANDBOX/opencode-with-model.jsonc"
+  dest_without_model="$SANDBOX/opencode-without-model.jsonc"
   export AI_BOOTSTRAP_WORKSPACE="/model/workspace"
 
   run opencode_render_config "$src" "$dest_with_model" "github-copilot/claude-sonnet-4.5"
@@ -915,8 +1104,8 @@ EOF
 }
 
 @test "opencode_render_config: external_directory includes substituted workspace allow" {
-  src="${BOOTSTRAP_DIR}/opencode/opencode.json.template"
-  dest="$SANDBOX/opencode.json"
+  src="${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
+  dest="$SANDBOX/opencode.jsonc"
   export AI_BOOTSTRAP_WORKSPACE="/external/workspace"
 
   run opencode_render_config "$src" "$dest" "x/y"

@@ -10,7 +10,8 @@ setup() {
   export HOME="$SANDBOX/home"
   mkdir -p "$HOME/.config/opencode" "$HOME/.config/ai-bootstrap"
 
-  CONFIG="$HOME/.config/opencode/opencode.json"
+  CONFIG="$HOME/.config/opencode/opencode.jsonc"
+  LEGACY_CONFIG="$HOME/.config/opencode/opencode.json"
   STATE_FILE="$HOME/.config/ai-bootstrap/state.sh"
   SCRIPT="${BOOTSTRAP_DIR}/scripts/agent/set-models.sh"
   PROFILE="${BOOTSTRAP_DIR}/scripts/model-profiles.json"
@@ -41,6 +42,11 @@ write_config() {
   }
 }
 JSON
+}
+
+write_legacy_config() {
+  CONFIG="$LEGACY_CONFIG" write_config
+  CONFIG="$HOME/.config/opencode/opencode.jsonc"
 }
 
 write_config_with_council() {
@@ -350,8 +356,124 @@ run_script() {
 
   backups=("$CONFIG".bak.*.*)
   [ "${#backups[@]}" -eq 1 ]
-  [[ "${backups[0]}" =~ opencode\.json\.bak\.[0-9]{8}-[0-9]{6}\.[0-9]+$ ]]
+  [[ "${backups[0]}" =~ opencode\.jsonc\.bak\.[0-9]{8}-[0-9]{6}\.[0-9]+$ ]]
   [ "$(jq -r '.model' "${backups[0]}")" = "old/root-model" ]
+}
+
+@test "set-models convergence: migrates json-only config to single jsonc live file" {
+  write_legacy_config
+  write_state ""
+
+  run_script default
+  [ "$status" -eq 0 ]
+
+  [ -f "$CONFIG" ]
+  [ ! -e "$LEGACY_CONFIG" ]
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
+  backups=("$LEGACY_CONFIG".bak.*.*)
+  [ "${#backups[@]}" -eq 1 ]
+  [ "$(jq -r '.model' "${backups[0]}")" = "old/root-model" ]
+}
+
+@test "set-models convergence: backs up both live files and leaves one jsonc" {
+  write_config
+  write_legacy_config
+  write_state ""
+
+  run_script eco
+  [ "$status" -eq 0 ]
+
+  [ -f "$CONFIG" ]
+  [ ! -e "$LEGACY_CONFIG" ]
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
+  json_backups=("$LEGACY_CONFIG".bak.*.*)
+  jsonc_backups=("$CONFIG".bak.*.*)
+  [ "${#json_backups[@]}" -eq 1 ]
+  [ "${#jsonc_backups[@]}" -eq 1 ]
+  [ "$(find "$HOME/.config/opencode" -maxdepth 1 \( -name 'opencode.json' -o -name 'opencode.jsonc' \) -type f | wc -l | tr -d ' ')" = "1" ]
+}
+
+@test "set-models backup failure restores already moved live files" {
+  printf '{"model":"json-first","legacy":true}\n' >"$LEGACY_CONFIG"
+  printf '{"model":"jsonc-second","jsonc":true}\n' >"$CONFIG"
+  write_state ""
+  before_json="$SANDBOX/before-opencode.json"
+  before_jsonc="$SANDBOX/before-opencode.jsonc"
+  cp "$LEGACY_CONFIG" "$before_json"
+  cp "$CONFIG" "$before_jsonc"
+  real_mv="$(command -v mv)"
+  mock_dir="$SANDBOX/mock-bin-partial-mv"
+  mkdir -p "$mock_dir"
+  cat >"$mock_dir/mv" <<EOF
+#!/usr/bin/env bash
+if [ "\${1:-}" = "$CONFIG" ] && [[ "\${2:-}" == *.bak.* ]]; then
+  exit 42
+fi
+exec "$real_mv" "\$@"
+EOF
+  chmod +x "$mock_dir/mv"
+
+  PATH="$mock_dir:$PATH" run_script default
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Error: failed to create backup"* ]]
+  cmp "$before_json" "$LEGACY_CONFIG"
+  cmp "$before_jsonc" "$CONFIG"
+  json_backups=("$LEGACY_CONFIG".bak.*.*)
+  jsonc_backups=("$CONFIG".bak.*.*)
+  [ ! -e "${json_backups[0]}" ]
+  [ ! -e "${jsonc_backups[0]}" ]
+  [ "$(jq -r '.model' "$CONFIG")" = "jsonc-second" ]
+}
+
+@test "set-models first backup failure is clean and leaves live config untouched" {
+  write_config
+  write_state ""
+  before="$SANDBOX/before-opencode.jsonc"
+  cp "$CONFIG" "$before"
+  real_mv="$(command -v mv)"
+  mock_dir="$SANDBOX/mock-bin-first-mv"
+  mkdir -p "$mock_dir"
+  cat >"$mock_dir/mv" <<EOF
+#!/usr/bin/env bash
+if [ "\${1:-}" = "$CONFIG" ] && [[ "\${2:-}" == *.bak.* ]]; then
+  exit 42
+fi
+exec "$real_mv" "\$@"
+EOF
+  chmod +x "$mock_dir/mv"
+
+  old_path="$PATH"
+  PATH="$mock_dir:$PATH"
+  export PATH
+  run /bin/bash "$SCRIPT" default
+  PATH="$old_path"
+  export PATH
+
+  [ "$status" -ne 0 ]
+  [[ "$output" == *"Error: failed to create backup"* ]]
+  [[ "$output" != *"unbound variable"* ]]
+  cmp "$before" "$CONFIG"
+  backups=("$CONFIG".bak.*.*)
+  [ ! -e "${backups[0]}" ]
+  [ ! -e "$LEGACY_CONFIG" ]
+  [ "$(jq -r '.model' "$CONFIG")" = "old/root-model" ]
+}
+
+@test "set-models reads commented jsonc before applying curated profile" {
+  cat >"$CONFIG" <<'JSONC'
+{
+  // user comment from OpenCode
+  "model": "old/root-model",
+  "agent": {}
+}
+JSONC
+  write_state ""
+
+  run_script default
+  [ "$status" -eq 0 ]
+
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
 }
 
 @test "set-models reset creates backup" {
@@ -447,7 +569,7 @@ run_script() {
 
 @test "opencode template allows the set-models helper script" {
   run jq -r '.permission.bash["$AI_BOOTSTRAP_WORKSPACE/scripts/agent/set-models.sh *"]' \
-    "${BOOTSTRAP_DIR}/opencode/opencode.json.template"
+    "${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template"
   [ "$status" -eq 0 ]
   [ "$output" = "allow" ]
 }

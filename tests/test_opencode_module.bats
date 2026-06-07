@@ -17,7 +17,7 @@ bats_require_minimum_version 1.5.0
 #
 # Each test is a full module run against a fresh sandbox. We assert on:
 #   - $MOCK_LOG (exact CLI command sequence)
-#   - $HOME/.config/opencode/{opencode.json,AGENTS.md,agents/,...}
+#   - $HOME/.config/opencode/{opencode.jsonc,AGENTS.md,agents/,...}
 #   - Module exit status
 
 setup() {
@@ -74,9 +74,10 @@ run_module() {
   # Copilot login was driven non-interactively.
   grep -q "opencode auth login --provider github-copilot --method oauth" "$MOCK_LOG"
 
-  # opencode.json has the Copilot model.
-  [ -f "$HOME/.config/opencode/opencode.json" ]
-  run jq -r '.model' "$HOME/.config/opencode/opencode.json"
+  # opencode.jsonc has the Copilot model.
+  [ -f "$HOME/.config/opencode/opencode.jsonc" ]
+  [ ! -e "$HOME/.config/opencode/opencode.json" ]
+  run jq -r '.model' "$HOME/.config/opencode/opencode.jsonc"
   [ "$output" = "github-copilot/claude-sonnet-4.5" ]
 
   # Curated assets landed (note: dir is 'instruction' singular per the
@@ -112,7 +113,7 @@ run_module() {
   run ! grep -q "opencode auth login --provider github-copilot" "$MOCK_LOG"
   grep -q "security delete-generic-password -s opencode-api-key -a" "$MOCK_LOG"
 
-  run jq -r '.model' "$HOME/.config/opencode/opencode.json"
+  run jq -r '.model' "$HOME/.config/opencode/opencode.jsonc"
   [ "$output" = "anthropic/claude-sonnet-4.5" ]
 }
 
@@ -126,7 +127,7 @@ run_module() {
   grep -q "opencode auth login --provider openai" "$MOCK_LOG"
   run ! grep -q "opencode auth login --provider github-copilot" "$MOCK_LOG"
 
-  run jq -r '.model' "$HOME/.config/opencode/opencode.json"
+  run jq -r '.model' "$HOME/.config/opencode/opencode.jsonc"
   [ "$output" = "openai/gpt-5.2" ]
 }
 
@@ -139,7 +140,7 @@ run_module() {
 
   grep -q "opencode auth login --provider google" "$MOCK_LOG"
 
-  run jq -r '.model' "$HOME/.config/opencode/opencode.json"
+  run jq -r '.model' "$HOME/.config/opencode/opencode.jsonc"
   [ "$output" = "google/gemini-2.5-flash" ]
 }
 
@@ -156,7 +157,7 @@ run_module() {
   grep -q -- "-w $OPENCODE_TEST_API_KEY" "$MOCK_LOG"
   run ! grep -q "opencode auth login --provider opencode-go" "$MOCK_LOG"
 
-  run jq -r '.model' "$HOME/.config/opencode/opencode.json"
+  run jq -r '.model' "$HOME/.config/opencode/opencode.jsonc"
   [ "$output" = "opencode-go/kimi-k2.6" ]
 }
 
@@ -224,7 +225,7 @@ EOF
 }
 
 # ── Path 6: skip path -> no auth login + no model field in config ────────────
-@test "module: skip path -> opencode.json has no model + no auth login called" {
+@test "module: skip path -> opencode.jsonc has no model + no auth login called" {
   export OPENCODE_TEST_MENU_SELECTION=skip
 
   run_module
@@ -235,12 +236,30 @@ EOF
   run ! grep -q "opencode auth login" "$MOCK_LOG"
 
   # Config exists but has no model field (so opencode falls back to default).
-  [ -f "$HOME/.config/opencode/opencode.json" ]
-  module_has_model=$(jq 'has("model")' "$HOME/.config/opencode/opencode.json")
+  [ -f "$HOME/.config/opencode/opencode.jsonc" ]
+  module_has_model=$(jq 'has("model")' "$HOME/.config/opencode/opencode.jsonc")
   [ "$module_has_model" = "false" ]
 
   # Module's post-install help should mention /connect for the user.
   [[ "$module_output" == *"/connect"* ]]
+}
+
+@test "module: skip on rerun preserves commented jsonc model and suppresses no-model warning" {
+  export OPENCODE_TEST_MENU_SELECTION=skip
+  mkdir -p "$HOME/.config/opencode"
+  cat >"$HOME/.config/opencode/opencode.jsonc" <<'EOF'
+{
+  // user changed model in OpenCode
+  "model": "opencode-go/kimi-k2.6"
+}
+EOF
+
+  run_module
+  [ "$status" -eq 0 ]
+
+  [ "$(jq -r '.model' "$HOME/.config/opencode/opencode.jsonc")" = "opencode-go/kimi-k2.6" ]
+  [[ "$output" != *"won't have"* ]]
+  [[ "$output" == *"Preserved existing model"* ]]
 }
 
 @test "module: installs tui.json with packaged TUI plugin" {

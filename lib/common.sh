@@ -1,12 +1,20 @@
 #!/bin/bash
 # Shared helpers used by all modules.
 
-# Detect bootstrap directory from this script location.
+if [ -n "${AI_BOOTSTRAP_COMMON_SH_SOURCED:-}" ]; then
+  # shellcheck disable=SC2317 # common.sh is sourced; fallback is for direct execution only.
+  return 0 2>/dev/null || exit 0
+fi
+AI_BOOTSTRAP_COMMON_SH_SOURCED=1
+
+# Detect this library's bootstrap root for sourcing sibling helpers. Callers
+# that need BOOTSTRAP_DIR globally still provide/export it themselves.
 BOOTSTRAP_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
+COMMON_BOOTSTRAP_DIR="${BOOTSTRAP_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}"
 
 # Source UI helpers for spinners and styled messages.
 # shellcheck source=lib/ui.sh
-source "${BOOTSTRAP_DIR}/lib/ui.sh"
+source "${COMMON_BOOTSTRAP_DIR}/lib/ui.sh"
 
 # Results tracking arrays.
 RESULTS_INSTALLED=()
@@ -56,6 +64,13 @@ is_selected() {
 # Check if a command exists.
 command_exists() {
   command -v "$1" >/dev/null 2>&1
+}
+
+# Strip JSONC comments and trailing commas so jq can read opencode.jsonc.
+# This intentionally mirrors the deployed deps-check helper's local copy; the
+# repo-root lib tree is not deployed to $WORKSPACE/scripts/lib/.
+strip_jsonc() {
+  perl -0pe 's{/\*.*?\*/}{}gs; s{(^|[^:"])//[^\n]*}{$1}g; s/,+(\s*[\]}])/$1/g' "$1"
 }
 
 # Ensure a directory exists.

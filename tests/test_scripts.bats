@@ -47,7 +47,7 @@ write_fixture_config() {
 }
 EOF
 
-  cat >"$TMP_CFG/opencode.json" <<'EOF'
+  cat >"$TMP_CFG/opencode.jsonc" <<'EOF'
 {
   "$schema": "https://opencode.ai/config.json",
   "plugin": ["another-fake-pkg@2.0.0"],

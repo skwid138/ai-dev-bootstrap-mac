@@ -194,17 +194,14 @@ if [ -n "${BOOTSTRAP_UPDATE:-}" ]; then
   BREW_PREFIX="$(brew --prefix 2>/dev/null || true)"
   export SELECTED_TIER OPENCODE_CONFIG_DIR WORKSPACE_PATH AI_BOOTSTRAP_WORKSPACE BOOTSTRAP_DIR BREW_PREFIX
 
-  existing_model=""
-  if [ -f "$OPENCODE_CONFIG_DIR/opencode.json" ]; then
-    existing_model=$(jq -r '.model // empty' "$OPENCODE_CONFIG_DIR/opencode.json" 2>/dev/null || true)
-  fi
+  existing_model="$(opencode_read_model_value "$OPENCODE_CONFIG_DIR")"
 
-  log_info "Updating OpenCode assets and helper scripts..."
+  log_info "Updating OpenCode assets, helper scripts, and opencode.jsonc..."
   opencode_deploy_assets "${BOOTSTRAP_DIR}/opencode" "$OPENCODE_CONFIG_DIR"
   opencode_deploy_scripts "${BOOTSTRAP_DIR}/scripts" "$AI_BOOTSTRAP_WORKSPACE/scripts"
   opencode_render_config \
-    "${BOOTSTRAP_DIR}/opencode/opencode.json.template" \
-    "$OPENCODE_CONFIG_DIR/opencode.json" \
+    "${BOOTSTRAP_DIR}/opencode/opencode.jsonc.template" \
+    "$OPENCODE_CONFIG_DIR/opencode.jsonc" \
     "$existing_model"
 
   tui_config_result=$(opencode_deploy_tui_config \
