@@ -33,15 +33,24 @@ check_architecture() {
   return 0
 }
 
-check_disk_space() {
-  local available_kb
-  local available_gb
+# Disk space is intentionally advisory. Preflight runs before tier selection
+# (bootstrap.sh:474 before :516-564) and before Homebrew install (module 01 at
+# :493-496), so the actual size requirement is unknown here and any threshold is
+# a guess. Blocking has little extra "cannot cause harm" value because safe
+# re-runs fix partial state and Homebrew resumes, while a flat hard-block could
+# falsely stop a small-tier user and leave them stuck. See
+# docs/adr/0001-disk-space-preflight-is-advisory.md for the full decision.
+warn_disk_space() {
+  local available_kb available_gb
 
-  available_kb=$(df -Pk / | awk 'NR==2 {print $4}')
+  available_kb="$(df -Pk / 2>/dev/null | awk 'NR==2 {print $4}' || true)"
+  case "$available_kb" in
+    "" | *[!0-9]*) available_kb=0 ;;
+  esac
   available_gb=$((available_kb / 1024 / 1024))
 
   if [ "$available_gb" -lt 10 ]; then
-    ui_warn "Less than 10GB free disk space detected (~${available_gb}GB)."
+    ui_warn "You have about ${available_gb}GB of free space. Installing everything may need a bit more than that. Setup will continue — but if you're low, freeing up some space first can help things go smoothly."
   fi
 
   return 0
@@ -60,5 +69,5 @@ run_preflight() {
   check_not_root || exit 1
   check_macos || exit 1
   check_architecture || exit 1
-  check_disk_space || true
+  warn_disk_space
 }
