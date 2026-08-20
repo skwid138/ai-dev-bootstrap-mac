@@ -47,6 +47,13 @@ if [[ "$tier" != "reset" ]]; then
       echo "Error: tier '$tier' not found in profile" >&2
       exit 1
     }
+
+  zdr_review_by="$(jq -r '._zdr_review_by // empty' "$PROFILE")"
+  if [[ -n "$zdr_review_by" ]] && [[ "$(date +%F)" > "$zdr_review_by" ]]; then
+    if jq -e --arg t "$tier" '.[$t] | [.. | strings | select(test("(^|/)deepseek-"))] | length > 0' "$PROFILE" >/dev/null 2>&1; then
+      echo "Warning: DeepSeek's zero-data-retention window may have lapsed. This only means the privacy promise needs a fresh check; ask your helper to swap DeepSeek out before sending private work through it." >&2
+    fi
+  fi
 fi
 
 tmp_file="${CONFIG}.tmp.$$"

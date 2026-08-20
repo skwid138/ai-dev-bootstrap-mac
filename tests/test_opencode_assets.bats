@@ -786,7 +786,7 @@ EOF
   [ "$status" -eq 0 ]
   [ "$output" = "2" ]
   run jq -r '.plugin[0]' "${OPENCODE_DIR}/opencode.jsonc.template"
-  [ "$output" = "@tarquinen/opencode-dcp@3.1.12" ]
+  [ "$output" = "@tarquinen/opencode-dcp@3.1.15" ]
   run jq -r '.plugin[1][0]' "${OPENCODE_DIR}/opencode.jsonc.template"
   [ "$output" = "@skwid138/opencode-council@0.10.0" ]
 }

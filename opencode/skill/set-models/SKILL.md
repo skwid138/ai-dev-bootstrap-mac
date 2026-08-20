@@ -71,11 +71,11 @@ Do not recommend provider-specific model names. Give role-based guidance instead
 
 Explain that these are characteristics to look for, not a required shopping list.
 
-## Research summary (2026-05-28)
+## Research summary (2026-08-20)
 
-- Kimi-family models use `thinking.type` to turn reasoning on or off.
-- DeepSeek V4-family models use `thinking.type`; high-effort reasoning uses the camel-case `reasoningEffort` key.
-- Qwen 3.6-family models use `enable_thinking`.
-- Qwen 3.7 Max on OpenCode Go routes through the @ai-sdk/anthropic adapter. Use Anthropic-shape reasoning config: `thinking: { type: "enabled", budgetTokens: N }`. Do NOT use `enable_thinking` or `preserve_thinking` for the OpenCode Go path.
-- MiniMax M2.5 and M2.7 do not need extra reasoning configuration for this workflow.
-- The eco profile keeps the team usable with more rate-limit headroom while preserving stronger choices for coordination, building, and review roles.
+- OpenCode Go config uses lowercase `opencode-go/<model-id>` IDs; display-name casing is not valid in profiles.
+- Default profile: root/small, Legolas, and compaction use MiMo V2.5; Gandalf/Aragorn and one council slot use GPT 5.6 Luna; Saruman uses MiMo V2.5 Pro; Radagast uses DeepSeek V4 Flash.
+- Default council: GLM 5.3, MiniMax M3, and GPT 5.6 Luna.
+- Eco profile: root/small/Radagast and one council slot use DeepSeek V4 Flash with the 2026-08-31 ZDR review guard; Gandalf/Aragorn and one council slot use MiniMax M3; Saruman/council use MiMo V2.5 Pro; Legolas/compaction use MiMo V2.5.
+- Reasoning options stay profile-specific: GPT 5.6 Luna uses `reasoningEffort`; DeepSeek V4 Flash and MiniMax M3 use `thinking.type` where configured; MiMo compaction disables `thinking.type`.
+- If DeepSeek ZDR lapses, use the profile's privacy-safe MiMo fallback note rather than introducing unverified or stale model IDs.

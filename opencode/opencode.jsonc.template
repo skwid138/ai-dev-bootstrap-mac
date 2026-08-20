@@ -9,7 +9,7 @@
     "instruction/update-awareness.md"
   ],
   "plugin": [
-    "@tarquinen/opencode-dcp@3.1.12",
+    "@tarquinen/opencode-dcp@3.1.15",
     ["@skwid138/opencode-council@0.10.0", {"council": {"reviewer": "saruman", "models": []}}]
   ],
   "permission": {
@@ -106,7 +106,7 @@
   "mcp": {
     "chrome-devtools": {
       "type": "local",
-      "command": ["npx", "-y", "chrome-devtools-mcp@1.1.1", "--browserUrl", "http:\/\/127.0.0.1:9222"],
+      "command": ["npx", "-y", "chrome-devtools-mcp@1.7.0", "--browserUrl", "http:\/\/127.0.0.1:9222"],
       "enabled": true
     },
     "context7": {

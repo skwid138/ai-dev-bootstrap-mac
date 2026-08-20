@@ -56,7 +56,7 @@ write_config_with_council() {
   "model": "old/root-model",
   "small_model": "old/small-model",
   "plugin": [
-    "@tarquinen/opencode-dcp@3.1.12",
+    "@tarquinen/opencode-dcp@3.1.15",
     ["@skwid138/opencode-council@0.10.0", {"council": {"reviewer": "saruman", "models": []}}]
   ],
   "agent": {
@@ -113,20 +113,20 @@ run_script() {
   run_script default
   [ "$status" -eq 0 ]
 
-  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
-  [ "$(jq -r '.small_model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
-  [ "$(jq -r '.agent.gandalf.model' "$CONFIG")" = "opencode-go/qwen3.7-max" ]
-  [ "$(jq -r '.agent.gandalf.thinking.type' "$CONFIG")" = "enabled" ]
-  [ "$(jq -r '.agent.gandalf.thinking.budgetTokens' "$CONFIG")" = "8192" ]
-  [ "$(jq -r '.agent.aragorn.model' "$CONFIG")" = "opencode-go/minimax-m2.5" ]
-  [ "$(jq -r '.agent.aragorn | has("thinking")' "$CONFIG")" = "false" ]
-  [ "$(jq -r '.agent.saruman.model' "$CONFIG")" = "opencode-go/minimax-m2.7" ]
-  [ "$(jq -r '.agent.legolas.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
-  [ "$(jq -r '.agent.legolas.thinking.type' "$CONFIG")" = "enabled" ]
-  [ "$(jq -r '.agent.legolas.reasoningEffort' "$CONFIG")" = "high" ]
-  [ "$(jq -r '.agent.radagast.model' "$CONFIG")" = "opencode-go/qwen3.6-plus" ]
-  [ "$(jq -r '.agent.radagast.enable_thinking' "$CONFIG")" = "true" ]
-  [ "$(jq -r '.agent.compaction.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/mimo-v2.5" ]
+  [ "$(jq -r '.small_model' "$CONFIG")" = "opencode-go/mimo-v2.5" ]
+  [ "$(jq -r '.agent.gandalf.model' "$CONFIG")" = "opencode-go/gpt-5.6-luna" ]
+  [ "$(jq -r '.agent.gandalf.reasoningEffort' "$CONFIG")" = "high" ]
+  [ "$(jq -r '.agent.aragorn.model' "$CONFIG")" = "opencode-go/gpt-5.6-luna" ]
+  [ "$(jq -r '.agent.aragorn.reasoningEffort' "$CONFIG")" = "high" ]
+  [ "$(jq -r '.agent.saruman.model' "$CONFIG")" = "opencode-go/mimo-v2.5-pro" ]
+  [ "$(jq -r '.agent.saruman.reasoningEffort' "$CONFIG")" = "max" ]
+  [ "$(jq -r '.agent.legolas.model' "$CONFIG")" = "opencode-go/mimo-v2.5" ]
+  [ "$(jq -r '.agent.legolas.reasoningEffort' "$CONFIG")" = "low" ]
+  [ "$(jq -r '.agent.radagast.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
+  [ "$(jq -r '.agent.radagast.thinking.type' "$CONFIG")" = "enabled" ]
+  [ "$(jq -r '.agent.radagast.reasoningEffort' "$CONFIG")" = "medium" ]
+  [ "$(jq -r '.agent.compaction.model' "$CONFIG")" = "opencode-go/mimo-v2.5" ]
   [ "$(jq -r '.agent.compaction.thinking.type' "$CONFIG")" = "disabled" ]
 }
 
@@ -139,9 +139,9 @@ run_script() {
 
   [ "$(jq -r '.plugin[1][1].council.models | length' "$CONFIG")" = "3" ]
   [ "$(jq -r '.plugin[1][1].council.models[0].providerID' "$CONFIG")" = "opencode-go" ]
-  [ "$(jq -r '.plugin[1][1].council.models[0].modelID' "$CONFIG")" = "kimi-k2.5" ]
-  [ "$(jq -r '.plugin[1][1].council.models[1].modelID' "$CONFIG")" = "kimi-k2.6" ]
-  [ "$(jq -r '.plugin[1][1].council.models[2].modelID' "$CONFIG")" = "qwen3.6-plus" ]
+  [ "$(jq -r '.plugin[1][1].council.models[0].modelID' "$CONFIG")" = "glm-5.3" ]
+  [ "$(jq -r '.plugin[1][1].council.models[1].modelID' "$CONFIG")" = "minimax-m3" ]
+  [ "$(jq -r '.plugin[1][1].council.models[2].modelID' "$CONFIG")" = "gpt-5.6-luna" ]
   jq -e '.plugin[1][1].council.models | map(.modelID) | index("deepseek-v4-pro") == null' "$CONFIG"
 }
 
@@ -152,8 +152,8 @@ run_script() {
   run_script
   [ "$status" -eq 0 ]
 
-  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
-  [ "$(jq -r '.agent.radagast.model' "$CONFIG")" = "opencode-go/qwen3.6-plus" ]
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/mimo-v2.5" ]
+  [ "$(jq -r '.agent.radagast.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
 }
 
 @test "set-models eco: applies economical models and provider-specific reasoning config" {
@@ -165,11 +165,11 @@ run_script() {
 
   [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
   [ "$(jq -r '.small_model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
-  [ "$(jq -r '.agent.gandalf.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
+  [ "$(jq -r '.agent.gandalf.model' "$CONFIG")" = "opencode-go/minimax-m3" ]
   [ "$(jq -r '.agent.gandalf.thinking.type' "$CONFIG")" = "enabled" ]
-  [ "$(jq -r '.agent.aragorn.model' "$CONFIG")" = "opencode-go/minimax-m2.5" ]
-  [ "$(jq -r '.agent.saruman.model' "$CONFIG")" = "opencode-go/minimax-m2.7" ]
-  [ "$(jq -r '.agent.legolas.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
+  [ "$(jq -r '.agent.aragorn.model' "$CONFIG")" = "opencode-go/minimax-m3" ]
+  [ "$(jq -r '.agent.saruman.model' "$CONFIG")" = "opencode-go/mimo-v2.5-pro" ]
+  [ "$(jq -r '.agent.legolas.model' "$CONFIG")" = "opencode-go/mimo-v2.5" ]
   [ "$(jq -r '.agent.legolas.thinking.type' "$CONFIG")" = "disabled" ]
   [ "$(jq -r '.agent.legolas | has("reasoningEffort")' "$CONFIG")" = "false" ]
   [ "$(jq -r '.agent.radagast.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
@@ -188,6 +188,8 @@ run_script() {
 
   [ "$(jq -r '.plugin[1][1].council.models | length' "$CONFIG")" = "3" ]
   [ "$(jq -r '.plugin[1][1].council.models[0].modelID' "$CONFIG")" = "deepseek-v4-flash" ]
+  [ "$(jq -r '.plugin[1][1].council.models[1].modelID' "$CONFIG")" = "minimax-m3" ]
+  [ "$(jq -r '.plugin[1][1].council.models[2].modelID' "$CONFIG")" = "mimo-v2.5-pro" ]
 }
 
 @test "set-models reset: deletes root model keys and all six script-owned agent blocks" {
@@ -226,7 +228,7 @@ run_script() {
   run_script default
   [ "$status" -eq 0 ]
 
-  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/mimo-v2.5" ]
   run jq -e '.plugin' "$CONFIG"
   [ "$status" -ne 0 ]
 }
@@ -266,8 +268,8 @@ run_script() {
 
   run_script default
   [ "$status" -eq 0 ]
-  [ "$(jq -r '.agent.radagast.enable_thinking' "$CONFIG")" = "true" ]
-  [ "$(jq -r '.agent.legolas.reasoningEffort' "$CONFIG")" = "high" ]
+  [ "$(jq -r '.agent.radagast.reasoningEffort' "$CONFIG")" = "medium" ]
+  [ "$(jq -r '.agent.legolas.reasoningEffort' "$CONFIG")" = "low" ]
 
   run_script eco
   [ "$status" -eq 0 ]
@@ -369,7 +371,7 @@ run_script() {
 
   [ -f "$CONFIG" ]
   [ ! -e "$LEGACY_CONFIG" ]
-  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/mimo-v2.5" ]
   backups=("$LEGACY_CONFIG".bak.*.*)
   [ "${#backups[@]}" -eq 1 ]
   [ "$(jq -r '.model' "${backups[0]}")" = "old/root-model" ]
@@ -473,7 +475,7 @@ JSONC
   run_script default
   [ "$status" -eq 0 ]
 
-  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/kimi-k2.6" ]
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/mimo-v2.5" ]
 }
 
 @test "set-models reset creates backup" {
@@ -561,10 +563,48 @@ JSONC
   [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
 }
 
-@test "model profile JSON contains only the supported curated tiers" {
-  run jq -r 'keys | sort | join(",")' "$PROFILE"
+@test "model profile JSON contains only the supported curated tiers plus metadata" {
+  run jq -r '[keys[] | select(startswith("_") | not)] | sort | join(",")' "$PROFILE"
   [ "$status" -eq 0 ]
   [ "$output" = "default,eco" ]
+  [ "$(jq -r '._zdr_review_by' "$PROFILE")" = "2026-08-31" ]
+}
+
+@test "model profile JSON uses lowercase current OpenCode Go model IDs" {
+  run jq -e '
+    [
+      .default.model,
+      .default.small_model,
+      .default.council_models[].modelID,
+      (.default.agent[] | .model),
+      .eco.model,
+      .eco.small_model,
+      .eco.council_models[].modelID,
+      (.eco.agent[] | .model)
+    ] as $ids |
+    ["kimi-k2.5", "qwen3.5-plus", "MiMo-V2.5"] as $stale_ids |
+    all($ids[]; (test("[A-Z]") | not)) and
+    all($ids[]; . as $id |
+      all($stale_ids[]; . as $stale |
+        $id != $stale and ($id | sub("^opencode-go/"; "")) != $stale
+      )
+    )
+  ' "$PROFILE"
+  [ "$status" -eq 0 ]
+}
+
+@test "set-models warns non-fatally when DeepSeek ZDR review date has passed" {
+  stage_script_fixture
+  write_config
+  write_state ""
+  tmp_profile="$SANDBOX/profile.json"
+  jq '._zdr_review_by = "2000-01-01"' "$PROFILE" >"$tmp_profile"
+  mv "$tmp_profile" "$PROFILE"
+
+  run_script eco
+  [ "$status" -eq 0 ]
+  [[ "$output" == *"DeepSeek's zero-data-retention window may have lapsed"* ]]
+  [ "$(jq -r '.model' "$CONFIG")" = "opencode-go/deepseek-v4-flash" ]
 }
 
 @test "opencode template allows the set-models helper script" {
@@ -581,9 +621,9 @@ JSONC
   grep -q 'AI_BOOTSTRAP_CURATED_MODELS' "$skill_file"
   grep -q 'scripts/agent/set-models.sh' "$skill_file"
   grep -q 'model-profiles.json' "$skill_file"
-  grep -q 'Research summary (2026-05-28)' "$skill_file"
-  grep -Fq 'Qwen 3.7 Max on OpenCode Go routes through the @ai-sdk/anthropic adapter' "$skill_file"
-  grep -Fq 'thinking: { type: "enabled", budgetTokens: N }' "$skill_file"
+  grep -q 'Research summary (2026-08-20)' "$skill_file"
+  grep -Fq 'Default council: GLM 5.3, MiniMax M3, and GPT 5.6 Luna.' "$skill_file"
+  grep -Fq 'Eco profile: root/small/Radagast and one council slot use DeepSeek V4 Flash with the 2026-08-31 ZDR review guard; Gandalf/Aragorn and one council slot use MiniMax M3; Saruman/council use MiMo V2.5 Pro; Legolas/compaction use MiMo V2.5.' "$skill_file"
 
   non_go_section="$SANDBOX/non-go-section.txt"
   awk '/^## For users without OpenCode Go/{flag=1; next} /^## /{flag=0} flag{print}' "$skill_file" >"$non_go_section"

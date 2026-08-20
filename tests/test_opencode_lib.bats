@@ -955,14 +955,14 @@ _decide() {
   [ "$MODEL" = "google/gemini-2.5-flash" ]
 }
 
-@test "decide: opencode -> opencode-go / opencode-go/kimi-k2.6" {
+@test "decide: opencode -> opencode-go / opencode-go/gpt-5.6-luna" {
   _decide yes opencode
   [ "$PROVIDER" = "opencode-go" ]
-  [ "$MODEL" = "opencode-go/kimi-k2.6" ]
+  [ "$MODEL" = "opencode-go/gpt-5.6-luna" ]
 
   _decide no opencode
   [ "$PROVIDER" = "opencode-go" ]
-  [ "$MODEL" = "opencode-go/kimi-k2.6" ]
+  [ "$MODEL" = "opencode-go/gpt-5.6-luna" ]
 }
 
 @test "decide: skip -> none with empty model (so opencode falls back)" {

@@ -52,7 +52,7 @@ teardown() {
   )
   [[ "$values" == *"WS=$SANDBOX/code"* ]]
   [[ "$values" == *"TIER=recommended"* ]]
-  [[ "$values" == *"VER=2.0.0-dev"* ]]
+  [[ "$values" == *"VER=2.0.0"* ]]
   [[ "$values" == *"FIRST=2026-05-01T00:00:00Z"* ]]
   [[ "$values" == *"LAST=2026-05-01T00:00:00Z"* ]]
   [[ "$values" == *"CURATED="* ]]

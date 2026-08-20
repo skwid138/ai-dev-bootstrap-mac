@@ -9,5 +9,5 @@
 # (Phases A-Z); v1.x.y was the original tier-only bootstrap. The "-dev"
 # suffix marks unreleased work; drop it on a release commit.
 
-AI_BOOTSTRAP_VERSION="2.0.0-dev"
+AI_BOOTSTRAP_VERSION="2.0.0"
 export AI_BOOTSTRAP_VERSION

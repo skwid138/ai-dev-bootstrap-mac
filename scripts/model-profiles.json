@@ -1,36 +1,38 @@
 {
+  "_zdr_review_by": "2026-08-31",
   "default": {
-    "model": "opencode-go/kimi-k2.6",
-    "small_model": "opencode-go/deepseek-v4-flash",
+    "model": "opencode-go/mimo-v2.5",
+    "small_model": "opencode-go/mimo-v2.5",
     "council_models": [
-      { "providerID": "opencode-go", "modelID": "kimi-k2.5" },
-      { "providerID": "opencode-go", "modelID": "kimi-k2.6" },
-      { "providerID": "opencode-go", "modelID": "qwen3.6-plus" }
+      { "providerID": "opencode-go", "modelID": "glm-5.3" },
+      { "providerID": "opencode-go", "modelID": "minimax-m3" },
+      { "providerID": "opencode-go", "modelID": "gpt-5.6-luna" }
     ],
     "agent": {
-      "gandalf": { "model": "opencode-go/qwen3.7-max", "thinking": { "type": "enabled", "budgetTokens": 8192 } },
-      "aragorn": { "model": "opencode-go/minimax-m2.5" },
-      "saruman": { "model": "opencode-go/minimax-m2.7" },
-      "legolas": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "enabled" }, "reasoningEffort": "high" },
-      "radagast": { "model": "opencode-go/qwen3.6-plus", "enable_thinking": true },
-      "compaction": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "disabled" } }
+      "gandalf": { "model": "opencode-go/gpt-5.6-luna", "reasoningEffort": "high" },
+      "aragorn": { "model": "opencode-go/gpt-5.6-luna", "reasoningEffort": "high" },
+      "saruman": { "model": "opencode-go/mimo-v2.5-pro", "reasoningEffort": "max" },
+      "legolas": { "model": "opencode-go/mimo-v2.5", "reasoningEffort": "low" },
+      "radagast": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "enabled" }, "reasoningEffort": "medium" },
+      "compaction": { "model": "opencode-go/mimo-v2.5", "thinking": { "type": "disabled" } }
     }
   },
+  "_eco_zdr_fallback_note": "If DeepSeek ZDR lapses, swap eco root/small/radagast deepseek-v4-flash to mimo-v2.5 and the council deepseek member to mimo-v2.5-pro; both are 0-day retention, privacy-safe fallbacks.",
   "eco": {
     "model": "opencode-go/deepseek-v4-flash",
     "small_model": "opencode-go/deepseek-v4-flash",
     "council_models": [
       { "providerID": "opencode-go", "modelID": "deepseek-v4-flash" },
-      { "providerID": "opencode-go", "modelID": "qwen3.5-plus" },
-      { "providerID": "opencode-go", "modelID": "MiMo-V2.5" }
+      { "providerID": "opencode-go", "modelID": "minimax-m3" },
+      { "providerID": "opencode-go", "modelID": "mimo-v2.5-pro" }
     ],
     "agent": {
-      "gandalf": { "model": "opencode-go/kimi-k2.6", "thinking": { "type": "enabled" } },
-      "aragorn": { "model": "opencode-go/minimax-m2.5" },
-      "saruman": { "model": "opencode-go/minimax-m2.7" },
-      "legolas": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "disabled" } },
+      "gandalf": { "model": "opencode-go/minimax-m3", "thinking": { "type": "enabled" } },
+      "aragorn": { "model": "opencode-go/minimax-m3" },
+      "saruman": { "model": "opencode-go/mimo-v2.5-pro" },
+      "legolas": { "model": "opencode-go/mimo-v2.5", "thinking": { "type": "disabled" } },
       "radagast": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "enabled" }, "reasoningEffort": "high" },
-      "compaction": { "model": "opencode-go/deepseek-v4-flash", "thinking": { "type": "disabled" } }
+      "compaction": { "model": "opencode-go/mimo-v2.5", "thinking": { "type": "disabled" } }
     }
   }
 }

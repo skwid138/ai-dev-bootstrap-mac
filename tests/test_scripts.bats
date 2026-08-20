@@ -25,7 +25,7 @@ if [[ "${1:-}" == "view" && "${3:-}" == "version" ]]; then
   case "${2:-}" in
     fake-pkg) echo "2.0.0" ;;
     another-fake-pkg) echo "3.0.0" ;;
-    chrome-devtools-mcp) echo "1.1.1" ;;
+    chrome-devtools-mcp) echo "1.7.0" ;;
     @scope/tool) echo "1.5.0" ;;
     *) echo "9.9.9" ;;
   esac
@@ -54,7 +54,7 @@ EOF
   "mcp": {
     "chrome-devtools": {
       "type": "local",
-      "command": ["npx", "-y", "chrome-devtools-mcp@1.1.1"]
+      "command": ["npx", "-y", "chrome-devtools-mcp@1.7.0"]
     },
     "scope-tool": {
       "type": "local",

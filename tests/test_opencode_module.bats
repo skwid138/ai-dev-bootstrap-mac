@@ -158,7 +158,7 @@ run_module() {
   run ! grep -q "opencode auth login --provider opencode-go" "$MOCK_LOG"
 
   run jq -r '.model' "$HOME/.config/opencode/opencode.jsonc"
-  [ "$output" = "opencode-go/kimi-k2.6" ]
+  [ "$output" = "opencode-go/gpt-5.6-luna" ]
 }
 
 @test "module: OpenCode Go/Zen reports Keychain write failure clearly" {
@@ -250,14 +250,14 @@ EOF
   cat >"$HOME/.config/opencode/opencode.jsonc" <<'EOF'
 {
   // user changed model in OpenCode
-  "model": "opencode-go/kimi-k2.6"
+  "model": "opencode-go/gpt-5.6-luna"
 }
 EOF
 
   run_module
   [ "$status" -eq 0 ]
 
-  [ "$(jq -r '.model' "$HOME/.config/opencode/opencode.jsonc")" = "opencode-go/kimi-k2.6" ]
+  [ "$(jq -r '.model' "$HOME/.config/opencode/opencode.jsonc")" = "opencode-go/gpt-5.6-luna" ]
   [[ "$output" != *"won't have"* ]]
   [[ "$output" == *"Preserved existing model"* ]]
 }
