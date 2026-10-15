@@ -1,0 +1,3 @@
+# gitleaks false positives (4-field fingerprints: commit:file:rule:line).
+# Reviewed: not real secrets. Add only verified false positives here.
+01bbfc88e280f3cc33993dc5fded6bb8b7593383:modules/09-opencode.sh:generic-api-key:181
